@@ -9,6 +9,7 @@ class DetailGuru extends Model
 {
     protected $table = 'detail_guru';
     protected $primaryKey = 'id_detail';
+    public $timestamps = false;
 
     protected $fillable = [
         'id_guru',

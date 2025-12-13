@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('tempat_lahir', 100)->nullable();
             $table->date('tanggal_lahir')->nullable();
             $table->string('nik', 20)->unique()->nullable();
-            $table->enum('agama', ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu'])->nullable();
+            $table->string('agama', 20)->nullable();
             
             // Data Alamat Rinci
             $table->string('alamat', 255)->nullable();
@@ -56,7 +56,7 @@ return new class extends Migration
 
             // Data Keluarga
             $table->string('nama_ibu_kandung', 150)->nullable();
-            $table->enum('status_perkawinan', ['Menikah', 'Belum Menikah', 'Cerai Hidup', 'Cerai Mati'])->nullable();
+            $table->string('status_perkawinan', 15)->nullable();
             $table->string('nama_suami_istri', 150)->nullable();
             $table->string('nip_suami_istri', 30)->nullable();
             $table->string('pekerjaan_suami_istri', 100)->nullable();
@@ -72,8 +72,8 @@ return new class extends Migration
             // Data Kompetensi
             $table->string('lisensi_kepsek', 100)->nullable();
             $table->string('diklat_kepengawasan', 100)->nullable();
-            $table->boolean('keahlian_braille')->default(false);
-            $table->boolean('keahlian_isyarat')->default(false);
+            $table->string('keahlian_braille',100)->nullable();
+            $table->string('keahlian_isyarat',100)->nullable();
             
             $table->string('kewarganegaraan', 50)->nullable(); 
         });

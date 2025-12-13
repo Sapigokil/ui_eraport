@@ -54,13 +54,13 @@
                         
                         {{-- SEMUA LINK MASTER DATA DIARAHKAN KE # --}}
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('master.school.index') ? 'active' : 'text-white' }}" href="#">
+                            <a class="nav-link {{ request()->routeIs('master.school.index') ? 'active' : 'text-white' }}" href="{{ route('master.sekolah.index') }}">
                                 <span class="sidenav-mini-icon"> S </span>
                                 <span class="sidenav-normal"> Data Sekolah </span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('master.teachers.index') ? 'active' : 'text-white' }}" href="#">
+                            <a class="nav-link {{ request()->routeIs('master.teachers.index') ? 'active' : 'text-white' }}" href="{{ route('master.guru.index') }}">
                                 <span class="sidenav-mini-icon"> G </span>
                                 <span class="sidenav-normal"> Data Guru </span>
                             </a>

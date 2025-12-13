@@ -9,6 +9,8 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\PdfController; // Impor Controller
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\InfoSekolahController;
+use App\Http\Controllers\GuruController;
 
 /*
 |--------------------------------------------------------------------------
@@ -119,6 +121,25 @@ Route::prefix('pengaturan')->middleware(['auth', 'can:pengaturan-manage-users'])
 // Untuk kesederhanaan, kita ganti yang lama:
 
 Route::get('/laravel-examples/users-management', [UserController::class, 'index'])->name('users-management.index')->middleware('auth');
-// DAN JANGAN MENGGUNAKAN Route::resource('users', ...) di atas, atau gunakan alias jika nama sudah terpakai.
 
-// Karena kita menggunakan Route::resource('users', ...) di atas, kita ASUMSIKAN kita akan menggunakan users.index
+Route::prefix('master-data')->name('master.')->group(function () {
+    // INFO SEKOLAH
+    Route::get('/sekolah', [InfoSekolahController::class, 'infoSekolah'])
+        ->name('sekolah.index')
+        ->middleware('can:manage-master'); // Otorisasi di tingkat route
+        
+    Route::post('/sekolah', [InfoSekolahController::class, 'update_info_sekolah'])
+        ->name('sekolah.update')
+        ->middleware('can:manage-master');
+    
+    Route::resource('guru', GuruController::class)
+        ->names('guru') // Memberikan nama master.guru.index, .create, .store, dll.
+        ->parameters(['guru' => 'guru']) // Menggunakan singular 'guru' di URL/Binding {guru}
+        ->middleware('can:manage-master'); 
+        
+    // Route Ekspor/Impor
+    Route::post('guru/import', [GuruController::class, 'importCsv'])->name('guru.import');
+    Route::get('guru/export/pdf', [GuruController::class, 'exportPdf'])->name('guru.export.pdf');
+    Route::get('guru/export/csv', [GuruController::class, 'exportCsv'])->name('guru.export.csv');
+        // ... (Route untuk Guru, Siswa, Kelas, dll. akan ditambahkan di sini)
+});
