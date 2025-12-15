@@ -1,4 +1,4 @@
-{{-- File: resources/views/pembelajaran/index.blade.php (REVISI FINAL UNTUK KERAPIAN Aksi) --}}
+{{-- File: resources/views/pembelajaran/index.blade.php --}}
 @extends('layouts.app') 
 
 @section('title', 'Data Pembelajaran Mata Pelajaran per Kelas')
@@ -39,12 +39,66 @@
                                 </div>
                             @endif
 
+                            {{-- 🛑 FORM FILTER BARU 🛑 --}}
+                            <div class="p-3 border rounded mb-3">
+                                <form action="{{ route('master.pembelajaran.index') }}" method="GET" class="row align-items-end">
+                                    
+                                    {{-- Filter Mapel --}}
+                                    <div class="col-md-4 mb-3">
+                                        <label for="id_mapel" class="form-label">Mata Pelajaran:</label>
+                                        <select name="id_mapel" id="id_mapel" class="form-select">
+                                            <option value="">Semua Mapel</option>
+                                            @foreach($mapel_list as $m)
+                                                <option value="{{ $m->id_mapel }}" 
+                                                    {{ request('id_mapel') == $m->id_mapel ? 'selected' : '' }}>
+                                                    {{ $m->nama_mapel }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    
+                                    {{-- Filter Kelas --}}
+                                    <div class="col-md-3 mb-3">
+                                        <label for="id_kelas" class="form-label">Kelas:</label>
+                                        <select name="id_kelas" id="id_kelas" class="form-select">
+                                            <option value="">Semua Kelas</option>
+                                            @foreach($kelas_list as $k)
+                                                <option value="{{ $k->id_kelas }}" 
+                                                    {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>
+                                                    {{ $k->nama_kelas }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    
+                                    {{-- Filter Guru --}}
+                                    <div class="col-md-3 mb-3">
+                                        <label for="id_guru" class="form-label">Guru Pengampu:</label>
+                                        <select name="id_guru" id="id_guru" class="form-select">
+                                            <option value="">Semua Guru</option>
+                                            @foreach($guru_list as $g)
+                                                <option value="{{ $g->id_guru }}" 
+                                                    {{ request('id_guru') == $g->id_guru ? 'selected' : '' }}>
+                                                    {{ $g->nama_guru }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-2 mb-3 text-end">
+                                        <button type="submit" class="btn bg-gradient-info btn-sm w-100 mb-0">Filter</button>
+                                    </div>
+                                </form>
+                            </div>
+                            {{-- 🛑 END FORM FILTER 🛑 --}}
+
+
                             {{-- Tombol Export --}}
                             <div class="d-flex justify-content-end mb-3">
-                                <a href="{{ route('master.pembelajaran.export.pdf') }}" class="btn btn-sm btn-info me-2 text-white">
+                                <a href="{{ route('master.pembelajaran.export.pdf', request()->query()) }}" class="btn btn-sm btn-info me-2 text-white" title="Export data yang difilter">
                                     <i class="fas fa-file-pdf me-1"></i> Export PDF
                                 </a>
-                                <a href="{{ route('master.pembelajaran.export.csv') }}" class="btn btn-sm btn-secondary text-white">
+                                <a href="{{ route('master.pembelajaran.export.csv', request()->query()) }}" class="btn btn-sm btn-secondary text-white" title="Export data yang difilter">
                                     <i class="fas fa-file-csv me-1"></i> Export CSV
                                 </a>
                             </div>
@@ -57,7 +111,7 @@
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Mata Pelajaran</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Kelas Terdampak</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Guru Pengampu</th>
-                                            <th class="text-secondary opacity-7" style="min-width: 150px;">Aksi</th> {{-- Tetapkan lebar minimum untuk stabilitas --}}
+                                            <th class="text-secondary opacity-7" style="min-width: 150px;">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -70,6 +124,13 @@
                                             @php
                                                 $rowspan = $items->count();
                                                 $mapel_name = $items->first()->mapel->nama_mapel ?? 'Mapel Tidak Ditemukan';
+                                                
+                                                // Jika Mapel sudah difilter di controller, kita tidak perlu grup di sini,
+                                                // tetapi untuk memastikan tampilan tetap dikelompokkan:
+                                                if(request('id_mapel') && request('id_mapel') != $id_mapel) continue;
+                                                
+                                                // Ambil ID Pembelajaran pertama untuk link Edit Massal
+                                                $first_pembelajaran_id = $items->first()->id_pembelajaran;
                                             @endphp
                                             
                                             @foreach ($items as $p)
@@ -91,23 +152,24 @@
                                                     
                                                     {{-- Kolom Detail Guru --}}
                                                     <td class="align-middle">
-                                                        <p class="text-xs font-weight-bold mb-0">{{ ($p->id_guru == 0) ? 'Belum Ditentukan' : ($p->guru->nama_guru ?? '-') }}</p>
+                                                        <p class="text-xs font-weight-bold mb-0">
+                                                            {{ ($p->id_guru == 0 || $p->id_guru == \App\Http\Controllers\PembelajaranController::DEFAULT_GURU_ID) ? 'Belum Ditentukan' : ($p->guru->nama_guru ?? '-') }}
+                                                        </p>
                                                     </td>
                                                     
                                                     {{-- Kolom Aksi (PENTING: Mengatur posisi tombol) --}}
                                                     <td class="align-middle">
                                                         
                                                         <div class="d-flex align-items-center">
-                                                            {{-- Tombol Edit Massal (Hanya muncul sekali, dan menempati ruang yang sama di semua baris) --}}
-                                                            <div style="min-width: 50px;"> {{-- Placeholder lebar tombol Edit --}}
+                                                            {{-- Tombol Edit Massal (Hanya muncul sekali) --}}
+                                                            <div style="min-width: 50px;">
                                                                 @if ($loop->first)
-                                                                    <a href="{{ route('master.pembelajaran.edit', $p->id_pembelajaran) }}" 
-                                                                       class="btn btn-link text-warning p-0 m-0 text-xs" 
-                                                                       title="Edit Tautan Massal Mapel Ini">
+                                                                    <a href="{{ route('master.pembelajaran.edit', $first_pembelajaran_id) }}" 
+                                                                        class="btn btn-link text-warning p-0 m-0 text-xs" 
+                                                                        title="Edit Tautan Massal Mapel Ini">
                                                                         <i class="fas fa-pencil-alt me-1"></i> Edit
                                                                     </a>
                                                                 @else
-                                                                    {{-- Placeholder agar tombol Hapus tidak bergeser --}}
                                                                     &nbsp;
                                                                 @endif
                                                             </div>

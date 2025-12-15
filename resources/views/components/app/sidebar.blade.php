@@ -18,7 +18,6 @@
             <li class="nav-item">
                 @php $isDashboardActive = request()->routeIs('dashboard'); @endphp 
                 
-                {{-- Link diarahkan ke route('dashboard') --}}
                 <a class="nav-link {{ $isDashboardActive ? 'active' : 'text-white' }}" href="{{ route('dashboard') }}">
                     <div class="icon icon-shape icon-sm px-0 text-center d-flex align-items-center justify-content-center">
                         <i class="fas fa-chart-line text-sm {{ $isDashboardActive ? 'text-white' : 'text-white opacity-8' }}"></i>
@@ -112,91 +111,129 @@
             </li>
             @endcan
 
-            {{-- ****************************************************** --}}
-            {{-- 3. INPUT NILAI --}}
-            {{-- ****************************************************** --}}
-            @php 
+            {{-- ============================================================= --}}
+            {{-- === MENU BARU: INPUT NILAI (Menu 2) === --}}
+            {{-- ============================================================= --}}
+            @php
                 $nilaiRoutes = [
-                    'nilai.sumatif.input', 'nilai.sumatif.rekap',
-                    'nilai.project.input', 'nilai.project.rekap',
-                    'nilai.rapor.data', 'nilai.wali.catatan'
+                    'master.sumatif.*', 
                 ];
-                $isInputNilaiActive = request()->routeIs($nilaiRoutes);
+                $isNilaiActive = request()->routeIs($nilaiRoutes); 
             @endphp
-            
-            {{-- 🛑 Kita gunakan sementara @can('manage-master') agar Admin bisa melihatnya --}}
+
             @can('manage-master') 
             <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#inputNilaiMenu" class="nav-link {{ $isInputNilaiActive ? 'active' : 'text-white' }}" aria-controls="inputNilaiMenu" role="button" aria-expanded="{{ $isInputNilaiActive ? 'true' : 'false' }}">
+                <a data-bs-toggle="collapse" href="#dataNilaiMenu" class="nav-link {{ $isNilaiActive ? 'active' : 'text-white' }}" aria-controls="dataNilaiMenu" role="button" aria-expanded="{{ $isNilaiActive ? 'true' : 'false' }}">
+                    {{-- IKON DIKEMBALIKAN --}}
                     <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-                        <i class="fas fa-marker text-sm {{ $isInputNilaiActive ? 'text-white' : 'text-dark opacity-10' }}"></i>
+                        <i class="fas fa-marker text-sm {{ $isNilaiActive ? 'text-white' : 'text-dark opacity-10' }}"></i>
                     </div>
                     <span class="nav-link-text ms-1">Input Nilai</span>
                 </a>
-
-                <div class="collapse {{ $isInputNilaiActive ? 'show' : '' }}" id="inputNilaiMenu">
+                
+                <div class="collapse {{ $isNilaiActive ? 'show' : '' }}" id="dataNilaiMenu">
                     <ul class="nav ms-4 ps-3">
-                        
-                        {{-- 1. Input Nilai Sumatif --}}
-                        {{-- <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('nilai.sumatif.input') ? 'active' : 'text-white' }}" href="{{ route('nilai.sumatif.input') }}">
-                                <span class="sidenav-mini-icon"> IS </span>
-                                <span class="sidenav-normal"> Input Nilai Sumatif </span>
-                            </a>
-                        </li> --}}
-                        
-                        {{-- 2. Rekap Nilai Sumatif --}}
-                        {{-- <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('nilai.sumatif.rekap') ? 'active' : 'text-white' }}" href="#">
-                                <span class="sidenav-mini-icon"> RS </span>
-                                <span class="sidenav-normal"> Rekap Nilai Sumatif </span>
-                            </a>
-                        </li> --}}
-                        
-                        {{-- 3. Input Nilai Project --}}
-                        {{-- <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('nilai.project.input') ? 'active' : 'text-white' }}" href="#">
-                                <span class="sidenav-mini-icon"> IP </span>
-                                <span class="sidenav-normal"> Input Nilai Project </span>
-                            </a>
-                        </li> --}}
-                        
-                        {{-- 4. Rekap Nilai Project --}}
-                        {{-- <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('nilai.project.rekap') ? 'active' : 'text-white' }}" href="#">
-                                <span class="sidenav-mini-icon"> RP </span>
-                                <span class="sidenav-normal"> Rekap Nilai Project </span>
-                            </a>
-                        </li> --}}
-
-                        <hr class="horizontal light my-2">
-                        
-                        {{-- Link: Data Nilai Rapor (Route: master.rapornilai.index) --}}
+                        @php
+                            $nilaiRoutes = [
+                                'master.sumatif.*', 
+                            ];
+                            $isNilaiActive = request()->routeIs($nilaiRoutes); 
+                        @endphp
+                        {{-- Submenu: Nilai Sumatif 1 (Route: master.sumatif.s1) --}}
                         <li class="nav-item">
-                            <a class="nav-link text-white {{ request()->routeIs('master.rapornilai.index') ? 'active bg-gradient-info' : '' }}" 
-                            href="{{ route('master.rapornilai.index') }}">
-                                <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-                                    <i class="fas fa-chart-line text-sm text-dark opacity-10"></i>
-                                </div>
-                                <span class="nav-link-text ms-1">Data Nilai Rapor</span>
+                            <a class="nav-link {{ request()->routeIs('master.sumatif.s1') ? 'active' : 'text-white' }}" 
+                            href="{{ route('master.sumatif.s1') }}">
+                                <span class="sidenav-mini-icon"> S1 </span>
+                                <span class="sidenav-normal"> Nilai Sumatif 1 </span>
+                            </a>
+                        </li>
+                        
+                        {{-- Submenu: Nilai Sumatif 2 (Route: master.sumatif.s2) --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('master.sumatif.s2') ? 'active' : 'text-white' }}" 
+                            href="{{ route('master.sumatif.s2') }}">
+                                <span class="sidenav-mini-icon"> S2 </span>
+                                <span class="sidenav-normal"> Nilai Sumatif 2 </span>
+                            </a>
+                        </li>
+                        
+                        {{-- Submenu: Nilai Sumatif 3 (Route: master.sumatif.s3) --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('master.sumatif.s3') ? 'active' : 'text-white' }}" 
+                            href="{{ route('master.sumatif.s3') }}">
+                                <span class="sidenav-mini-icon"> S3 </span>
+                                <span class="sidenav-normal"> Nilai Sumatif 3 </span>
+                            </a>
+                        </li>
+                        
+                        {{-- Submenu: Nilai Project (Route: master.sumatif.project) --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('master.project.index') ? 'active' : 'text-white' }}" 
+                            href="{{ route('master.project.index') }}">
+                                <span class="sidenav-mini-icon"> NP </span>
+                                <span class="sidenav-normal"> Nilai Project </span>
                             </a>
                         </li>
 
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('master.nilaiakhir.index') ? 'active' : 'text-white' }}" 
+                            href="{{ route('master.nilaiakhir.index') }}">
+                                <span class="sidenav-mini-icon"> NA </span>
+                                <span class="sidenav-normal"> Nilai Akhir </span>
+                            </a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+            {{-- ============================================================= --}}
+            {{-- === MENU BARU: DATA RAPOR (Menu 3) === --}}
+            {{-- ============================================================= --}}
+            @php
+                // Semua route yang terkait dengan Rapor (Progres & Catatan Wali Kelas)
+                $raporRoutes = [
+                    'master.rapornilai.*',
+                ];
+                $isRaporActive = request()->routeIs($raporRoutes); 
+            @endphp
+
+            @can('manage-master') 
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#dataRaporMenu" class="nav-link {{ $isRaporActive ? 'active' : 'text-white' }}" aria-controls="dataRaporMenu" role="button" aria-expanded="{{ $isRaporActive ? 'true' : 'false' }}">
+                    {{-- IKON DIKEMBALIKAN --}}
+                    <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-file-invoice text-sm {{ $isRaporActive ? 'text-white' : 'text-dark opacity-10' }}"></i>
+                    </div>
+                    <span class="nav-link-text ms-1">Data Rapor</span>
+                </a>
+                
+                <div class="collapse {{ $isRaporActive ? 'show' : '' }}" id="dataRaporMenu">
+                    <ul class="nav ms-4 ps-3">
+                        
+                        {{-- Submenu: Dashboard Nilai Rapor (Route: master.rapornilai.index) --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('master.rapornilai.index') ? 'active' : 'text-white' }}" 
+                            href="{{ route('master.rapornilai.index') }}">
+                                <span class="sidenav-mini-icon"> DR </span>
+                                <span class="sidenav-normal"> Dashboard Nilai </span>
+                            </a>
+                        </li>
+                        
                         {{-- Link: Catatan Wali Kelas (Route: master.rapornilai.wali.catatan) --}}
                         <li class="nav-item">
-                            <a class="nav-link text-white {{ request()->routeIs('master.rapornilai.wali.*') ? 'active bg-gradient-primary' : '' }}" 
+                            <a class="nav-link {{ request()->routeIs('master.rapornilai.wali.catatan') ? 'active' : 'text-white' }}" 
                             href="{{ route('master.rapornilai.wali.catatan') }}">
-                                <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-                                    <i class="fas fa-clipboard-list text-sm text-dark opacity-10"></i>
-                                </div>
-                                <span class="nav-link-text ms-1">Catatan Wali Kelas</span>
+                                <span class="sidenav-mini-icon"> CK </span>
+                                <span class="sidenav-normal"> Catatan Wali Kelas </span>
                             </a>
                         </li>
                     </ul>
                 </div>
             </li>
             @endcan
-
+            
             {{-- 4. LAPORAN NILAI --}}
             @php $isLaporanActive = request()->routeIs(['laporan.rekap', 'laporan.absensi']); @endphp
             @can('view-laporan') 
@@ -250,13 +287,13 @@
                 <div class="collapse {{ $isManagementActive ? 'show' : '' }}" id="manajemenUserMenu">
                     <ul class="nav ms-4 ps-3">
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('users.index') ? 'active' : 'text-white' }}" href="{{ route('users.index') }}">
+                            <a class="nav-link {{ request()->routeIs('master.users.index') ? 'active' : 'text-white' }}" href="{{ route('master.users.index') }}">
                                 <span class="sidenav-mini-icon"> U </span>
                                 <span class="sidenav-normal"> Daftar User </span>
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('roles.index') ? 'active' : 'text-white' }}" href="{{ route('roles.index') }}">
+                            <a class="nav-link {{ request()->routeIs('master.roles.index') ? 'active' : 'text-white' }}" href="{{ route('master.roles.index') }}">
                                 <span class="sidenav-mini-icon"> R </span>
                                 <span class="sidenav-normal"> Role & Izin </span>
                             </a>

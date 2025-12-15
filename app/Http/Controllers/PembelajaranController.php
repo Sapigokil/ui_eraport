@@ -1,5 +1,7 @@
 <?php
 
+// File: app/Http/Controllers/PembelajaranController.php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -12,44 +14,57 @@ use Illuminate\Support\Facades\Response;
 
 class PembelajaranController extends Controller
 {
-    // 🟩 Halaman utama
-    public function dataPembelajaran() 
+    // 🛑 KOREKSI: Mengubah aksesibilitas menjadi public agar dapat diakses di view
+    public const DEFAULT_GURU_ID = 1; 
+
+    // 🟩 Halaman utama (Menambahkan Filter)
+    public function dataPembelajaran(Request $request) // 🛑 Menerima Request $request
     {
-        // Menggunakan join untuk mengakses kolom 'urutan' dari tabel mata_pelajaran
-        $pembelajaran = Pembelajaran::select('pembelajaran.*') // Pilih semua kolom dari tabel pembelajaran
-            ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
+        // 1. Inisialisasi Query (Base Query dengan Join untuk Pengurutan Mapel)
+        $query = Pembelajaran::select('pembelajaran.*')
+            ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel');
             
-            // 🛑 PENGURUTAN UTAMA: Berdasarkan kolom 'urutan' di tabel mata_pelajaran
+        // 2. Terapkan Filter
+        if ($request->id_mapel) {
+            $query->where('pembelajaran.id_mapel', $request->id_mapel);
+        }
+        if ($request->id_kelas) {
+            $query->where('pembelajaran.id_kelas', $request->id_kelas);
+        }
+        
+        $idGuruFilter = $request->id_guru;
+        // Logic filter Guru: Hanya terapkan WHERE jika id_guru TIDAK kosong dan TIDAK nol (yang berarti 'Semua Guru' dipilih)
+        if (!empty($idGuruFilter) && $idGuruFilter != 0) {
+            $query->where('pembelajaran.id_guru', $idGuruFilter);
+        }
+
+        // 3. Pengurutan & Eksekusi
+        $pembelajaran = $query
             ->orderBy('mata_pelajaran.urutan', 'asc')
-            
-            // PENGURUTAN SEKUNDER: Berdasarkan nama mapel (opsional, untuk mapel dengan urutan sama)
             ->orderBy('mata_pelajaran.nama_mapel', 'asc') 
-            
-            // Ambil relasi setelah join
             ->with(['mapel', 'kelas', 'guru'])
-            ->get();
+            ->get(); // Eksekusi query dengan filter
 
-        // Ambil data untuk dropdown (tetap sama)
-        $mapel = MataPelajaran::orderBy('nama_mapel')->get();
-        $kelas = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get();
-        $guru  = Guru::orderBy('nama_guru')->get();
+        // 4. Ambil data untuk dropdown filter
+        $mapel_list = MataPelajaran::orderBy('urutan')->orderBy('nama_mapel')->get();
+        $kelas_list = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get();
+        $guru_list = Guru::orderBy('nama_guru')->get(); 
 
-        return view('pembelajaran.index', compact('pembelajaran', 'mapel', 'kelas', 'guru'));
+        // 5. Kirim data ke view
+        return view('pembelajaran.index', compact('pembelajaran', 'mapel_list', 'kelas_list', 'guru_list'));
     }
 
     // 🟫 Tampilkan form create
     public function create()
     {
-        // 🛑 REVISI: Urutkan Mapel berdasarkan urutan, lalu nama
         $mapel = MataPelajaran::orderBy('urutan', 'asc')->orderBy('nama_mapel', 'asc')->get();
-        
         $kelas = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get();
-        $guru  = Guru::orderBy('nama_guru')->get();
+        $guru = Guru::orderBy('nama_guru')->get();
         
         return view('pembelajaran.create', compact('mapel', 'kelas', 'guru'));
     }
     
-    // 🟦 Simpan data pembelajaran (Mass Store dengan Guru Opsional melalui Placeholder)
+    // 🟦 Simpan data pembelajaran (Mass Store)
     public function store(Request $request)
     {
         // 1. Validasi Input Dasar (ID Mapel)
@@ -58,9 +73,6 @@ class PembelajaranController extends Controller
             'kelas_guru' => 'required|array', 
         ]);
         
-        // 🛑 ASUMSI ID GURU PLACEHOLDER: Anda harus memastikan ID 0 ada di tabel guru!
-        $PLACEHOLDER_GURU_ID = 0; 
-
         $id_mapel = $request->id_mapel;
         $data_pembelajaran = $request->kelas_guru;
         $counter = 0;
@@ -69,14 +81,13 @@ class PembelajaranController extends Controller
         foreach ($data_pembelajaran as $data) {
             
             $id_kelas = $data['id_kelas'];
-            // id_guru akan null jika tidak dicentang (karena input disable)
-            $id_guru = $data['id_guru'] ?? $PLACEHOLDER_GURU_ID; 
+            $id_guru = $data['id_guru'] ?? self::DEFAULT_GURU_ID; 
             $is_active = isset($data['active']); 
 
             if ($is_active) {
-                // Jika aktif, pastikan ID Guru valid (0 adalah placeholder)
-                if (empty($id_guru) || $id_guru === "") {
-                    $id_guru = $PLACEHOLDER_GURU_ID;
+                // Jika aktif, pastikan ID Guru valid (bukan 0 atau kosong)
+                if (empty($id_guru) || $id_guru === "" || $id_guru == 0) {
+                    $id_guru = self::DEFAULT_GURU_ID;
                 }
                 
                 $existing = Pembelajaran::where('id_mapel', $id_mapel)
@@ -88,7 +99,7 @@ class PembelajaranController extends Controller
                     Pembelajaran::create([
                         'id_mapel' => $id_mapel,
                         'id_kelas' => $id_kelas,
-                        'id_guru'  => $id_guru, // Menggunakan ID valid atau Placeholder ID 0
+                        'id_guru'  => $id_guru, // Menggunakan ID valid atau Placeholder ID 1
                     ]);
                     $counter++;
                 } else {
@@ -116,18 +127,14 @@ class PembelajaranController extends Controller
     // 🟪 Tampilkan form edit (Mass Edit berdasarkan ID Mapel)
     public function edit($id_pembelajaran)
     {
-        // 1. Ambil data Pembelajaran awal untuk mendapatkan ID Mapel
         $pembelajaran_awal = Pembelajaran::findOrFail($id_pembelajaran);
         $id_mapel_edit = $pembelajaran_awal->id_mapel;
 
-        // 2. Ambil data Mata Pelajaran yang sedang diedit
         $mapel_edit = MataPelajaran::findOrFail($id_mapel_edit);
 
-        // 3. Ambil data Master untuk dropdown
         $kelas = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get();
-        $guru  = Guru::orderBy('nama_guru')->get();
+        $guru = Guru::orderBy('nama_guru')->get();
 
-        // 4. Ambil semua data Pembelajaran yang sudah ada untuk Mapel ini.
         $existing_pembelajaran = Pembelajaran::where('id_mapel', $id_mapel_edit)
                                             ->get()
                                             ->keyBy('id_kelas'); 
@@ -151,7 +158,6 @@ class PembelajaranController extends Controller
             'kelas_guru' => 'required|array', 
         ]);
 
-        $PLACEHOLDER_GURU_ID = 0; 
         $data_pembelajaran = $request->kelas_guru;
         $counter_created = 0;
         $counter_deleted = 0;
@@ -160,13 +166,13 @@ class PembelajaranController extends Controller
         foreach ($data_pembelajaran as $data) {
             
             $id_kelas = $data['id_kelas'];
-            $id_guru = $data['id_guru'] ?? $PLACEHOLDER_GURU_ID; 
+            $id_guru = $data['id_guru'] ?? self::DEFAULT_GURU_ID; 
             $is_active = isset($data['active']); 
 
             if ($is_active) {
-                // Jika aktif, pastikan ID Guru valid (placeholder 0)
-                if (empty($id_guru) || $id_guru === "") {
-                    $id_guru = $PLACEHOLDER_GURU_ID;
+                // Jika aktif, pastikan ID Guru valid (bukan 0 atau kosong)
+                if (empty($id_guru) || $id_guru === "" || $id_guru == 0) {
+                    $id_guru = self::DEFAULT_GURU_ID;
                 }
                 
                 $existing = Pembelajaran::where('id_mapel', $id_mapel_edit)
@@ -178,7 +184,7 @@ class PembelajaranController extends Controller
                     Pembelajaran::create([
                         'id_mapel' => $id_mapel_edit, 
                         'id_kelas' => $id_kelas,
-                        'id_guru'  => $id_guru,
+                        'id_guru'  => $id_guru, // Menggunakan ID valid (misal 1)
                     ]);
                     $counter_created++;
                 } else {
@@ -191,8 +197,8 @@ class PembelajaranController extends Controller
             } else {
                 // Skema Delete: Jika Tidak Aktif, Hapus Record Pembelajaran
                 $deleted = Pembelajaran::where('id_mapel', $id_mapel_edit) 
-                            ->where('id_kelas', $id_kelas)
-                            ->delete();
+                                        ->where('id_kelas', $id_kelas)
+                                        ->delete();
                 if($deleted) $counter_deleted++;
             }
         }
@@ -211,45 +217,66 @@ class PembelajaranController extends Controller
             ->with('success', 'Data pembelajaran berhasil dihapus.');
     }
 
-    public function exportPdf()
-{
-    $pembelajaran = Pembelajaran::with(['mapel', 'kelas', 'guru'])
-        ->orderBy('id', 'asc')
-        ->get();
+    // Export PDF (Menerima parameter filter)
+    public function exportPdf(Request $request)
+    {
+        $query = Pembelajaran::with(['mapel', 'kelas', 'guru'])
+            ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel');
+            
+        // Terapkan Filter dari Request
+        if ($request->id_mapel) { $query->where('pembelajaran.id_mapel', $request->id_mapel); }
+        if ($request->id_kelas) { $query->where('pembelajaran.id_kelas', $request->id_kelas); }
+        $idGuruFilter = $request->id_guru;
+        if (!empty($idGuruFilter) && $idGuruFilter != 0) { $query->where('pembelajaran.id_guru', $idGuruFilter); }
 
-    $pdf = Pdf::loadView('exports.data_pembelajaran_pdf', compact('pembelajaran'))
-        ->setPaper('a4', 'landscape');
 
-    return $pdf->download('data_pembelajaran.pdf');
-}
+        $pembelajaran = $query
+            ->orderBy('mata_pelajaran.urutan', 'asc')
+            ->orderBy('pembelajaran.id_pembelajaran', 'asc')
+            ->get();
+            
+        $pdf = Pdf::loadView('exports.data_pembelajaran_pdf', compact('pembelajaran'))
+            ->setPaper('a4', 'landscape');
 
-
-public function exportCsv()
-{
-    $pembelajaran = Pembelajaran::with(['mapel', 'kelas', 'guru'])
-        ->orderBy('id', 'asc')
-        ->get();
-
-    $filename = 'data_pembelajaran.csv';
-    $handle = fopen($filename, 'w+');
-
-    // Header kolom
-    fputcsv($handle, ['No', 'Mata Pelajaran', 'Tingkat', 'Kelas', 'Jurusan', 'Guru Mapel']);
-
-    foreach ($pembelajaran as $i => $p) {
-        fputcsv($handle, [
-            $i + 1,
-            $p->mapel->nama_mapel ?? '-',
-            $p->kelas->tingkat ?? '-',
-            $p->kelas->nama_kelas ?? '-',
-            $p->kelas->jurusan ?? '-',
-            $p->guru->nama_guru ?? '-',
-        ]);
+        return $pdf->download('data_pembelajaran_filtered.pdf');
     }
 
-    fclose($handle);
 
-    return Response::download($filename)->deleteFileAfterSend(true);
+    // Export CSV (Menerima parameter filter)
+    public function exportCsv(Request $request)
+    {
+        $query = Pembelajaran::with(['mapel', 'kelas', 'guru'])
+            ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel');
+
+        // Terapkan Filter dari Request
+        if ($request->id_mapel) { $query->where('pembelajaran.id_mapel', $request->id_mapel); }
+        if ($request->id_kelas) { $query->where('pembelajaran.id_kelas', $request->id_kelas); }
+        $idGuruFilter = $request->id_guru;
+        if (!empty($idGuruFilter) && $idGuruFilter != 0) { $query->where('pembelajaran.id_guru', $idGuruFilter); }
+
+        $pembelajaran = $query
+            ->orderBy('mata_pelajaran.urutan', 'asc')
+            ->orderBy('pembelajaran.id_pembelajaran', 'asc')
+            ->get();
+
+        $filename = 'data_pembelajaran_filtered.csv';
+        $handle = fopen($filename, 'w+');
+
+        fputcsv($handle, ['No', 'Mata Pelajaran', 'Tingkat', 'Kelas', 'Jurusan', 'Guru Mapel']);
+
+        foreach ($pembelajaran as $i => $p) {
+            fputcsv($handle, [
+                $i + 1,
+                $p->mapel->nama_mapel ?? '-',
+                $p->kelas->tingkat ?? '-',
+                $p->kelas->nama_kelas ?? '-',
+                $p->kelas->jurusan ?? '-',
+                $p->guru->nama_guru ?? '-',
+            ]);
+        }
+
+        fclose($handle);
+
+        return Response::download($filename)->deleteFileAfterSend(true);
     }
-
 }

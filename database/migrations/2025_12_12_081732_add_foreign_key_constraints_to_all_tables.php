@@ -92,12 +92,30 @@ return new class extends Migration
             $table->foreign('id_mapel')->references('id_mapel')->on('mata_pelajaran')->onDelete('cascade');
             $table->foreign('id_siswa')->references('id_siswa')->on('siswa')->onDelete('cascade');
         });
+        
+        // =====================================================================
+        // 8. Relasi Sumatif (BARU)
+        // =====================================================================
+        // Schema::table('sumatif', function (Blueprint $table) {
+        //     $table->foreign('id_kelas')->references('id_kelas')->on('kelas')->onDelete('cascade');
+        //     $table->foreign('id_mapel')->references('id_mapel')->on('mata_pelajaran')->onDelete('cascade');
+        //     $table->foreign('id_siswa')->references('id_siswa')->on('siswa')->onDelete('cascade');
+        // });
     }
 
     public function down(): void
     {
+        // // =====================================================================
+        // // 8. Relasi Sumatif (BARU)
+        // // =====================================================================
+        // Schema::table('sumatif', function (Blueprint $table) {
+        //     $table->dropForeign(['id_kelas']);
+        //     $table->dropForeign(['id_mapel']);
+        //     $table->dropForeign(['id_siswa']);
+        // });
+        
         // ---------------------------------------------------------------------
-        // 1. Relasi Rapor
+        // 7. Relasi Rapor
         // ---------------------------------------------------------------------
         Schema::table('rapor', function (Blueprint $table) {
             $table->dropForeign(['id_kelas']);
@@ -106,7 +124,7 @@ return new class extends Migration
         });
 
         // ---------------------------------------------------------------------
-        // 2. Relasi Catatan dan Ekskul Siswa
+        // 6. Relasi Catatan dan Ekskul Siswa
         // ---------------------------------------------------------------------
         Schema::table('ekskul_siswa', function (Blueprint $table) {
             $table->dropForeign(['id_siswa']);
@@ -124,7 +142,7 @@ return new class extends Migration
         });
 
         // ---------------------------------------------------------------------
-        // 3. Relasi Guru Tambahan
+        // 5. Relasi Guru Tambahan
         // ---------------------------------------------------------------------
         Schema::table('detail_guru', function (Blueprint $table) {
             $table->dropForeign(['id_guru']);
@@ -148,7 +166,7 @@ return new class extends Migration
         });
         
         // ---------------------------------------------------------------------
-        // 5. Relasi Siswa
+        // 3. Relasi Siswa
         // ---------------------------------------------------------------------
         Schema::table('detail_siswa', function (Blueprint $table) {
             $table->dropForeign(['id_siswa']);
@@ -159,7 +177,7 @@ return new class extends Migration
         });
 
         // ---------------------------------------------------------------------
-        // 6. Relasi Kelas dan Guru (Struktur Dasar)
+        // 2. Relasi Kelas dan Guru (Struktur Dasar)
         // ---------------------------------------------------------------------
         Schema::table('wali_kelas', function (Blueprint $table) {
             $table->dropForeign(['id_guru']);
@@ -173,7 +191,7 @@ return new class extends Migration
         });
 
         // ---------------------------------------------------------------------
-        // 7. Relasi ke USERS
+        // 1. Relasi ke USERS
         // ---------------------------------------------------------------------
         Schema::table('siswa', function (Blueprint $table) {
             $table->dropForeign(['id_user']);
