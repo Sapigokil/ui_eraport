@@ -161,32 +161,33 @@
                                     </p>
                                 
                                 @else
-                                    <div class="alert alert-info text-white text-sm">
-                                        **Rekap Nilai Akhir:** Hasil perhitungan ini menggabungkan Nilai Sumatif (40%) dan Nilai Project (60%).
+                                    <div style="background-color: #ff7b00 !important;" class="alert text-white text-sm">
+                                        **Catatan:** Wajib memasukan minimal 2 Nilai Sumatif, bila tidak Bobot tidak dapat dihitung.
                                     </div>
                                     
                                     <div class="table-responsive p-0">
                                         <table class="table align-items-center mb-0">
-                                            <thead class="bg-gradient-secondary text-white text-xs">
+                                            <thead>
                                                 <tr>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 ps-3 text-center" style="width: 5%">No</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center" style="width: 25%">Nama Siswa</th>
+                                                    {{-- 1. INFORMASI SISWA (Abu Gelap) --}}
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 ps-3 text-center bg-secondary" style="width: 5%">No</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-secondary" style="width: 25%">Nama Siswa</th>
                                                     
-                                                    {{-- SUMATIF (40%) --}}
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center">S1</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center">S2</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center">S3</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center">Rata S</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center">Bobot S (40%)</th>
+                                                    {{-- 2. SUMATIF (Biru Tua) --}}
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Sumatif 1</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Sumatif 2</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Sumatif 3</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Rata-rata</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Bobot (40%)</th>
 
-                                                    {{-- PROJECT (60%) --}}
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center">Nilai P</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center">Rata P</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center">Bobot P (60%)</th>
+                                                    {{-- 3. PROJECT (Hijau Tua) --}}
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Project</th>
+                                                    {{-- <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Rata P</th> --}}
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Bobot (60%)</th>
                                                     
-                                                    {{-- AKHIR --}}
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 text-center text-bold">NILAI AKHIR</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-9 ps-2">CAPAIAN AKHIR</th>
+                                                    {{-- 4. AKHIR (Warna Berbeda) --}}
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-danger text-bold">NILAI AKHIR</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 ps-2 bg-danger">CAPAIAN AKHIR</th>
                                                 </tr>
                                             </thead>
 
@@ -202,9 +203,9 @@
                                                     <td class="px-3 py-2 text-sm font-weight-bold">{{ $s->nama_siswa }}</td>
 
                                                     {{-- S1, S2, S3 --}}
-                                                    <td class="px-3 py-2 text-sm text-center">{{ $rekapSiswa['nilai_s1'] ?? '-' }}</td>
-                                                    <td class="px-3 py-2 text-sm text-center">{{ $rekapSiswa['nilai_s2'] ?? '-' }}</td>
-                                                    <td class="px-3 py-2 text-sm text-center">{{ $rekapSiswa['nilai_s3'] ?? '-' }}</td>
+                                                    <td class="px-3 py-2 text-sm text-center">{{ $rekapSiswa['s1'] ?? '-' }}</td>
+                                                    <td class="px-3 py-2 text-sm text-center">{{ $rekapSiswa['s2'] ?? '-' }}</td>
+                                                    <td class="px-3 py-2 text-sm text-center">{{ $rekapSiswa['s3'] ?? '-' }}</td>
                                                     
                                                     {{-- Rata & Bobot Sumatif --}}
                                                     <td class="px-3 py-2 text-sm text-center font-weight-bold">{{ $rekapSiswa['rata_sumatif'] ?? '-' }}</td>
@@ -212,7 +213,7 @@
 
                                                     {{-- Nilai & Bobot Project --}}
                                                     <td class="px-3 py-2 text-sm text-center">{{ $rekapSiswa['nilai_project'] ?? '-' }}</td>
-                                                    <td class="px-3 py-2 text-sm text-center font-weight-bold">{{ $rekapSiswa['rata_project'] ?? '-' }}</td>
+                                                    {{-- <td class="px-3 py-2 text-sm text-center font-weight-bold">{{ $rekapSiswa['rata_project'] ?? '-' }}</td> --}}
                                                     <td class="px-3 py-2 text-sm text-center text-success font-weight-bolder">{{ $rekapSiswa['bobot_project'] ?? '-' }}</td>
                                                     
                                                     {{-- NILAI AKHIR --}}
