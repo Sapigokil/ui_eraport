@@ -305,9 +305,15 @@ class RaporController extends Controller
                     ->avg('nilai') ?: 0;
 
                 $mp->nilai_akhir = round(($nilaiSumatif + $nilaiProject) / 2);
-                $mp->capaian = $mp->nilai_akhir >= 85 
-                    ? "Menunjukkan penguasaan yang sangat baik dalam seluruh kompetensi."
-                    : "Perlu penguatan dalam beberapa materi inti.";
+                
+                // Deskripsi Capaian Kompetensi (Contoh Logika)
+                if ($mp->nilai_akhir >= 85) {
+                    $mp->capaian = "Menunjukkan penguasaan yang sangat baik dalam " . $mp->nama_mapel;
+                } elseif ($mp->nilai_akhir >= 75) {
+                    $mp->capaian = "Menunjukkan penguasaan yang baik dalam " . $mp->nama_mapel;
+                } else {
+                    $mp->capaian = "Perlu bimbingan lebih lanjut dalam kompetensi " . $mp->nama_mapel;
+                }
             }
         }
 
