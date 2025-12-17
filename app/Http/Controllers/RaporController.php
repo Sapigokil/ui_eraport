@@ -275,47 +275,44 @@ class RaporController extends Controller
             ->first();
 
         // 5. Olah Mata Pelajaran & Nilai
-        $mapelGroup = DB::table('pembelajaran')
-            ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
-            ->where('pembelajaran.id_kelas', $siswa->id_kelas)
-            ->select('mata_pelajaran.*')
-            ->get()
-            ->groupBy('kategori');
+$mapelRaw = DB::table('pembelajaran')
+    ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
+    ->where('pembelajaran.id_kelas', $siswa->id_kelas)
+    ->select('mata_pelajaran.*')
+    ->get();
 
-        // --- LOGIKA PENGURUTAN KATEGORI SESUAI REVISI ---
-        $urutanKategori = [
-            'Mata Pelajaran Umum'   => 1,
-            'Mata Pelajaran Kejuruan' => 2,
-            'Mata Pelajaran Pilihan'  => 3,
-            'Muatan Lokal'           => 4
-        ];
+// DEFINISIKAN URUTAN KATEGORI (Harus sama persis dengan tulisan di database)
+    $urutanKustom = [
+        'Mata Pelajaran Umum'    => 1,
+        'Mata Pelajaran Kejuruan' => 2,
+        'Mata Pelajaran Pilihan'  => 3,
+        'Muatan Lokal'           => 4
+    ];
 
-        $mapelGroup = $mapelGroup->sortBy(function ($value, $key) use ($urutanKategori) {
-            return $urutanKategori[$key] ?? 99; // Jika kategori tidak terdaftar, taruh di paling bawah
-        });
+    // Kelompokkan dan Urutkan berdasarkan array di atas
+    $mapelGroup = $mapelRaw->groupBy('kategori')->sortBy(function ($items, $key) use ($urutanKustom) {
+        return $urutanKustom[$key] ?? 99; // Jika ada kategori lain, taruh di paling bawah
+    });
 
-        foreach ($mapelGroup as $kategori => $daftarMapel) {
-            foreach ($daftarMapel as $mp) {
-                $nilaiSumatif = DB::table('sumatif')
-                    ->where(['id_siswa' => $id_siswa, 'id_mapel' => $mp->id_mapel, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran])
-                    ->avg('nilai') ?: 0;
+    foreach ($mapelGroup as $kategori => $daftarMapel) {
+        foreach ($daftarMapel as $mp) {
+            // ... (Logika hitung nilai sumatif & project tetap sama) ...
+            $nilaiSumatif = DB::table('sumatif')
+                ->where(['id_siswa' => $id_siswa, 'id_mapel' => $mp->id_mapel, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran])
+                ->avg('nilai') ?: 0;
 
-                $nilaiProject = DB::table('project')
-                    ->where(['id_siswa' => $id_siswa, 'id_mapel' => $mp->id_mapel, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran])
-                    ->avg('nilai') ?: 0;
+            $nilaiProject = DB::table('project')
+                ->where(['id_siswa' => $id_siswa, 'id_mapel' => $mp->id_mapel, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran])
+                ->avg('nilai') ?: 0;
 
-                $mp->nilai_akhir = round(($nilaiSumatif + $nilaiProject) / 2);
-                
-                // Deskripsi Capaian Kompetensi (Contoh Logika)
-                if ($mp->nilai_akhir >= 85) {
-                    $mp->capaian = "Menunjukkan penguasaan yang sangat baik dalam " . $mp->nama_mapel;
-                } elseif ($mp->nilai_akhir >= 75) {
-                    $mp->capaian = "Menunjukkan penguasaan yang baik dalam " . $mp->nama_mapel;
-                } else {
-                    $mp->capaian = "Perlu bimbingan lebih lanjut dalam kompetensi " . $mp->nama_mapel;
-                }
-            }
+            $mp->nilai_akhir = round(($nilaiSumatif + $nilaiProject) / 2);
+            
+            // Logika Capaian Kompetensi
+            $mp->capaian = $mp->nilai_akhir >= 75 
+                ? "Menunjukkan penguasaan yang baik dalam " . $mp->nama_mapel
+                : "Perlu bimbingan lebih lanjut dalam " . $mp->nama_mapel;
         }
+    }
 
         // 6. Catatan & Ekskul
         $catatan = DB::table('catatan')
