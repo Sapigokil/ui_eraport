@@ -297,7 +297,7 @@ class CatatanController extends Controller
             // Inisialisasi Import Class dengan filter
             Excel::import(new CatatanImport($filters), $request->file('file_excel'));
 
-            return redirect()->route('catatan.input', $request->query())
+            return redirect()->route('master.catatan.input', $request->query())
                              ->with('success', 'Import Catatan Wali Kelas berhasil diproses!');
 
         } catch (\Exception $e) {

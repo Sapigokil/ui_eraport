@@ -102,18 +102,18 @@
                                     </select>
                                 </div>
                                 <div class="col-md-2 mb-3 text-start">
-                                    <label class="form-label text-xs font-weight-bold text-uppercase">Tahun Ajaran</label>
-                                    <select name="tahun_ajaran" class="form-select border ps-2">
-                                        @foreach ($tahunAjaranList as $ta)
-                                            <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>{{ $ta }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-2 mb-3 text-start">
                                     <label class="form-label text-xs font-weight-bold text-uppercase">Semester</label>
                                     <select name="semester" class="form-select border ps-2">
                                         @foreach ($semesterList as $sem)
                                             <option value="{{ $sem }}" {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>{{ $sem }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-2 mb-3 text-start">
+                                    <label class="form-label text-xs font-weight-bold text-uppercase">Tahun Ajaran</label>
+                                    <select name="tahun_ajaran" class="form-select border ps-2">
+                                        @foreach ($tahunAjaranList as $ta)
+                                            <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>{{ $ta }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -297,33 +297,60 @@
         </div>
     </div>
 
-    {{-- MODAL IMPORT --}}
+
+    {{-- MODAL IMPORT CATATAN --}}
     <div class="modal fade" id="importModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content shadow-lg border-0">
                 <div class="modal-header bg-gray-100">
-                    <h6 class="modal-title font-weight-bolder text-dark text-start">
+                    <h6 class="modal-title font-weight-bolder text-dark">
                         <i class="fas fa-file-import text-success me-2"></i> Import Catatan Wali
                     </h6>
                     <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+                
                 <form action="{{ route('master.catatan.import') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="modal-body py-4 text-start">
-                        <div class="alert alert-info border-0 text-white text-xs mb-4">
-                            <i class="fas fa-info-circle me-1"></i> Pastikan format file sesuai template.
-                        </div>
+                        {{-- Input Pilih Kelas --}}
                         <div class="mb-3">
-                            <label class="form-label text-xs font-weight-bolder text-uppercase">Pilih File Excel</label>
-                            <input type="file" name="file_excel" class="form-control border ps-2" required accept=".xlsx, .xls">
+                            <label class="form-label text-xs font-weight-bolder text-uppercase">Pilih Kelas</label>
+                            <select name="id_kelas" required class="form-select border ps-2 text-sm">
+                                <option value="">-- Pilih Kelas --</option>
+                                @foreach($kelas as $k)
+                                    <option value="{{ $k->id_kelas }}" {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>
+                                        {{ $k->nama_kelas }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
-                        <input type="hidden" name="id_kelas" value="{{ request('id_kelas') }}">
-                        <input type="hidden" name="tahun_ajaran" value="{{ request('tahun_ajaran') }}">
-                        <input type="hidden" name="semester" value="{{ request('semester') }}">
+
+                        {{-- Baris Semester dan Tahun Ajaran --}}
+                        <div class="row text-start mb-3">
+                            <div class="col-6">
+                                <label class="form-label text-xs font-weight-bolder text-uppercase">Semester</label>
+                                <select name="semester" class="form-select border ps-2 text-sm">
+                                    <option value="Ganjil" {{ request('semester') == 'Ganjil' ? 'selected' : '' }}>Ganjil</option>
+                                    <option value="Genap" {{ request('semester') == 'Genap' ? 'selected' : '' }}>Genap</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label text-xs font-weight-bolder text-uppercase">Tahun Ajaran</label>
+                                <input type="text" name="tahun_ajaran" class="form-control border ps-2 text-sm" 
+                                    value="{{ request('tahun_ajaran') ?? $defaultTahunAjaran }}">
+                            </div>
+                        </div>
+
+                        {{-- Input Pilih File Excel --}}
+                        <div class="mb-0">
+                            <label class="form-label text-xs font-weight-bolder text-uppercase">Pilih File Excel</label>
+                            <input type="file" name="file_excel" class="form-control border ps-2 text-sm" required accept=".xlsx, .xls">
+                        </div>
                     </div>
+
                     <div class="modal-footer bg-gray-100">
                         <button type="button" class="btn btn-sm btn-white mb-0" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-sm bg-gradient-success mb-0">Proses Import</button>
+                        <button type="submit" class="btn btn-sm bg-gradient-success mb-0">Upload & Proses</button>
                     </div>
                 </form>
             </div>

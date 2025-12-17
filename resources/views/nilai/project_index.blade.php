@@ -4,17 +4,29 @@
 @section('title', 'Input Nilai Project (P5)')
 
 @php
+   // LOGIKA TAHUN AJARAN & SEMESTER
     $tahunSekarang = date('Y');
     $bulanSekarang = date('n');
-    $defaultSemester = ($bulanSekarang < 7) ? 'Genap' : 'Ganjil';
-    $defaultTahunAjaran = ($bulanSekarang < 7) ? ($tahunSekarang - 1) . '/' . $tahunSekarang : $tahunSekarang . '/' . ($tahunSekarang + 1);
 
+    if ($bulanSekarang < 7) {
+        $defaultTA1 = $tahunSekarang - 1;
+        $defaultTA2 = $tahunSekarang;
+        $defaultSemester = 'Genap';
+    } else {
+        $defaultTA1 = $tahunSekarang;
+        $defaultTA2 = $tahunSekarang + 1;
+        $defaultSemester = 'Ganjil';
+    }
+
+    $defaultTahunAjaran = $defaultTA1 . '/' . $defaultTA2;
+    
     $tahunMulai = 2025; 
     $tahunAkhir = date('Y') + 5; 
     $tahunAjaranList = [];
     for ($tahun = $tahunAkhir; $tahun >= $tahunMulai; $tahun--) {
         $tahunAjaranList[] = $tahun . '/' . ($tahun + 1);
     }
+    $semesterList = ['Ganjil', 'Genap']; 
 @endphp
 
 @section('content')
@@ -68,20 +80,22 @@
                                     </select>
                                 </div>
                                 <div class="col-md-2 mb-3">
-                                    <label class="form-label">Semester:</label>
-                                    <select name="semester" class="form-select">
-                                        <option value="Ganjil" {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>Ganjil</option>
-                                        <option value="Genap" {{ request('semester', $defaultSemester) == 'Genap' ? 'selected' : '' }}>Genap</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2 mb-3">
-                                    <label class="form-label">Tahun Ajaran:</label>
-                                    <select name="tahun_ajaran" class="form-select">
-                                        @foreach($tahunAjaranList as $ta)
-                                            <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>{{ $ta }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                                        <label class="form-label">Semester:</label>
+                                        <select name="semester" required class="form-select">
+                                            @foreach($semesterList as $sem)
+                                                <option value="{{ $sem }}" {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>{{ $sem }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Tahun Ajaran:</label>
+                                        <select name="tahun_ajaran" required class="form-select">
+                                            @foreach ($tahunAjaranList as $ta)
+                                                <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>{{ $ta }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                 <div class="col-md-2 mb-3">
                                     <button type="submit" class="btn bg-gradient-dark w-100 mb-0">Filter</button>
                                 </div>
@@ -157,17 +171,21 @@
                     {{-- Semester & TA --}}
                     <div class="mb-3">
                         <label class="form-label">Semester:</label>
-                        <select name="semester" required class="form-select">
-                            <option value="Ganjil">Ganjil</option><option value="Genap">Genap</option>
-                        </select>
-                    </div>
+                            <select name="semester" required class="form-select">
+                                @foreach($semesterList as $sem)
+                                    <option value="{{ $sem }}" {{ $defaultSemester == $sem ? 'selected' : '' }}>{{ $sem }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     <div class="mb-3">
                         <label class="form-label">Tahun Ajaran:</label>
-                        <select name="tahun_ajaran" required class="form-select">
-                            @foreach($tahunAjaranList as $ta) <option value="{{ $ta }}">{{ $ta }}</option> @endforeach
-                        </select>
+                            <select name="tahun_ajaran" required class="form-select">
+                                @foreach ($tahunAjaranList as $ta)
+                                    <option value="{{ $ta }}" {{ $defaultTahunAjaran == $ta ? 'selected' : '' }}>{{ $ta }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-                </div>
                 <div class="modal-footer"><button type="submit" class="btn bg-gradient-info">Download</button></div>
             </form>
         </div>
@@ -195,15 +213,20 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Semester:</label>
-                        <select name="semester" required class="form-select">
-                            <option value="Ganjil">Ganjil</option><option value="Genap">Genap</option>
-                        </select>
-                    </div>
+                            <select name="semester" required class="form-select">
+                                @foreach($semesterList as $sem)
+                                    <option value="{{ $sem }}" {{ $defaultSemester == $sem ? 'selected' : '' }}>{{ $sem }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     <div class="mb-3">
                         <label class="form-label">Tahun Ajaran:</label>
-                        <select name="tahun_ajaran" required class="form-select">
-                            @foreach($tahunAjaranList as $ta) <option value="{{ $ta }}">{{ $ta }}</option> @endforeach
-                        </select>
+                            <select name="tahun_ajaran" required class="form-select">
+                                @foreach ($tahunAjaranList as $ta)
+                                    <option value="{{ $ta }}" {{ $defaultTahunAjaran == $ta ? 'selected' : '' }}>{{ $ta }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Pilih File Excel:</label>
