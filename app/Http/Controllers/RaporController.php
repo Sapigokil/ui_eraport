@@ -615,35 +615,5 @@ class RaporController extends Controller
         return redirect()->back()->with('error', 'Gagal membuat file ZIP.');
     }
 
-    private function generateCapaianOtomatis($id_siswa, $id_mapel, $semester, $tahun_ajaran)
-    {
-        // 1. Ambil semua nilai TP siswa untuk mapel ini
-        $nilaiTp = DB::table('nilai_tp')
-            ->where([
-                'id_siswa' => $id_siswa,
-                'id_mapel' => $id_mapel,
-                'semester' => $semester,
-                'tahun_ajaran' => $tahun_ajaran
-            ])
-            ->orderBy('nilai', 'desc')
-            ->get();
 
-        if ($nilaiTp->isEmpty()) return null;
-
-        $tertinggi = $nilaiTp->first();
-        $terendah = $nilaiTp->last();
-
-        // 2. Ambil deskripsi TP dari tabel referensi
-        $tpMax = DB::table('tujuan_pembelajaran')->where('id_tp', $tertinggi->id_tp)->first();
-        $tpMin = DB::table('tujuan_pembelajaran')->where('id_tp', $terendah->id_tp)->first();
-
-        // 3. Susun Kalimat Capaian (Justify Friendly)
-        $capaian = "Menunjukkan penguasaan yang sangat baik dalam " . ($tpMax->deskripsi ?? 'materi pembelajaran') . ". ";
-        
-        if ($tertinggi->id_tp != $terendah->id_tp) {
-            $capaian .= "Perlu bimbingan dalam " . ($tpMin->deskripsi ?? 'beberapa materi') . ".";
-        }
-
-        return $capaian;
-    }
 }
