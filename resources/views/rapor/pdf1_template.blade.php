@@ -26,7 +26,7 @@
             z-index: 1000;
             margin-bottom: 50px;
         }
-        body { font-family: 'Arial', sans-serif; font-size: 11pt; line-height: 1.3; padding-bottom: 50px; }
+        body { font-family: 'Arial', sans-serif; font-size: 11pt; line-height: 1.3; padding-bottom: 50px; margin-top: 20px; }
         .header-table td { vertical-align: top; padding-bottom: 5px; }
         .main-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .main-table th, .main-table td { border: 1px solid black; padding: 8px; text-align: left; }
