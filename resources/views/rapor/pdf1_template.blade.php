@@ -218,6 +218,12 @@
             font-family: 'Arial', sans-serif; 
             padding-bottom: 55px; /* Memberi ruang untuk teks footer PHP */
         }
+
+        .text-justify {
+            text-align: justify;
+            text-justify: inter-word; /* Membantu perataan kata yang lebih halus di DomPDF */
+            line-height: 1.4;        /* Memberi ruang agar teks panjang lebih enak dibaca */
+        }
     </style>
 </head>
 <body>
@@ -318,7 +324,7 @@
                     <td class="text-center">
                         {{ number_format((float)$m->nilai_akhir, 0, '', '') }}
                     </td>
-                    <td style="font-size: 9pt;">{{ $m->capaian }}</td>
+                    <td style="font-size: 9pt; text-align: justify">{{ $m->capaian }}</td>
                 </tr>
                 @endforeach
             @endforeach
