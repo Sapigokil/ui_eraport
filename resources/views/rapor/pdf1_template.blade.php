@@ -315,7 +315,9 @@
                 <tr>
                     <td class="text-center">{{ $loop->iteration }}</td>
                     <td>{{ $m->nama_mapel }}</td>
-                    <td class="text-center">{{ $m->nilai_akhir }}</td>
+                    <td class="text-center">
+                        {{ number_format((float)$m->nilai_akhir, 0, '', '') }}
+                    </td>
                     <td style="font-size: 9pt;">{{ $m->capaian }}</td>
                 </tr>
                 @endforeach
