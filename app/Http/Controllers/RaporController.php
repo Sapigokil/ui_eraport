@@ -85,7 +85,7 @@ class RaporController extends Controller
     {
         $id_mapel = $request->id_mapel;
         $id_kelas = $request->id_kelas;
-        $tipe = $request->tipe; 
+        $tipe = $request->tipe;
         $semester = (strtoupper($request->semester) == 'GANJIL') ? 1 : 2;
         $tahun_ajaran = $request->tahun_ajaran;
 
@@ -251,7 +251,7 @@ class RaporController extends Controller
     }
 
     /**
-     * Proses Cetak PDF Rapor: Urutan Terkunci 1-4 & Ambil Data Final dengan Pembulatan 0
+     * Proses Cetak PDF Rapor: Sinkronisasi Tabel ekskul
      */
     public function cetak_proses($id_siswa, Request $request)
     {
@@ -273,6 +273,7 @@ class RaporController extends Controller
             default => '-'
         };
 
+        // --- MAPEL GROUPING (1-4) ---
         $mapelFinal = [];
         $daftarUrutan = [
             1 => 'MATA PELAJARAN UMUM',
@@ -300,15 +301,36 @@ class RaporController extends Controller
                         ])
                         ->first();
 
-                    // Menerapkan pembulatan 0 angka di belakang koma pada nilai akhir
                     $mp->nilai_akhir = isset($dataFinal->nilai_akhir) ? round($dataFinal->nilai_akhir, 0) : 0;
                     $mp->capaian = $dataFinal->capaian_akhir ?? '-';
                 }
-                $mapelFinal[$headerLabel] = $kelompok;
+                $mapelFinal[$key] = $kelompok;
             }
         }
 
+        // --- PARSING EKSKUL (MENGGUNAKAN TABEL 'ekskul') ---
         $catatan = DB::table('catatan')->where(['id_siswa' => $id_siswa, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran])->first();
+        
+        $dataEkskul = [];
+        if ($catatan && !empty($catatan->ekskul)) {
+            $ids = explode(',', $catatan->ekskul);
+            $grades = !empty($catatan->predikat) ? explode(',', $catatan->predikat) : [];
+            $descs = !empty($catatan->keterangan) ? explode('|', $catatan->keterangan) : [];
+
+            foreach ($ids as $index => $idEkstra) {
+                if (trim($idEkstra) != "") {
+                    // FIX: Tabel yang benar adalah 'ekskul', bukan 'ekstrakurikuler'
+                    $namaEkskulReal = DB::table('ekskul')->where('id_ekskul', trim($idEkstra))->value('nama_ekskul');
+                    
+                    $dataEkskul[] = (object)[
+                        'nama' => $namaEkskulReal ?? 'Ekstra ID: ' . $idEkstra,
+                        'predikat' => isset($grades[$index]) ? trim($grades[$index]) : '-',
+                        'keterangan' => isset($descs[$index]) ? trim($descs[$index]) : '-'
+                    ];
+                }
+            }
+        }
+
         $namaWali = $siswa->kelas->wali_kelas ?? 'Wali Kelas';
         $dataGuru = DB::table('guru')->where('nama_guru', 'LIKE', '%' . $namaWali . '%')->first();
 
@@ -317,12 +339,14 @@ class RaporController extends Controller
             'fase'          => $fase,
             'sekolah'       => $sekolah,
             'infoSekolah'   => $infoSekolahVar,
+            'info_sekolah'  => $getSekolah,
             'mapelGroup'    => $mapelFinal,
+            'dataEkskul'    => $dataEkskul,
             'catatan'       => $catatan,
             'semester'      => $semesterRaw,
             'tahun_ajaran'  => $tahun_ajaran,
             'semesterInt'   => $semesterInt,
-            'namaWali'      => $namaWali,
+            'nama_wali'     => $namaWali,
             'nip_wali'      => $dataGuru->nip ?? '-',
         ];
 

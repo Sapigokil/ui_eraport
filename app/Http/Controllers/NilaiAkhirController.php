@@ -1,207 +1,259 @@
 <?php
+// File: app/Http/Controllers/NilaiAkhirController.php
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\Siswa;
 use App\Models\Kelas;
-use App\Models\InfoSekolah;
-use App\Models\Catatan;
-use App\Models\StatusRapor;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\MataPelajaran;
+use App\Models\NilaiAkhir;
+use App\Models\Pembelajaran;
+use App\Models\Sumatif; 
+use App\Models\Project; 
+use App\Http\Controllers\RaporController;
 
-class RaporController extends Controller
+
+class NilaiAkhirController extends Controller
 {
-    /**
-     * Halaman Monitoring Progres Per Mata Pelajaran
-     */
+    private function mapSemesterToInt(string $semester): ?int
+    {
+        $map = [
+            'GANJIL' => 1,
+            'GENAP' => 2,
+        ];
+        return $map[strtoupper(trim($semester))] ?? null;
+    }
+
+    private function generateCapaianAkhir($siswa, $semuaNilai): ?string
+    {
+        if ($semuaNilai->count() === 0) {
+            return "Data nilai intrakurikuler dan project belum tersedia.";
+        }
+        
+        $terendah  = $semuaNilai->sortBy('nilai')->first();
+        $tertinggi = $semuaNilai->sortByDesc('nilai')->first();
+
+        // Kasus 1: Nilai Tunggal atau Sama Semua
+        if ($semuaNilai->count() === 1 || $terendah['nilai'] === $tertinggi['nilai']) {
+            $nilaiKomparasi = $terendah['nilai']; 
+            
+            if ($nilaiKomparasi > 84) {
+                // 🛑 DIHAPUS: Tag **
+                $narasi = "Menunjukkan penguasaan yang baik dalam hal";
+            } else {
+                // 🛑 DIHAPUS: Tag **
+                $narasi = "Perlu penguatan dalam hal";
+            }
+            
+            $allTujuan = $semuaNilai->pluck('tp')->unique()->implode(', ');
+            return $narasi . " " . $allTujuan . ".";
+
+        } 
+        
+        // Kasus 2: Nilai Bervariasi (Komparasi Terendah vs Tertinggi)
+        
+        // A. Kualifikasi Nilai Terendah (Area Peningkatan)
+        $nilaiRendah = $terendah['nilai'];
+        $tpRendah = $terendah['tp'];
+
+        if ($nilaiRendah < 81) {
+            $kunciRendah = "Perlu peningkatan dalam hal";
+        } else {
+            $kunciRendah = "Perlu penguatan dalam hal";
+        }
+        
+        // B. Kualifikasi Nilai Tertinggi (Area Penguasaan)
+        $nilaiTinggi = $tertinggi['nilai'];
+        $tpTinggi = $tertinggi['tp'];
+
+        if ($nilaiTinggi > 89) {
+            $kunciTinggi = "Mahir dalam hal";
+        } else {
+            $kunciTinggi = "Baik dalam hal";
+        }
+
+        // C. Bentuk Narasi Komparasi
+        // 🛑 DIHAPUS: Tag **
+        $narasi = "{$kunciRendah} {$tpRendah}, namun menunjukkan capaian {$kunciTinggi} {$tpTinggi}.";
+        
+        return $narasi;
+    }
+
+
     public function index(Request $request)
     {
-        $kelas = Kelas::orderBy('nama_kelas', 'asc')->get();
-        $id_kelas = $request->id_kelas;
-        $semesterRaw = $request->semester ?? 'Ganjil';
-        $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
-        $semesterInt = (strtoupper($semesterRaw) == 'GANJIL') ? 1 : 2;
-
-        $infoSekolah = InfoSekolah::first();
-        $namasekolah = $infoSekolah->nama_sekolah ?? 'E-Rapor SMK';
-        $alamatsekolah = $infoSekolah->jalan ?? 'Alamat belum diatur';
-
-        $monitoring = [];
-
-        if ($id_kelas) {
-            $pembelajaran = DB::table('pembelajaran')
-                ->leftJoin('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel') 
-                ->where('pembelajaran.id_kelas', $id_kelas)
-                ->select('pembelajaran.id_mapel', 'mata_pelajaran.nama_mapel')
-                ->get();
-
-            if ($pembelajaran->isNotEmpty()) {
-                $totalSiswaKelas = DB::table('siswa')->where('id_kelas', $id_kelas)->count();
-
-                foreach ($pembelajaran as $mp) {
-                    $namaMapel = $mp->nama_mapel ?? "Mapel ID: " . $mp->id_mapel;
-                    $siswaTuntasIds = DB::table(function ($query) use ($mp, $semesterInt, $tahun_ajaran) {
-                        $query->select('id_siswa')
-                            ->from('sumatif')
-                            ->where('id_mapel', $mp->id_mapel)
-                            ->where('semester', $semesterInt)
-                            ->where('tahun_ajaran', $tahun_ajaran)
-                            ->where('nilai', '>', 0)
-                            ->unionAll(
-                                DB::table('project')
-                                    ->select('id_siswa')
-                                    ->where('id_mapel', $mp->id_mapel)
-                                    ->where('semester', $semesterInt)
-                                    ->where('tahun_ajaran', $tahun_ajaran)
-                                    ->where('nilai', '>', 0)
-                            );
-                    }, 'combined_grades')
-                    ->select('id_siswa', DB::raw('count(*) as total'))
-                    ->groupBy('id_siswa')
-                    ->having('total', '>=', 1)
-                    ->pluck('id_siswa');
-
-                    $monitoring[] = (object)[
-                        'id_mapel' => $mp->id_mapel,
-                        'nama_mapel' => $namaMapel,
-                        'tuntas' => $siswaTuntasIds->count(),
-                        'belum' => $totalSiswaKelas - $siswaTuntasIds->count(),
-                        'total_siswa' => $totalSiswaKelas
-                    ];
-                }
-            }
-        }
-
-        return view('rapor.index_rapor', compact('kelas', 'monitoring', 'id_kelas', 'semesterRaw', 'tahun_ajaran', 'namasekolah', 'alamatsekolah'));
-    }
-
-    /**
-     * Halaman Cetak Rapor (Daftar Siswa Per Kelas)
-     */
-    public function cetakIndex(Request $request)
-    {
-        $kelas = Kelas::orderBy('nama_kelas', 'asc')->get();
-        $id_kelas = $request->id_kelas;
-        $semesterRaw = $request->semester ?? 'Ganjil';
-        $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
-        $semesterInt = (strtoupper($semesterRaw) == 'GANJIL' || $semesterRaw == '1') ? 1 : 2;
-
-        $siswaList = [];
-
-        if ($id_kelas) {
-            $siswaList = Siswa::with('kelas')
-                ->where('id_kelas', $id_kelas)
-                ->orderBy('nama_siswa', 'asc')
-                ->get();
-
-            foreach ($siswaList as $s) {
-                $s->status_monitoring = DB::table('status_rapor')
-                    ->where('id_siswa', $s->id_siswa)
-                    ->where('semester', (int)$semesterInt)
-                    ->where('tahun_ajaran', trim((string)$tahun_ajaran))
-                    ->first();
-
-                $s->data_catatan = DB::table('catatan')
-                    ->where('id_siswa', $s->id_siswa)
-                    ->where('semester', (int)$semesterInt)
-                    ->where('tahun_ajaran', trim((string)$tahun_ajaran))
-                    ->first();
-            }
-        }
-
-        return view('rapor.cetak_rapor', compact('kelas', 'siswaList', 'id_kelas', 'semesterRaw', 'tahun_ajaran'));
-    }
-
-    /**
-     * Proses Cetak PDF: Urutan 1-4 Tanpa Kata "KATEGORI"
-     */
-    public function cetak_proses($id_siswa, Request $request)
-    {
-        $semesterRaw = $request->semester ?? 'Ganjil';
-        $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
-        $semesterInt = (strtoupper($semesterRaw) == 'GANJIL' || $semesterRaw == '1') ? 1 : 2;
-
-        $siswa = Siswa::with('kelas')->findOrFail($id_siswa);
-        $getSekolah = InfoSekolah::first();
+        $kelas = Kelas::orderBy('nama_kelas')->get();
+        $mapel = collect();
+        $siswa = collect();
+        $rekap = [];
+        $error = null;
         
-        $sekolah = $getSekolah->nama_sekolah ?? 'SMKN 1 SALATIGA';
-        $infoSekolahVar = $getSekolah->jalan ?? 'Alamat Sekolah';
+        if ($request->id_kelas) {
+            $mapel = Pembelajaran::with('mapel')
+                ->where('id_kelas', $request->id_kelas)
+                ->get()
+                ->map(fn($p) => $p->mapel)
+                ->filter()
+                ->values();
+        }
 
-        // Logika Fase
-        $tktRaw = trim($siswa->kelas->tingkat ?? '');
-        $tkt = strtoupper(preg_replace("/[^a-zA-Z0-9]/", "", $tktRaw));
-        $fase = match (true) {
-            ($tkt === 'X' || $tkt === '10') => 'E',
-            ($tkt === 'XI' || $tkt === '11' || $tkt === 'XII' || $tkt === '12') => 'F',
-            default => '-'
-        };
+        if (
+            $request->filled(['id_kelas', 'id_mapel', 'tahun_ajaran', 'semester'])
+        ) {
+            
+            $semesterDB = $this->mapSemesterToInt($request->semester);
+            $idKelas = $request->id_kelas;
+            $idMapel = $request->id_mapel;
+            $tahunAjaran = trim($request->tahun_ajaran);
 
-        // --- TAHAP PECAH 1-1 BERDASARKAN INTEGER (1-4) ---
-        // Header disesuaikan: Menghilangkan kata "KATEGORI"
-        $mapelFinal = [];
-        $daftarUrutan = [
-            1 => 'MATA PELAJARAN UMUM',
-            2 => 'MATA PELAJARAN KEJURUAN',
-            3 => 'MATA PELAJARAN PILIHAN',
-            4 => 'MUATAN LOKAL'
-        ];
+            if (is_null($semesterDB)) {
+                $error = 'Nilai semester tidak valid.';
+                goto render_view;
+            }
 
-        foreach ($daftarUrutan as $key => $headerLabel) {
-            $kelompok = DB::table('pembelajaran')
-                ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
-                ->where('pembelajaran.id_kelas', $siswa->id_kelas)
-                ->where('mata_pelajaran.kategori', $key)
-                ->select('mata_pelajaran.id_mapel', 'mata_pelajaran.nama_mapel')
-                ->get();
+            // ... (Pengambilan Siswa) ...
+            $selectedMapel = MataPelajaran::find($idMapel);
+            $querySiswa = Siswa::with('detail')->where('id_kelas', $idKelas);
+            if ($selectedMapel && $selectedMapel->agama_khusus) {
+                $querySiswa->whereHas('detail', fn ($q) => $q->where('agama', $selectedMapel->agama_khusus));
+            }
+            $siswa = $querySiswa->orderBy('nama_siswa')->get();
 
-            if ($kelompok->isNotEmpty()) {
-                foreach ($kelompok as $mp) {
-                    $mp->nilai_akhir = $this->hitungNilai($id_siswa, $mp->id_mapel, $semesterInt, $tahun_ajaran);
-                    $mp->capaian = $mp->nilai_akhir >= 75 
-                        ? "Menunjukkan penguasaan yang baik dalam " . $mp->nama_mapel 
-                        : "Perlu bimbingan dalam " . $mp->nama_mapel;
+            if ($siswa->isEmpty()) {
+                goto render_view;
+            }
+
+            // --- QUERY UTAMA SUMATIF DAN PROJECT ---
+            $baseQuery = [
+                'id_kelas' => $idKelas,
+                'id_mapel' => $idMapel,
+                'semester' => $semesterDB, 
+                'tahun_ajaran' => $tahunAjaran,
+            ];
+            
+            $allSumatif = Sumatif::select(['id_siswa', 'nilai', 'sumatif', 'tujuan_pembelajaran']) 
+                ->where($baseQuery)
+                ->get()
+                ->groupBy('id_siswa'); 
+            
+            $allProject = Project::where($baseQuery)->get()->keyBy('id_siswa');
+
+
+            foreach ($siswa as $s) {
+                $idSiswa = $s->id_siswa;
+                
+                // --- 1. PROSES SUMATIF & CASTING ---
+                $sumatifCollection = $allSumatif->get($idSiswa) ?? collect();
+                
+                $s1_raw = optional($sumatifCollection->firstWhere('sumatif', 1))->nilai;
+                $s2_raw = optional($sumatifCollection->firstWhere('sumatif', 2))->nilai;
+                $s3_raw = optional($sumatifCollection->firstWhere('sumatif', 3))->nilai;
+                
+                $s1 = ($s1_raw !== null && $s1_raw !== '') ? (int)$s1_raw : null;
+                $s2 = ($s2_raw !== null && $s2_raw !== '') ? (int)$s2_raw : null;
+                $s3 = ($s3_raw !== null && $s3_raw !== '') ? (int)$s3_raw : null;
+
+                // Kumpulkan TP Sumatif yang memiliki nilai
+                $tpSumatif = $sumatifCollection
+                    ->filter(fn ($i) => $i->nilai !== null)
+                    ->map(fn ($item) => [
+                        'nilai' => (float) $item->nilai,
+                        'tp'    => $item->tujuan_pembelajaran, 
+                        'label' => 'Sumatif ' . $item->sumatif, 
+                    ]);
+
+                $nilaiSumatif = collect([$s1, $s2, $s3])
+                    ->filter(fn ($v) => $v !== null && $v > 0);
+                $rataSumatif = $nilaiSumatif->count() >= 2 ? round($nilaiSumatif->avg(), 2) : null;
+                $bobotSumatif = $rataSumatif !== null ? round($rataSumatif * 0.4, 2) : null;
+
+                // --- 2. PROSES PROJECT ---
+                $projectItem = $allProject->get($idSiswa);
+                $nilaiMentahProject = optional($projectItem)->nilai; 
+                $rataProject = $nilaiMentahProject; 
+
+                // Kumpulkan TP Project
+                $tpProject = $projectItem
+                    ? collect([[
+                        'nilai' => (float) $projectItem->nilai,
+                        'tp'    => $projectItem->tujuan_pembelajaran, 
+                        'label' => 'Project',
+                    ]])
+                    : collect();
+
+                $bobotProject = optional($projectItem)->nilai_bobot;
+                if ($bobotProject === null && $rataProject !== null) {
+                    $bobotProject = round($rataProject * 0.6, 2); 
                 }
-                $mapelFinal[$headerLabel] = $kelompok;
+
+                // --- 3. HITUNG AKHIR ---
+                $nilaiAkhir = round(($bobotSumatif ?? 0) + ($bobotProject ?? 0), 2);
+
+
+                // --- 4. GENERATE DAN SIMPAN CAPAIAN AKHIR ---
+                $semuaNilai = $tpSumatif
+                    ->merge($tpProject)
+                    ->filter(fn ($n) => $n['nilai'] !== null && $n['nilai'] > 0);
+                
+                $capaianAkhir = $this->generateCapaianAkhir($s, $semuaNilai);
+
+                // --- 5. SIMPAN KE NILAI AKHIR MODEL ---
+                NilaiAkhir::updateOrCreate(
+                    [
+                        'id_kelas' => $idKelas,
+                        'id_mapel' => $idMapel,
+                        'id_siswa' => $idSiswa,
+                        'tahun_ajaran' => $tahunAjaran,
+                        'semester' => $semesterDB,
+                    ],
+                    [
+                        'nilai_s1' => $s1 ?? 0, 'nilai_s2' => $s2 ?? 0, 'nilai_s3' => $s3 ?? 0, 
+                        'rata_sumatif' => $rataSumatif ?? 0.00,
+                        'bobot_sumatif' => $bobotSumatif ?? 0.00,
+                        'nilai_project' => $nilaiMentahProject ?? 0.00, 
+                        'rata_project' => $rataProject ?? 0.00, 
+                        'bobot_project' => $bobotProject ?? 0.00,
+                        'nilai_akhir' => $nilaiAkhir ?? 0.00,
+                        'capaian_akhir' => $capaianAkhir,
+                    ]
+                );
+
+                // --- 6. DATA UNTUK VIEW ---
+                $rekap[$s->id_siswa] = [
+                    's1' => ($s1 !== null) ? $s1 : '-', 
+                    's2' => ($s2 !== null) ? $s2 : '-',
+                    's3' => ($s3 !== null) ? $s3 : '-',
+                    'rata_sumatif' => $rataSumatif,
+                    'bobot_sumatif' => $bobotSumatif,
+                    'nilai_project' => $nilaiMentahProject ?? '-',
+                    'rata_project' => $rataProject, 
+                    'bobot_project' => $bobotProject,
+                    'nilai_akhir' => $nilaiAkhir,
+                    'capaian_akhir' => $capaianAkhir,
+                ];
+
+                // // Panggil mesin penghitung status rapor
+                // $raporCtrl = app(RaporController::class);
+                // foreach ($siswa as $s) {
+                //     $raporCtrl->perbaruiStatusRapor(
+                //         $s->id_siswa, 
+                //         $request->semester, 
+                //         $request->tahun_ajaran
+                //     );
+                // }
             }
         }
 
-        $catatan = DB::table('catatan')->where(['id_siswa' => $id_siswa, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran])->first();
-        $namaWali = $siswa->kelas->wali_kelas ?? 'Wali Kelas';
-        $dataGuru = DB::table('guru')->where('nama_guru', 'LIKE', '%' . $namaWali . '%')->first();
-
-        $data = [
-            'siswa'         => $siswa,
-            'fase'          => $fase,
-            'sekolah'       => $sekolah,
-            'infoSekolah'   => $infoSekolahVar,
-            'mapelGroup'    => $mapelFinal,
-            'catatan'       => $catatan,
-            'semester'      => $semesterRaw,
-            'tahun_ajaran'  => $tahun_ajaran,
-            'semesterInt'   => $semesterInt,
-            'namaWali'      => $namaWali,
-            'nip_wali'      => $dataGuru->nip ?? '-',
-        ];
-
-        $pdf = Pdf::loadView('rapor.pdf1_template', $data)->setPaper('a4', 'portrait');
-        return $pdf->stream('Rapor_'.$siswa->nama_siswa.'.pdf');
-    }
-
-    /**
-     * Helper Hitung Nilai Akhir
-     */
-    private function hitungNilai($id_siswa, $id_mapel, $semester, $tahun)
-    {
-        $sumatif = DB::table('sumatif')
-            ->where(['id_siswa' => $id_siswa, 'id_mapel' => $id_mapel, 'semester' => $semester, 'tahun_ajaran' => $tahun])
-            ->avg('nilai') ?: 0;
-
-        $project = DB::table('project')
-            ->where(['id_siswa' => $id_siswa, 'id_mapel' => $id_mapel, 'semester' => $semester, 'tahun_ajaran' => $tahun])
-            ->avg('nilai') ?: 0;
-
-        return round(($sumatif + $project) / 2);
+        
+        
+        render_view:
+        return view('nilai.nilaiakhir', compact(
+            'kelas',
+            'mapel',
+            'siswa',
+            'rekap',
+            'error' 
+        ));
     }
 }
