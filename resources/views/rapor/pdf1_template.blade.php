@@ -171,7 +171,7 @@
         }
 
         .main-table{
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .table-ttd {
@@ -279,7 +279,7 @@
     <div class="judul-rapor">LAPORAN HASIL BELAJAR</div>
     {{-- <h4 class="text-center" style="margin-top: 5px;">LAPORAN HASIL BELAJAR</h4> --}}
     </body>
-    <table class="main-table" style="margin-bottom: 30px">
+    <table class="main-table">
         <thead>
             <tr>
                 <th class="text-center" style="width: 5%;">No</th>
@@ -304,7 +304,7 @@
             @endforeach
         </tbody>
     </table>
-<table class="main-table" style="margin-bottom: 30px">
+<table class="main-table">
     <thead>
         <tr class="bg-light">
             {{-- Baris 1: Judul --}}

@@ -192,48 +192,88 @@
     </div>
 </div>
 
-{{-- MODAL IMPORT --}}
-<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+{{-- MODAL IMPORT REVISI --}}
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header"><h5>Import Nilai Project</h5></div>
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-normal" id="importModalLabel">
+                    <i class="fas fa-file-import me-2 text-success"></i>Import Nilai Project
+                </h5>
+                <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
             <form action="{{ route('master.project.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Kelas:</label>
-                        <select name="id_kelas" required class="form-select ajax-select-kelas" data-target="#mapel_import_project">
-                            <option value="">Pilih Kelas</option>
-                            @foreach($kelas as $k) <option value="{{ $k->id_kelas }}">{{ $k->nama_kelas }}</option> @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Mata Pelajaran:</label>
-                        <select name="id_mapel" id="mapel_import_project" required class="form-select"><option value="">Pilih Kelas Dahulu</option></select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Semester:</label>
-                            <select name="semester" required class="form-select">
-                                @foreach($semesterList as $sem)
-                                    <option value="{{ $sem }}" {{ $defaultSemester == $sem ? 'selected' : '' }}>{{ $sem }}</option>
-                                @endforeach
-                            </select>
+                    <div class="row">
+                        {{-- Row 1: Kelas --}}
+                        <div class="col-12 mb-3">
+                            <div class="form-group">
+                                <label class="form-control-label">Kelas</label>
+                                <select name="id_kelas" required class="form-select ajax-select-kelas" data-target="#mapel_import_project">
+                                    <option value="">Pilih Kelas</option>
+                                    @foreach($kelas as $k) 
+                                        <option value="{{ $k->id_kelas }}">{{ $k->nama_kelas }}</option> 
+                                    @endforeach
+                                </select>
+                            </div>
                         </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tahun Ajaran:</label>
-                            <select name="tahun_ajaran" required class="form-select">
-                                @foreach ($tahunAjaranList as $ta)
-                                    <option value="{{ $ta }}" {{ $defaultTahunAjaran == $ta ? 'selected' : '' }}>{{ $ta }}</option>
-                                @endforeach
-                            </select>
+
+                        {{-- Row 2: Mata Pelajaran --}}
+                        <div class="col-12 mb-3">
+                            <div class="form-group">
+                                <label class="form-control-label">Mata Pelajaran</label>
+                                <select name="id_mapel" id="mapel_import_project" required class="form-select">
+                                    <option value="">Pilih Kelas Dahulu</option>
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Pilih File Excel:</label>
-                        <input type="file" name="file_excel" required class="form-control" accept=".xlsx, .xls">
+
+                        {{-- Row 3: Semester & Tahun Ajaran (Berdampingan) --}}
+                        <div class="col-md-6 mb-3">
+                            <div class="form-group">
+                                <label class="form-control-label">Semester</label>
+                                <select name="semester" required class="form-select">
+                                    @foreach($semesterList as $sem)
+                                        <option value="{{ $sem }}" {{ $defaultSemester == $sem ? 'selected' : '' }}>{{ $sem }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-group">
+                                <label class="form-control-label">Tahun Ajaran</label>
+                                <select name="tahun_ajaran" required class="form-select">
+                                    @foreach ($tahunAjaranList as $ta)
+                                        <option value="{{ $ta }}" {{ $defaultTahunAjaran == $ta ? 'selected' : '' }}>{{ $ta }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        {{-- Row 4: File Excel --}}
+                        <div class="col-12 mb-2">
+                            <div class="form-group">
+                                <label class="form-control-label">Pilih File Excel</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-file-excel"></i></span>
+                                    <input type="file" name="file_excel" required class="form-control" accept=".xlsx, .xls">
+                                </div>
+                                <small class="text-xs text-muted mt-2 d-block">
+                                    *Gunakan template yang telah diunduh untuk menghindari kesalahan format.
+                                </small>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer"><button type="submit" class="btn bg-gradient-success">Import Data</button></div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-link text-secondary mb-0" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn bg-gradient-success mb-0">
+                        <i class="fas fa-upload me-2"></i>Import Data
+                    </button>
+                </div>
             </form>
         </div>
     </div>
