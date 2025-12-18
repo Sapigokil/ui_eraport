@@ -481,8 +481,9 @@
         {{-- NIP Kepala Sekolah --}}
         <span>NIP. {{ $info_sekolah->nip_kepsek ?? '-' }}</span>
     </div>
-<div class="footer-fixed" style="position: fixed; bottom: -30px; left: 0; right: 0; height: 40px; border-top: 1px solid #000; z-index: 1000;"></div>
 </div>
+<div class="footer-fixed" style="position: fixed; bottom: -30px; left: 0; right: 0; height: 40px; border-top: 1px solid #000; z-index: 1000;"></div>
+
 <script type="text/php">
     if (isset($pdf)) {
         // Coba gunakan nama font standar yang biasanya memiliki varian italic otomatis di DomPDF
