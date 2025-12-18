@@ -24,6 +24,7 @@
             border-bottom: 2px solid #000;
             background-color: white; /* Mencegah tembus pandang */
             z-index: 1000;
+            margin-bottom: 50px;
         }
         body { font-family: 'Arial', sans-serif; font-size: 11pt; line-height: 1.3; padding-bottom: 50px; }
         .header-table td { vertical-align: top; padding-bottom: 5px; }
