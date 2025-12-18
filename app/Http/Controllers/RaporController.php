@@ -79,7 +79,54 @@ class RaporController extends Controller
     }
 
     /**
-     * MESIN SINKRONISASI (Logic yang sempat hilang)
+     * AJAX: Mendapatkan daftar nama siswa untuk Modal Detail di Monitoring
+     */
+    public function getDetailSiswa(Request $request)
+    {
+        $id_mapel = $request->id_mapel;
+        $id_kelas = $request->id_kelas;
+        $tipe = $request->tipe; 
+        $semester = (strtoupper($request->semester) == 'GANJIL') ? 1 : 2;
+        $tahun_ajaran = $request->tahun_ajaran;
+
+        $semuaSiswa = DB::table('siswa')
+            ->where('id_kelas', $id_kelas)
+            ->select('id_siswa', 'nama_siswa', 'nis')
+            ->get();
+
+        $tuntasIds = DB::table(function ($query) use ($id_mapel, $semester, $tahun_ajaran) {
+            $query->select('id_siswa')
+                ->from('sumatif')
+                ->where('id_mapel', $id_mapel)
+                ->where('semester', $semester)
+                ->where('tahun_ajaran', $tahun_ajaran)
+                ->where('nilai', '>', 0)
+                ->unionAll(
+                    DB::table('project')
+                        ->select('id_siswa')
+                        ->where('id_mapel', $id_mapel)
+                        ->where('semester', $semester)
+                        ->where('tahun_ajaran', $tahun_ajaran)
+                        ->where('nilai', '>', 0)
+                );
+        }, 'combined_grades')
+        ->select('id_siswa', DB::raw('count(*) as total'))
+        ->groupBy('id_siswa')
+        ->having('total', '>=', 1)
+        ->pluck('id_siswa')
+        ->toArray();
+
+        if ($tipe == 'tuntas') {
+            $result = $semuaSiswa->whereIn('id_siswa', $tuntasIds);
+        } else {
+            $result = $semuaSiswa->whereNotIn('id_siswa', $tuntasIds);
+        }
+
+        return response()->json($result->values());
+    }
+
+    /**
+     * Mesin Sinkronisasi Progres Rapor
      */
     public function perbaruiStatusRapor($id_siswa, $semester, $tahun_ajaran)
     {
@@ -132,6 +179,9 @@ class RaporController extends Controller
         );
     }
 
+    /**
+     * Sinkronkan Status Rapor Satu Kelas via AJAX
+     */
     public function sinkronkanKelas(Request $request)
     {
         try {
@@ -151,7 +201,7 @@ class RaporController extends Controller
     }
 
     /**
-     * Halaman Cetak Rapor (Daftar Siswa)
+     * Halaman Cetak Rapor (List Siswa per Kelas)
      */
     public function cetakIndex(Request $request)
     {
@@ -201,7 +251,7 @@ class RaporController extends Controller
     }
 
     /**
-     * Proses Cetak PDF: Urutan Kelompok Mata Pelajaran 1-4
+     * Proses Cetak PDF Rapor: Urutan Terkunci 1-4 & Ambil Data Final
      */
     public function cetak_proses($id_siswa, Request $request)
     {
@@ -241,10 +291,18 @@ class RaporController extends Controller
 
             if ($kelompok->isNotEmpty()) {
                 foreach ($kelompok as $mp) {
-                    $mp->nilai_akhir = $this->hitungNilai($id_siswa, $mp->id_mapel, $semesterInt, $tahun_ajaran);
-                    $mp->capaian = $mp->nilai_akhir >= 75 
-                        ? "Menunjukkan penguasaan yang baik dalam " . $mp->nama_mapel 
-                        : "Perlu bimbingan dalam " . $mp->nama_mapel;
+                    $dataFinal = DB::table('nilai_akhir')
+                        ->where([
+                            'id_siswa' => $id_siswa,
+                            'id_mapel' => $mp->id_mapel,
+                            'semester' => $semesterInt,
+                            'tahun_ajaran' => $tahun_ajaran
+                        ])
+                        ->first();
+
+                    // Gunakan variabel nilai_akhir agar tidak terjadi error di Blade
+                    $mp->nilai_akhir = $dataFinal->nilai_akhir ?? 0;
+                    $mp->capaian = $dataFinal->capaian_akhir ?? '-';
                 }
                 $mapelFinal[$headerLabel] = $kelompok;
             }
@@ -270,18 +328,5 @@ class RaporController extends Controller
 
         $pdf = Pdf::loadView('rapor.pdf1_template', $data)->setPaper('a4', 'portrait');
         return $pdf->stream('Rapor_'.$siswa->nama_siswa.'.pdf');
-    }
-
-    private function hitungNilai($id_siswa, $id_mapel, $semester, $tahun)
-    {
-        $sumatif = DB::table('sumatif')
-            ->where(['id_siswa' => $id_siswa, 'id_mapel' => $id_mapel, 'semester' => $semester, 'tahun_ajaran' => $tahun])
-            ->avg('nilai') ?: 0;
-
-        $project = DB::table('project')
-            ->where(['id_siswa' => $id_siswa, 'id_mapel' => $id_mapel, 'semester' => $semester, 'tahun_ajaran' => $tahun])
-            ->avg('nilai') ?: 0;
-
-        return round(($sumatif + $project) / 2);
     }
 }
