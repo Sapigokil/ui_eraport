@@ -42,6 +42,7 @@ class RaporController extends Controller
 
                 foreach ($pembelajaran as $mp) {
                     $namaMapel = $mp->nama_mapel ?? "Mapel ID: " . $mp->id_mapel;
+
                     $siswaTuntasIds = DB::table(function ($query) use ($mp, $semesterInt, $tahun_ajaran) {
                         $query->select('id_siswa')
                             ->from('sumatif')
@@ -78,7 +79,79 @@ class RaporController extends Controller
     }
 
     /**
-     * Halaman Cetak Rapor (Daftar Siswa Per Kelas)
+     * MESIN SINKRONISASI (Logic yang sempat hilang)
+     */
+    public function perbaruiStatusRapor($id_siswa, $semester, $tahun_ajaran)
+    {
+        $semesterInt = (strtoupper($semester) == 'GANJIL' || $semester == '1') ? 1 : 2;
+        $siswa = Siswa::findOrFail($id_siswa);
+
+        $daftarMapel = DB::table('pembelajaran')->where('id_kelas', $siswa->id_kelas)->pluck('id_mapel');
+        $totalMapel = $daftarMapel->count();
+        $mapelTuntas = 0;
+
+        foreach ($daftarMapel as $id_mapel) {
+            $sumatifCount = DB::table('sumatif')
+                ->where('id_siswa', $id_siswa)
+                ->where('id_mapel', $id_mapel)
+                ->where('semester', $semesterInt)
+                ->where('tahun_ajaran', (string)$tahun_ajaran)
+                ->where('nilai', '>', 0)
+                ->count();
+
+            $projectCount = DB::table('project')
+                ->where('id_siswa', $id_siswa)
+                ->where('id_mapel', $id_mapel)
+                ->where('semester', $semesterInt)
+                ->where('tahun_ajaran', (string)$tahun_ajaran)
+                ->where('nilai', '>', 0)
+                ->count();
+
+            if (($sumatifCount + $projectCount) >= 1) { 
+                $mapelTuntas++; 
+            }
+        }
+
+        $isCatatanReady = DB::table('catatan')
+            ->where('id_siswa', $id_siswa)
+            ->where('semester', $semesterInt)
+            ->where('tahun_ajaran', (string)$tahun_ajaran)
+            ->whereNotNull('catatan_wali_kelas') 
+            ->whereRaw("TRIM(catatan_wali_kelas) != ''") 
+            ->exists();
+
+        return StatusRapor::updateOrCreate(
+            ['id_siswa' => $id_siswa, 'semester' => $semesterInt, 'tahun_ajaran' => (string)$tahun_ajaran],
+            [
+                'id_kelas' => $siswa->id_kelas,
+                'total_mapel_seharusnya' => $totalMapel,
+                'mapel_tuntas_input' => $mapelTuntas,
+                'is_catatan_wali_ready' => $isCatatanReady ? 1 : 0,
+                'status_akhir' => ($mapelTuntas >= $totalMapel && $isCatatanReady) ? 'Siap Cetak' : 'Belum Lengkap'
+            ]
+        );
+    }
+
+    public function sinkronkanKelas(Request $request)
+    {
+        try {
+            $id_kelas = $request->id_kelas;
+            $semester = $request->semester;
+            $tahun_ajaran = $request->tahun_ajaran;
+            if (!$id_kelas) return response()->json(['success' => false, 'message' => 'ID Kelas tidak ditemukan'], 400);
+
+            $daftarSiswa = Siswa::where('id_kelas', $id_kelas)->get();
+            foreach ($daftarSiswa as $s) {
+                $this->perbaruiStatusRapor($s->id_siswa, $semester, $tahun_ajaran);
+            }
+            return response()->json(['success' => true, 'message' => 'Sinkronisasi berhasil']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Halaman Cetak Rapor (Daftar Siswa)
      */
     public function cetakIndex(Request $request)
     {
@@ -115,7 +188,20 @@ class RaporController extends Controller
     }
 
     /**
-     * Proses Cetak PDF: Urutan 1-4 Tanpa Kata "KATEGORI"
+     * AJAX: Get Mapel by Kelas
+     */
+    public function getMapelByKelas($id_kelas)
+    {
+        $mapel = DB::table('pembelajaran')
+            ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
+            ->where('pembelajaran.id_kelas', $id_kelas)
+            ->select('mata_pelajaran.id_mapel', 'mata_pelajaran.nama_mapel')
+            ->get();
+        return response()->json($mapel);
+    }
+
+    /**
+     * Proses Cetak PDF: Urutan Kelompok Mata Pelajaran 1-4
      */
     public function cetak_proses($id_siswa, Request $request)
     {
@@ -129,7 +215,6 @@ class RaporController extends Controller
         $sekolah = $getSekolah->nama_sekolah ?? 'SMKN 1 SALATIGA';
         $infoSekolahVar = $getSekolah->jalan ?? 'Alamat Sekolah';
 
-        // Logika Fase
         $tktRaw = trim($siswa->kelas->tingkat ?? '');
         $tkt = strtoupper(preg_replace("/[^a-zA-Z0-9]/", "", $tktRaw));
         $fase = match (true) {
@@ -138,8 +223,6 @@ class RaporController extends Controller
             default => '-'
         };
 
-        // --- TAHAP PECAH 1-1 BERDASARKAN INTEGER (1-4) ---
-        // Header disesuaikan: Menghilangkan kata "KATEGORI"
         $mapelFinal = [];
         $daftarUrutan = [
             1 => 'MATA PELAJARAN UMUM',
@@ -189,9 +272,6 @@ class RaporController extends Controller
         return $pdf->stream('Rapor_'.$siswa->nama_siswa.'.pdf');
     }
 
-    /**
-     * Helper Hitung Nilai Akhir
-     */
     private function hitungNilai($id_siswa, $id_mapel, $semester, $tahun)
     {
         $sumatif = DB::table('sumatif')
