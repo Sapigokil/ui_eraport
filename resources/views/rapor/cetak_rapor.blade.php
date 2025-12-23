@@ -293,10 +293,12 @@ function sinkronkanSatuKelas() {
 }
 
 function showDetailProgress(idSiswa, namaSiswa) {
+    // 1. Tampilkan Modal & Loading State
     $('#modalStudentName').text(namaSiswa);
     $('#listDetailMapel').html('<tr><td colspan="3" class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i> Mengambil data...</td></tr>');
     $('#modalDetailProgress').modal('show');
 
+    // 2. Jalankan AJAX
     $.ajax({
         url: "{{ route('rapornilai.detail_progress') }}",
         method: "GET",
@@ -310,6 +312,7 @@ function showDetailProgress(idSiswa, namaSiswa) {
             let html = '';
             if (res.data && res.data.length > 0) {
                 res.data.forEach(function(item) {
+                    // Warna baris transparan hijau jika lengkap, merah jika belum
                     let rowStyle = item.is_lengkap 
                         ? 'background-color: rgba(45, 206, 137, 0.05);' 
                         : 'background-color: rgba(245, 54, 88, 0.05);';
@@ -327,7 +330,7 @@ function showDetailProgress(idSiswa, namaSiswa) {
                                     ${iconStatus}
                                     <div class="d-flex flex-column text-start">
                                         <span class="text-sm font-weight-bold text-dark">${item.nama_mapel}</span>
-                                        <span class="text-xxs text-secondary text-uppercase">${item.kategori || 'Umum'}</span>
+                                        <span class="text-xxs text-secondary text-uppercase">${item.kategori}</span>
                                     </div>
                                 </div>
                             </td>
@@ -338,18 +341,21 @@ function showDetailProgress(idSiswa, namaSiswa) {
                             </td>
                             <td class="text-center">
                                 <span class="text-sm font-weight-bolder ${item.is_lengkap ? 'text-dark' : 'text-muted'}">
-                                    ${item.nilai_akhir && item.nilai_akhir !== '-' ? item.nilai_akhir : '<span class="text-xs opacity-5">-</span>'}
+                                    ${item.nilai_akhir}
                                 </span>
                             </td>
                         </tr>`;
                 });
             } else {
-                html = '<tr><td colspan="3" class="text-center py-4 text-muted">Tidak ada data mapel.</td></tr>';
+                html = '<tr><td colspan="3" class="text-center py-4 text-muted">Tidak ada data mapel untuk siswa ini.</td></tr>';
             }
+            // Update isi tabel modal
             $('#listDetailMapel').html(html);
         },
         error: function(xhr) {
-            $('#listDetailMapel').html(`<tr><td colspan="3" class="text-center text-danger py-4">Gagal memuat data.</td></tr>`);
+            console.error(xhr);
+            let errorText = xhr.responseJSON ? xhr.responseJSON.message : 'Gagal memuat data.';
+            $('#listDetailMapel').html(`<tr><td colspan="3" class="text-center text-danger py-4">${errorText}</td></tr>`);
         }
     });
 }

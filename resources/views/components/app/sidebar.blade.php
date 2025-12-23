@@ -317,7 +317,7 @@ linear-gradient(180deg, #0f172a, #020617);">
                 <div class="collapse {{ $isRaporActive ? 'show' : '' }}" id="dataRaporMenu">
                     <ul class="nav ms-4 ps-3">
                         
-                        {{-- Menu Monitoring (Yang sudah ada) --}}
+                        {{-- Menu Monitoring (Yang sudah ada)
                         <li class="nav-item">
                             <a class="nav-link {{ Route::is('rapornilai.index') ? 'active' : '' }}" href="{{ route('rapornilai.index') }}">
                                 <span class="sidenav-mini-icon">
@@ -325,7 +325,7 @@ linear-gradient(180deg, #0f172a, #020617);">
                                 </span>
                                 <span class="nav-link-text ms-1 text-white">Monitoring Rapor</span>
                             </a>
-                        </li>
+                        </li> --}}
 
                         {{-- MENU BARU: Cetak Rapor --}}
                         <li class="nav-item">
