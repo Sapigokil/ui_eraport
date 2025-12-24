@@ -1,48 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Cetak Massal Rapor</title>
-    <style>
-        /* CSS Page Break */
-        .page-break { page-break-after: always; }
-        .page-break:last-child { page-break-after: never; }
+    <meta charset="UTF-8">
 
-        /* Copy SEMUA CSS dari pdf1_template ke sini agar konsisten */
-        @page { margin: 50px 50px 50px 50px; }
-        .header-fixed { position: fixed; top: 0px; left: 0px; right: 0px; height: 90px; border-bottom: 2px solid #000; background-color: white; z-index: 1000; }
-        .footer-fixed { position: fixed; bottom: -30px; left: 0; right: 0; height: 40px; border-top: 1px solid #000; z-index: 1000; }
-        body { font-family: 'Arial', sans-serif; font-size: 11pt; padding-top: 110px; padding-bottom: 50px; }
-        /* ... Sertakan CSS tabel Anda yang lain di sini ... */
+    <style>
+        /* =========================
+           PAGE SETTING (DOMPDF)
+        ========================== */
+        @page {
+            size: A4;
+            margin: 150px 40px 60px 40px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+            margin: 0;
+            padding: 0;
+            color: #000;
+        }
+
+        /* =========================
+           HEADER
+        ========================== */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 130px;
+            background: #ffffff;
+            border-bottom: 2px solid #000;
+        }
+
+        .header-wrapper {
+            width: 100%;
+            padding: 10px 15px;
+        }
+
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed; /* WAJIB */
+        }
+
+        .header-table td {
+            padding: 2px 4px;
+            vertical-align: top;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .font-bold {
+            font-weight: bold;
+        }
+
+        /* =========================
+           CONTENT
+        ========================== */
+        main {
+            padding-top: 10px;
+        }
+
+        .dummy-box {
+            border: 1px solid #000;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
+
 <body>
-    <div class="header-fixed">
+
+    {{-- =========================
+         HEADER (FIXED)
+    ========================== --}}
+    <header>
+        <div class="header-wrapper">
+            <table class="header-table">
+                <tr>
+                    <td style="width: 25mm;">Nama</td>
+                    <td style="width: 5mm;">:</td>
+                    <td style="width: 60mm;" class="font-bold">
+                        {{ strtoupper($siswa->nama_siswa ?? 'NAMA SISWA SANGAT PANJANG SEKALI') }}
+                    </td>
+
+                    <td style="width: 10mm;"></td>
+
+                    <td style="width: 20mm;">Kelas</td>
+                    <td style="width: 5mm;">:</td>
+                    <td style="width: 25mm;">
+                        {{ $siswa->kelas->nama_kelas ?? 'XII RPL 1' }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>NIS / NIPD</td>
+                    <td>:</td>
+                    <td>{{ $siswa->nipd ?? '1234567890' }}</td>
+
+                    <td></td>
+
+                    <td>Semester</td>
+                    <td>:</td>
+                    <td>{{ $semester ?? 'Ganjil' }}</td>
+                </tr>
+
+                <tr>
+                    <td>Tahun Ajaran</td>
+                    <td>:</td>
+                    <td>{{ $tahun_ajaran ?? '2025 / 2026' }}</td>
+
+                    <td></td>
+
+                    <td>Wali Kelas</td>
+                    <td>:</td>
+                    <td>
+                        {{ $wali_kelas ?? 'NAMA WALI KELAS PANJANG SEKALI' }}
+                    </td>
+                </tr>
+            </table>
         </div>
-    <div class="footer-fixed"></div>
+    </header>
 
-    @foreach($allData as $data)
-        <div class="page-break">
-            {{-- Panggil konten tabel saja --}}
-            @include('rapor.pdf1_template_content', $data)
+    {{-- =========================
+         CONTENT
+    ========================== --}}
+    <main>
+        <div class="dummy-box">
+            Contoh konten halaman 1.
         </div>
-    @endforeach
 
-    <script type="text/php">
-        if (isset($pdf)) {
-            $font_italic = $fontMetrics->get_font("helvetica", "italic");
-            $font_bold = $fontMetrics->get_font("helvetica", "bold");
-            $size = 9;
+        <div class="dummy-box">
+            Tambahkan banyak konten di sini sampai halaman 2,
+            untuk memastikan header tetap aman dan tidak overflow.
+        </div>
 
-            // Loop per halaman untuk mengisi Header dan Footer secara dinamis
-            foreach ($pdf->get_pages() as $pageNumber => $page) {
-                $pdf->reopen_object($page);
-                
-                // Tulis nomor halaman dan identitas di sini agar tidak bertumpuk
-                // Ini memastikan teks hanya ditulis 1x per halaman
-                
-                $pdf->close_object();
-            }
-        }
-    </script>
+        @for ($i = 1; $i <= 40; $i++)
+            <div class="dummy-box">
+                Baris konten ke-{{ $i }}
+            </div>
+        @endfor
+    </main>
+
 </body>
 </html>

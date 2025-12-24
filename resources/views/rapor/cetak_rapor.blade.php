@@ -5,7 +5,7 @@
 @section('content')
 
 @php
-    // --- LOGIKA TAHUN AJARAN & SEMESTER OTOMATIS (Sama dengan Index Rapor) ---
+    // --- LOGIKA TAHUN AJARAN & SEMESTER OTOMATIS ---
     $tahunSekarang = date('Y');
     $bulanSekarang = date('n');
 
@@ -21,7 +21,6 @@
 
     $defaultTahunAjaran = $defaultTA1 . '/' . $defaultTA2;
     
-    // Gunakan value dari controller, jika kosong gunakan default
     $selectedTA = $tahun_ajaran ?? $defaultTahunAjaran;
     $selectedSemester = $semesterRaw ?? $defaultSemester;
 
@@ -100,9 +99,8 @@
                                 <td class="text-center text-sm">{{ $idx + 1 }}</td>
                                 <td class="text-sm">
                                     <span class="font-weight-bold">{{ $s->nama_siswa }}</span><br>
-                                    <small class="text-secondary">{{ $s->nis }}</small>
+                                    <small class="text-secondary">{{ $s->nipd }}</small>
                                 </td>
-                                {{-- Ganti bagian <td> Progress Mapel dengan ini --}}
                                 <td class="text-center text-sm">
                                     @if($s->status_monitoring)
                                         @php
@@ -147,7 +145,6 @@
                                 <td class="text-center align-middle">
                                     @if($s->status_monitoring && $s->status_monitoring->status_akhir == 'Siap Cetak')
                                         <div class="d-flex justify-content-center gap-2">
-                                            {{-- Tombol View: Style Identik Badge Status (Biru) --}}
                                             <a href="{{ route('rapornilai.cetak_proses', $s->id_siswa) }}?semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
                                             target="_blank" 
                                             class="badge border-0" 
@@ -155,7 +152,6 @@
                                                 View
                                             </a>
 
-                                            {{-- Tombol Download: Style Identik Badge Status (Hijau) --}}
                                             <a href="{{ route('rapornilai.download_satuan', $s->id_siswa) }}?semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
                                             class="badge border-0" 
                                             style="background-color: #4CAF50; color: white; padding: 8px 16px; font-weight: bold; font-size: 12px; border-radius: 8px; text-decoration: none;">
@@ -174,9 +170,17 @@
                             @endforelse
                         </tbody>
                     </table>
-                    {{-- TOMBOL CETAK MASSAL DI BAWAH TABEL SISI KANAN --}}
+
+                    {{-- TOMBOL CETAK MASSAL --}}
                     @if($id_kelas && count($siswaList) > 0)
-                        <div class="d-flex justify-content-end p-3">
+                        <div class="d-flex justify-content-end p-3 gap-3">
+                            {{-- Tombol PDF Massal (Ditambahkan di sisi kiri ZIP) --}}
+                            <a href="{{ route('rapornilai.download_massal_pdf') }}?id_kelas={{ $id_kelas }}&semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
+                               class="btn bg-gradient-primary mb-0" target="_blank">
+                                <i class="fas fa-file-pdf me-2"></i> Download Massal (PDF)
+                            </a>
+
+                            {{-- Tombol ZIP Massal --}}
                             <button onclick="downloadZipWithLoading('{{ route('rapornilai.download_massal') }}?id_kelas={{ $id_kelas }}&semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}')" 
                                     class="btn bg-gradient-success mb-0">
                                 <i class="fas fa-file-archive me-2"></i> Download Massal (ZIP)
@@ -195,6 +199,7 @@
         </div>
     </div>
 </main>
+
 {{-- MODAL DETAIL PROGRESS --}}
 <div class="modal fade" id="modalDetailProgress" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
@@ -216,7 +221,7 @@
                             </tr>
                         </thead>
                         <tbody id="listDetailMapel">
-                            {{-- Data akan diisi via JavaScript --}}
+                            {{-- Data via AJAX --}}
                         </tbody>
                     </table>
                 </div>
@@ -227,7 +232,7 @@
         </div>
     </div>
 </div>
-{{-- SCRIPT TETAP SAMA SEPERTI SEBELUMNYA --}}
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -288,84 +293,7 @@ function sinkronkanSatuKelas() {
 }
 
 function showDetailProgress(idSiswa, namaSiswa) {
-    $('#modalStudentName').text(namaSiswa);
-    $('#listDetailMapel').html('<tr><td colspan="3" class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i> Mengambil data...</td></tr>');
-    $('#modalDetailProgress').modal('show');
-
-    $.ajax({
-        url: "{{ route('rapornilai.detail_progress') }}", // Anda perlu membuat route & function ini di Controller
-        method: "GET",
-        data: {
-            id_siswa: idSiswa,
-            id_kelas: "{{ $id_kelas }}",
-            semester: "{{ $selectedSemester }}",
-            tahun_ajaran: "{{ $selectedTA }}"
-        },
-        success: function(res) {
-        let html = '';
-        if (res.data.length > 0) {
-            res.data.forEach(function(item) {
-               <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-$(document).ready(function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    });
-});
-
-function sinkronkanSatuKelas() {
-    const btn = $('#btnSync');
-    const icon = $('#syncIcon');
-
-    Swal.fire({
-        title: 'Perbarui Data?',
-        text: "Sistem akan menghitung ulang progres nilai dan catatan untuk kelas ini.",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Ya, Sinkronkan!',
-        cancelButtonText: 'Batal'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Sedang Memproses',
-                html: 'Mohon tunggu sebentar...',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-
-            btn.prop('disabled', true);
-            icon.addClass('fa-spin');
-
-            $.ajax({
-                url: "{{ route('rapornilai.sinkronkan_kelas') }}",
-                method: "POST",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    id_kelas: "{{ $id_kelas }}",
-                    semester: "{{ $selectedSemester }}",
-                    tahun_ajaran: "{{ $selectedTA }}"
-                },
-                success: function(res) {
-                    Swal.fire({ icon: 'success', title: 'Berhasil!', timer: 1500, showConfirmButton: false })
-                    .then(() => { window.location.reload(); });
-                },
-                error: function(xhr) {
-                    btn.prop('disabled', false);
-                    icon.removeClass('fa-spin');
-                    Swal.fire({ icon: 'error', title: 'Gagal!', text: xhr.responseJSON ? xhr.responseJSON.message : 'Terjadi kesalahan' });
-                }
-            });
-        }
-    });
-}
-
-function showDetailProgress(idSiswa, namaSiswa) {
-    // 1. Tampilkan Modal & Loading
+    // 1. Tampilkan Modal & Loading State
     $('#modalStudentName').text(namaSiswa);
     $('#listDetailMapel').html('<tr><td colspan="3" class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i> Mengambil data...</td></tr>');
     $('#modalDetailProgress').modal('show');
@@ -382,10 +310,9 @@ function showDetailProgress(idSiswa, namaSiswa) {
         },
         success: function(res) {
             let html = '';
-            // Cek apakah data ada dan merupakan array
             if (res.data && res.data.length > 0) {
                 res.data.forEach(function(item) {
-                    // Penentuan warna baris & status
+                    // Warna baris transparan hijau jika lengkap, merah jika belum
                     let rowStyle = item.is_lengkap 
                         ? 'background-color: rgba(45, 206, 137, 0.05);' 
                         : 'background-color: rgba(245, 54, 88, 0.05);';
@@ -403,7 +330,7 @@ function showDetailProgress(idSiswa, namaSiswa) {
                                     ${iconStatus}
                                     <div class="d-flex flex-column text-start">
                                         <span class="text-sm font-weight-bold text-dark">${item.nama_mapel}</span>
-                                        <span class="text-xxs text-secondary text-uppercase">${item.kategori || 'Umum'}</span>
+                                        <span class="text-xxs text-secondary text-uppercase">${item.kategori}</span>
                                     </div>
                                 </div>
                             </td>
@@ -414,41 +341,37 @@ function showDetailProgress(idSiswa, namaSiswa) {
                             </td>
                             <td class="text-center">
                                 <span class="text-sm font-weight-bolder ${item.is_lengkap ? 'text-dark' : 'text-muted'}">
-                                    ${item.nilai_akhir && item.nilai_akhir !== '-' ? item.nilai_akhir : '<span class="text-xs opacity-5">-</span>'}
+                                    ${item.nilai_akhir}
                                 </span>
                             </td>
                         </tr>`;
                 });
             } else {
-                html = '<tr><td colspan="3" class="text-center py-4 text-muted">Tidak ada data mapel wajib untuk kelas ini.</td></tr>';
+                html = '<tr><td colspan="3" class="text-center py-4 text-muted">Tidak ada data mapel untuk siswa ini.</td></tr>';
             }
+            // Update isi tabel modal
             $('#listDetailMapel').html(html);
         },
         error: function(xhr) {
+            console.error(xhr);
             let errorText = xhr.responseJSON ? xhr.responseJSON.message : 'Gagal memuat data.';
             $('#listDetailMapel').html(`<tr><td colspan="3" class="text-center text-danger py-4">${errorText}</td></tr>`);
         }
     });
 }
-    function downloadZipWithLoading(url) {
-        Swal.fire({
-            title: 'Sedang Memproses...',
-            html: 'Mohon tunggu, sistem sedang membuat file PDF satu per satu dan menyusunnya ke dalam ZIP.',
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
 
-        // Trigger download
-        window.location.href = url;
+function downloadZipWithLoading(url) {
+    Swal.fire({
+        title: 'Sedang Memproses...',
+        text: 'Sistem sedang menyiapkan paket ZIP. Proses ini mungkin memakan waktu tergantung jumlah siswa.',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
 
-        // Tutup loading setelah beberapa detik (karena response download tidak bisa men-trigger callback selesai)
-        setTimeout(() => {
-            Swal.close();
-        }, 5000); 
-    }
+    window.location.href = url;
 
+    setTimeout(() => { Swal.close(); }, 5000); 
+}
 </script>
 @endsection

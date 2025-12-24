@@ -19,7 +19,7 @@ use App\Http\Controllers\MapelController;
 use App\Http\Controllers\PembelajaranController;
 use App\Http\Controllers\MasterEkskulController;
 use App\Http\Controllers\PesertaEkskulController;
-use App\Http\Controllers\RaporNilaiController;
+// use App\Http\Controllers\RaporNilaiController;
 use App\Http\Controllers\RaporCatatanController;
 use App\Http\Controllers\SumatifController;
 use App\Http\Controllers\ProjectController; 
@@ -179,18 +179,18 @@ Route::group(['prefix' => 'master', 'as' => 'master.', 'middleware' => 'auth'], 
         });
         
         // 3. RAPOR NILAI & CATATAN WALI KELAS (master.rapornilai.*)
-        Route::prefix('rapor')->name('rapornilai.')->group(function () {
-            Route::get('/', [RaporNilaiController::class, 'index'])->name('index'); 
-            Route::get('/create', [RaporNilaiController::class, 'create'])->name('create');
-            Route::post('/', [RaporNilaiController::class, 'store'])->name('store');
-            Route::delete('/{id_rapor}', [RaporNilaiController::class, 'destroy'])->name('destroy'); 
+        // Route::prefix('rapor')->name('rapornilai.')->group(function () {
+        //     Route::get('/', [RaporNilaiController::class, 'index'])->name('index'); 
+        //     Route::get('/create', [RaporNilaiController::class, 'create'])->name('create');
+        //     Route::post('/', [RaporNilaiController::class, 'store'])->name('store');
+        //     Route::delete('/{id_rapor}', [RaporNilaiController::class, 'destroy'])->name('destroy'); 
 
-            Route::prefix('wali')->name('wali.')->group(function () {
-                Route::get('/catatan', [RaporCatatanController::class, 'inputCatatan'])->name('catatan');
-                Route::post('/simpan', [RaporCatatanController::class, 'simpanCatatan'])->name('simpan');
-                Route::get('/get-siswa/{id_kelas}', [RaporCatatanController::class, 'getSiswa'])->name('get_siswa'); 
-            });
-        });
+        //     Route::prefix('wali')->name('wali.')->group(function () {
+        //         Route::get('/catatan', [RaporCatatanController::class, 'inputCatatan'])->name('catatan');
+        //         Route::post('/simpan', [RaporCatatanController::class, 'simpanCatatan'])->name('simpan');
+        //         Route::get('/get-siswa/{id_kelas}', [RaporCatatanController::class, 'getSiswa'])->name('get_siswa'); 
+        //     });
+        // });
 
         // 4. NILAI AKHIR (master.nilaiakhir.*)
         Route::group(['prefix' => 'akhir', 'as' => 'nilaiakhir.', 'controller' => NilaiAkhirController::class], function () {
@@ -235,7 +235,7 @@ Route::group(['prefix' => 'pengaturan', 'as' => 'pengaturan.'], function () {
 
 Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.'], function () {
     // 1. Halaman Monitoring Utama
-    Route::get('/index', [RaporController::class, 'index'])->name('index');
+    // Route::get('/index', [RaporController::class, 'index'])->name('index');
     
     // 2. Route AJAX untuk Sinkronisasi Status
     Route::post('/sinkronkan', [RaporController::class, 'sinkronkanKelas'])->name('sinkronkan');
@@ -254,21 +254,22 @@ Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.'], function () {
     // 5. Rute Baru: Khusus Download (Tanpa merusak rute lama)
     Route::get('/download-satuan/{id_siswa}', [RaporController::class, 'download_satuan'])->name('download_satuan');
     Route::get('/download-massal', [RaporController::class, 'download_massal'])->name('download_massal');
-
+    // 🛑 ROUTE BARU: DOWNLOAD PDF MASSAL (SATU FILE PANJANG)
+    Route::get('/download-massal-pdf', [RaporController::class, 'download_massal_pdf'])->name('download_massal_pdf');
 });
 
 // 3. RAPOR NILAI & CATATAN WALI KELAS (master.rapornilai.*)
-Route::prefix('rapor')->name('rapornilai.')->group(function () {
-    Route::get('/', [RaporNilaiController::class, 'index'])->name('index'); 
-    Route::get('/create', [RaporNilaiController::class, 'create'])->name('create');
-    Route::post('/', [RaporNilaiController::class, 'store'])->name('store');
-    Route::delete('/{id_rapor}', [RaporNilaiController::class, 'destroy'])->name('destroy'); 
+// Route::prefix('rapor')->name('rapornilai.')->group(function () {
+//     Route::get('/', [RaporNilaiController::class, 'index'])->name('index'); 
+//     Route::get('/create', [RaporNilaiController::class, 'create'])->name('create');
+//     Route::post('/', [RaporNilaiController::class, 'store'])->name('store');
+//     Route::delete('/{id_rapor}', [RaporNilaiController::class, 'destroy'])->name('destroy'); 
 
-    Route::prefix('wali')->name('wali.')->group(function () {
-        Route::get('/catatan', [RaporCatatanController::class, 'inputCatatan'])->name('catatan');
-        Route::post('/simpan', [RaporCatatanController::class, 'simpanCatatan'])->name('simpan');
-        Route::get('/get-siswa/{id_kelas}', [RaporCatatanController::class, 'getSiswa'])->name('get_siswa'); 
-    });
-});
+//     Route::prefix('wali')->name('wali.')->group(function () {
+//         Route::get('/catatan', [RaporCatatanController::class, 'inputCatatan'])->name('catatan');
+//         Route::post('/simpan', [RaporCatatanController::class, 'simpanCatatan'])->name('simpan');
+//         Route::get('/get-siswa/{id_kelas}', [RaporCatatanController::class, 'getSiswa'])->name('get_siswa'); 
+//     });
+// });
 
-Route::get('/rapor-nilai/detail-progress', [RaporNilaiController::class, 'detailProgress'])->name('rapornilai.detail_progress');
+// Route::get('/rapor-nilai/detail-progress', [RaporNilaiController::class, 'detailProgress'])->name('rapornilai.detail_progress');

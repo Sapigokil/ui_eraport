@@ -1,7 +1,7 @@
 {{-- File: resources/views/nilai/project_index.blade.php --}}
 @extends('layouts.app') 
 
-@section('title', 'Input Nilai Project (P5)')
+@section('title', 'Input Nilai Project')
 
 @php
    // LOGIKA TAHUN AJARAN & SEMESTER
@@ -38,7 +38,7 @@
                 <div class="card my-4 shadow-xs border">
                     <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
                         <div class="bg-gradient-dark shadow-dark border-radius-lg pt-4 pb-3 d-flex justify-content-between align-items-center">
-                            <h6 class="text-white text-capitalize ps-3 mb-0"><i class="fas fa-rocket me-2"></i> Input Nilai Project (P5)</h6>
+                            <h6 class="text-white text-capitalize ps-3 mb-0"><i class="fas fa-rocket me-2"></i> Input Nilai Project</h6>
                             <div class="pe-3">
                                 <button class="btn btn-outline-white btn-sm mb-0 me-2" data-bs-toggle="modal" data-bs-target="#downloadTemplateModal">
                                     <i class="fas fa-file-excel me-1"></i> Download Template
