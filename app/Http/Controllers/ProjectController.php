@@ -168,7 +168,7 @@ class ProjectController extends Controller
             return back()->with('error', 'Tidak ada siswa yang ditemukan untuk filter ini. Template tidak dapat dibuat.');
         }
 
-        $fileName = 'Template_Project_P5_' . $kelas->nama_kelas . '_' . $mapel->nama_mapel . '.xlsx';
+        $fileName = 'Template_Project_' . $kelas->nama_kelas . '_' . $mapel->nama_mapel . '.xlsx';
         
         // 🛑 Panggil Class Export Project yang baru
         return Excel::download(new ProjectTemplateExport(

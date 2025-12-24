@@ -27,6 +27,7 @@ use App\Http\Controllers\NilaiAkhirController;
 use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\SetKokurikulerController;
 use App\Http\Controllers\RaporController;
+use App\Http\Controllers\LedgerController;
 
 
 /*
@@ -256,6 +257,12 @@ Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.'], function () {
     Route::get('/download-massal', [RaporController::class, 'download_massal'])->name('download_massal');
     // 🛑 ROUTE BARU: DOWNLOAD PDF MASSAL (SATU FILE PANJANG)
     Route::get('/download-massal-pdf', [RaporController::class, 'download_massal_pdf'])->name('download_massal_pdf');
+});
+
+Route::group(['prefix' => 'ledger', 'as' => 'ledger.'], function () {
+    Route::get('/data-nilai', [LedgerController::class, 'index'])->name('ledger_index');
+    // Jika nanti butuh export excel, bisa ditambahkan di sini:
+    // Route::get('/export-excel', [LedgerController::class, 'exportExcel'])->name('export_excel');
 });
 
 // 3. RAPOR NILAI & CATATAN WALI KELAS (master.rapornilai.*)
