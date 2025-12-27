@@ -432,9 +432,18 @@ linear-gradient(180deg, #0f172a, #020617);">
                                 <span class="sidenav-normal"> Kokurikuler </span>
                             </a>
                         </li>
+                        {{-- Pengaturan Bobot Nilai --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('pengaturan.bobot.index') ? 'active' : 'text-white' }}" href="{{ route('pengaturan.bobot.index') }}">
+                                <span class="sidenav-mini-icon"> B </span>
+                                <span class="sidenav-normal"> Bobot Nilai </span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </li>
+
+            
 
             {{-- 7. PROFIL SAYA --}}
             @php $isProfileActive = false; @endphp

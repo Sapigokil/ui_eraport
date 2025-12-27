@@ -11,6 +11,7 @@ use App\Models\NilaiAkhir;
 use App\Models\Pembelajaran;
 use App\Models\Sumatif; 
 use App\Models\Project; 
+use App\Models\BobotNilai;
 use App\Http\Controllers\RaporController;
 use App\Services\NilaiAkhirService;
 use App\Services\CapaianAkhirService;
@@ -187,6 +188,19 @@ class NilaiAkhirController extends Controller
             
             $allProject = Project::where($baseQuery)->get()->keyBy('id_siswa');
 
+            //hitung bobot dari pengaturan bobot 
+            $bobotSetting = BobotNilai::where('tahun_ajaran', $tahunAjaran)
+                ->where('semester', strtoupper($request->semester))
+                ->first();
+
+            if (!$bobotSetting) {
+                $error = 'Bobot nilai belum diatur untuk semester dan tahun ajaran ini.';
+                goto render_view;
+            }
+
+            $bobotSumatifPersen = $bobotSetting->bobot_sumatif; // contoh: 60
+            $bobotProjectPersen = $bobotSetting->bobot_project; // contoh: 40
+
 
             foreach ($siswa as $s) {
                 $idSiswa = $s->id_siswa;
@@ -216,7 +230,11 @@ class NilaiAkhirController extends Controller
                 $rataSumatif = $nilaiSumatif->count() >= 2
                 ? round($nilaiSumatif->sum() / $nilaiSumatif->count(), 2)
                 : null;
-                $bobotSumatif = $rataSumatif !== null ? round($rataSumatif * 0.4, 2) : null;
+                // $bobotSumatif = $rataSumatif !== null ? round($rataSumatif * 0.4, 2) : null;
+                $bobotSumatif = $rataSumatif !== null
+                    ? round($rataSumatif * ($bobotSumatifPersen / 100), 2)
+                    : null;
+
 
                 // --- 2. PROSES PROJECT ---
                 $projectItem = $allProject->get($idSiswa);
@@ -232,9 +250,14 @@ class NilaiAkhirController extends Controller
                     ]])
                     : collect();
 
-                $bobotProject = optional($projectItem)->nilai_bobot;
+                $bobotProject = $rataProject !== null
+                    ? round($rataProject * ($bobotProjectPersen / 100), 2)
+                    : null;
                 if ($bobotProject === null && $rataProject !== null) {
-                    $bobotProject = round($rataProject * 0.6, 2); // 0 tetap masuk
+                    // $bobotProject = round($rataProject * 0.6, 2); // 0 tetap masuk
+                    $bobotProject = $rataProject !== null
+                        ? round($rataProject * ($bobotProjectPersen / 100), 2)
+                        : null;
                 }
 
 

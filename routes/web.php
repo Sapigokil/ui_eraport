@@ -27,6 +27,7 @@ use App\Http\Controllers\NilaiAkhirController;
 use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\SetKokurikulerController;
 use App\Http\Controllers\RaporController;
+use App\Http\Controllers\BobotNilaiController;
 
 
 /*
@@ -226,11 +227,17 @@ Route::group(['prefix' => 'master', 'as' => 'master.', 'middleware' => 'auth'], 
 }); // END GROUP MASTER (URL: /master)
 
 Route::group(['prefix' => 'pengaturan', 'as' => 'pengaturan.'], function () {
+    //kokurikuler
     Route::get('/kokurikuler', [SetKokurikulerController::class, 'index'])->name('kok.index');
     Route::post('/kokurikuler', [SetKokurikulerController::class, 'store'])->name('kok.store');
     Route::put('/kokurikuler/{id}', [SetKokurikulerController::class, 'update'])->name('kok.update');
     Route::delete('/kokurikuler/{id}', [SetKokurikulerController::class, 'destroy'])->name('kok.destroy');
     Route::patch('/kokurikuler/{id}/toggle', [SetKokurikulerController::class, 'toggleStatus'])->name('kok.toggle');
+
+    //bobot nilai
+    Route::get('/bobot-nilai', [BobotNilaiController::class, 'index'])->name('bobot.index');
+    Route::post('/bobot-nilai', [BobotNilaiController::class, 'store'])->name('bobot.store');
+    Route::put('/bobot-nilai/{id}', [BobotNilaiController::class, 'update'])->name('bobot.update');
 });
 
 Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.'], function () {

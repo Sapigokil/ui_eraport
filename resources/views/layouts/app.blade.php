@@ -473,6 +473,7 @@
     
     {{-- AREA @stack('scripts') --}}
     @stack('scripts')
+    @stack('js')
 </body>
 
 </html>
