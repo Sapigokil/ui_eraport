@@ -9,6 +9,9 @@ use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\NilaiAkhir;
 use App\Models\Pembelajaran;
+use App\Models\Event;
+use Carbon\Carbon;
+
 use Illuminate\Support\Facades\DB;
 
 
@@ -84,7 +87,12 @@ if ($request->filled('kelas')) {
         // =====================
         $statusRapor = $this->getStatusRapor();
 
-
+        // =====================
+        // UPCOMING EVENT
+        // =====================
+        $events = Event::whereDate('tanggal', '>=', Carbon::today()->subDays(3))
+            ->orderBy('tanggal')
+            ->get();
 
         return view('dashboard', compact(
             'totalSiswa',
@@ -96,7 +104,8 @@ if ($request->filled('kelas')) {
             'progressData',
             'kelasList',
             'statistikNilai',
-            'statusRapor'
+            'statusRapor',
+            'events'
         ));
     }
 
@@ -148,7 +157,7 @@ if ($request->filled('kelas')) {
     return round(($totalTerisi / $totalHarusDiisi) * 100, 1);
 }
 
-    // =====================
+// =====================
 // STATUS RAPOR
 // =====================
 private function getStatusRapor()
@@ -192,4 +201,52 @@ private function getStatusRapor()
         ];
     });
 }
+
+// =====================
+// SIMPAN EVENT
+// =====================
+public function storeEvent(Request $request)
+{
+    $request->validate([
+        'deskripsi' => 'required|string',
+        'tanggal'   => 'required|date',
+    ]);
+
+    Event::create([
+        'deskripsi' => $request->deskripsi,
+        'tanggal'   => $request->tanggal,
+    ]);
+
+    return redirect()->back()->with('success', 'Event berhasil ditambahkan');
+}
+
+// =====================
+// HAPUS EVENT
+// =====================
+public function destroy($id)
+{
+    Event::where('id_event', $id)->delete();
+
+    return redirect()->back()->with('success', 'Event berhasil dihapus');
+}
+
+// =====================
+// UPDATE EVENT
+// =====================
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'deskripsi' => 'required|string',
+        'tanggal'   => 'required|date',
+    ]);
+
+    Event::where('id_event', $id)->update([
+        'deskripsi' => $request->deskripsi,
+        'tanggal'   => $request->tanggal,
+    ]);
+
+    return redirect()->back()->with('success', 'Event berhasil diperbarui');
+}
+
+
 }

@@ -84,7 +84,156 @@
             </div>
         </div>
 
+
+<div class="row">
+<div class="col-12">
+
+    <!-- FRAME BESAR -->
+    <div class="card shadow-sm rounded-4 mb-4" style="max-width:700px;">
+      <div class="card-body">
+
+    <!-- FORM INPUT -->
+        <form action="{{ route('dashboard.event.store') }}" method="POST">
+          @csrf
+
+        <!-- FORM INPUT -->
+        <h6 class="mb-3">Form Input</h6>
+
+        <textarea
+        name="deskripsi"
+        class="form-control mb-2"
+        placeholder="Deskripsi ..."
+        required></textarea>
+
+        <input type="date" name="tanggal" class="form-control mb-2" required>
+
+        <!-- <select class="form-control mb-3">
+          <option selected disabled>Kategori</option>
+          <option>Akademik</option>
+          <option>Rapor</option>
+          <option>Ujian</option>
+        </select> -->
+
+        <button type="submit" class="btn btn-info w-100 mb-4">
+          Tambah Event
+        </button>
+
+        <!-- GARIS PEMBATAS -->
+        <hr>
+
+        <!-- UPCOMING EVENT -->
+        <h6 class="mb-3">Upcoming Event</h6>
+
+@forelse ($events as $event)
+
+@php
+  $eventDate = \Carbon\Carbon::parse($event->tanggal);
+
+  // DEFAULT
+  $bg = 'bg-secondary';
+  $icon = 'fa-book';
+
+  if ($eventDate->isToday()) {
+      $bg = 'bg-success';
+      $icon = 'fa-clock';
+  } elseif ($eventDate->isTomorrow()) {
+      $bg = 'bg-primary';
+      $icon = 'fa-pencil';
+  }
+@endphp
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+
+<!-- KIRI : ICON + TEXT -->
+  <div class="d-flex align-items-center">
+
+  <!-- KOTAK ICON -->
+  <div class="rounded d-flex align-items-center justify-content-center {{ $bg }} me-3"
+       style="width:46px;height:46px;">
+    <i class="fa-solid {{ $icon }} text-white"></i>
+  </div>
+
+  <!-- TEXT EVENT -->
+  <div>
+    <strong>{{ $event->deskripsi }}</strong><br>
+    <small class="text-muted">
+      {{ $eventDate->translatedFormat('d F Y') }}
+    </small>
+  </div>
+
+</div>
+
+<!-- KANAN : ACTION -->
+  <div class="d-flex gap-4">
+
+    <!-- EDIT -->
+    <button
+      class="btn btn-sm btn-link text-warning p-0"
+      data-bs-toggle="modal"
+      data-bs-target="#editEvent{{ $event->id_event }}">
+      <i class="fa-solid fa-pen fs-6"></i>
+    </button>
+
+    <!-- DELETE -->
+    <form action="{{ route('dashboard.event.destroy', $event->id_event) }}"
+          method="POST"
+          onsubmit="return confirm('Yakin hapus event ini?')">
+      @csrf
+      @method('DELETE')
+      <button class="btn btn-sm btn-link text-danger p-0">
+        <i class="fa-solid fa-trash fs-6"></i>
+      </button>
+    </form>
+
+  </div>
+</div>
+
+<!-- MODAL EDIT -->
+<div class="modal fade" id="editEvent{{ $event->id_event }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4">
+      <form action="{{ route('dashboard.event.update', $event->id_event) }}" method="POST">
+        @csrf
+        @method('PUT')
+
+        <div class="modal-header">
+          <h6 class="modal-title">Edit Event</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <textarea name="deskripsi" class="form-control mb-2" required>
+{{ $event->deskripsi }}</textarea>
+
+          <input type="date" name="tanggal"
+                 class="form-control"
+                 value="{{ $event->tanggal }}"
+                 required>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button class="btn btn-warning">Simpan</button>
+        </div>
+      </form>
     </div>
+  </div>
+</div>
+
+@empty
+  <p class="text-muted">Belum ada event mendatang</p>
+@endforelse
+
+      </div>
+    </div>
+    <!-- END FRAME -->
+
+  </div>
+</div>
+
+    </div>
+
+    
 
     {{-- KOLOM KANAN --}}
     <div class="col-md-6">
@@ -142,6 +291,9 @@
         <x-app.footer />
     </div>
 </main>
+
+
+
 @endsection
 
 @push('scripts')

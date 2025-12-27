@@ -27,11 +27,7 @@ use App\Http\Controllers\NilaiAkhirController;
 use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\SetKokurikulerController;
 use App\Http\Controllers\RaporController;
-<<<<<<< HEAD
 use App\Http\Controllers\DashboardController;
-=======
-use App\Http\Controllers\LedgerController;
->>>>>>> cb4ef9aee3c488de3f13942b8346775383710182
 
 
 /*
@@ -52,6 +48,9 @@ Route::get('/RTL', fn () => view('RTL'))->name('RTL')->middleware('auth');
 Route::get('/profile', fn () => view('account-pages.profile'))->name('profile')->middleware('auth');
 Route::get('/laravel-examples/users-management', [UserController::class, 'index'])->name('users-management.index')->middleware('auth');
 
+Route::post('/dashboard/event/store', [DashboardController::class, 'storeEvent'])->name('dashboard.event.store');
+Route::put('/dashboard/event/{id}', [DashboardController::class, 'update'])->name('dashboard.event.update');
+Route::delete('/dashboard/event/{id}', [DashboardController::class, 'destroy'])->name('dashboard.event.destroy');
 
 Route::group(['middleware' => 'guest'], function () {
     Route::get('/signin', fn () => view('account-pages.signin'))->name('signin');
