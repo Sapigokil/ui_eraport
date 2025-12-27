@@ -724,6 +724,60 @@ class RaporController extends Controller
         return redirect()->back()->with('error', 'Gagal membuat file ZIP.');
     }
 
+    /**
+     * Download Rapor Massal dalam SATU FILE PDF (Single PDF file)
+     * Menggunakan template massal dengan header/footer fixed di setiap halaman
+     */
+    public function download_massal_pdf(Request $request)
+    {
+        // Mencegah timeout jika jumlah siswa banyak
+        set_time_limit(0);
+        ini_set('memory_limit', '512M');
+
+        $id_kelas = $request->id_kelas;
+        $semesterRaw = $request->semester ?? 'Ganjil';
+        $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
+
+        if (!$id_kelas) {
+            return redirect()->back()->with('error', 'Silakan pilih kelas terlebih dahulu.');
+        }
+
+        // Ambil daftar siswa berdasarkan kelas
+        $daftarSiswa = Siswa::where('id_kelas', $id_kelas)
+            ->orderBy('nama_siswa', 'asc')
+            ->get();
+
+        if ($daftarSiswa->isEmpty()) {
+            return redirect()->back()->with('error', 'Tidak ada data siswa di kelas ini.');
+        }
+
+        $allData = [];
+
+        foreach ($daftarSiswa as $siswa) {
+            // Gunakan helper persiapkanDataRapor (Eksisting) untuk mengambil data tiap siswa
+            // Ini memastikan logika sinkronisasi & grouping mapel 100% sama dengan cetak satuan
+            $allData[] = $this->persiapkanDataRapor($siswa->id_siswa, $semesterRaw, $tahun_ajaran);
+        }
+
+        // Ambil info kelas untuk penamaan file
+        $dataKelas = Kelas::find($id_kelas);
+        $namaKelasFile = str_replace(' ', '_', $dataKelas->nama_kelas ?? $id_kelas);
+
+        // Load View Massal (pdf2_massal_template)
+        // Pastikan di dalam view pdf2_massal_template menggunakan @foreach($allData as $data)
+        $pdf = Pdf::loadView('rapor.pdf2_massal_template', compact('allData'))
+                ->setPaper('a4', 'portrait')
+                ->setOption([
+                    'isPhpEnabled' => true, 
+                    'isRemoteEnabled' => true,
+                    'margin_top' => 0,
+                    'margin_bottom' => 0,
+                ]);
+
+        $filename = 'RAPOR_MASSAL_' . $namaKelasFile . '_' . time() . '.pdf';
+
+        return $pdf->download($filename);
+    }
     private function generateCapaianDariSumatif($id_siswa, $id_mapel, $semester, $tahun_ajaran)
     {
         $nilaiTp = DB::table('sumatif')

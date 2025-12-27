@@ -41,13 +41,16 @@ use App\Http\Controllers\BobotNilaiController;
 // =========================================================
 
 Route::get('/', fn () => redirect('/dashboard'))->middleware('auth');
-Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard')->middleware('auth');
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('auth');
 Route::get('/tables', fn () => view('tables'))->name('tables')->middleware('auth');
 Route::get('/wallet', fn () => view('wallet'))->name('wallet')->middleware('auth');
 Route::get('/RTL', fn () => view('RTL'))->name('RTL')->middleware('auth');
 Route::get('/profile', fn () => view('account-pages.profile'))->name('profile')->middleware('auth');
 Route::get('/laravel-examples/users-management', [UserController::class, 'index'])->name('users-management.index')->middleware('auth');
 
+Route::post('/dashboard/event/store', [DashboardController::class, 'storeEvent'])->name('dashboard.event.store');
+Route::put('/dashboard/event/{id}', [DashboardController::class, 'update'])->name('dashboard.event.update');
+Route::delete('/dashboard/event/{id}', [DashboardController::class, 'destroy'])->name('dashboard.event.destroy');
 
 Route::group(['middleware' => 'guest'], function () {
     Route::get('/signin', fn () => view('account-pages.signin'))->name('signin');
@@ -263,6 +266,12 @@ Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.'], function () {
     Route::get('/download-massal', [RaporController::class, 'download_massal'])->name('download_massal');
     // 🛑 ROUTE BARU: DOWNLOAD PDF MASSAL (SATU FILE PANJANG)
     Route::get('/download-massal-pdf', [RaporController::class, 'download_massal_pdf'])->name('download_massal_pdf');
+});
+
+Route::group(['prefix' => 'ledger', 'as' => 'ledger.'], function () {
+    Route::get('/data-nilai', [LedgerController::class, 'index'])->name('ledger_index');
+    // Jika nanti butuh export excel, bisa ditambahkan di sini:
+    // Route::get('/export-excel', [LedgerController::class, 'exportExcel'])->name('export_excel');
 });
 
 // 3. RAPOR NILAI & CATATAN WALI KELAS (master.rapornilai.*)

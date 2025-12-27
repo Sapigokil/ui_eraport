@@ -327,6 +327,16 @@ linear-gradient(180deg, #0f172a, #020617);">
                             </a>
                         </li> --}}
 
+                        {{-- Menu Ledger Nilai --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ Route::is('ledger.ledger_index') ? 'active' : '' }}" href="{{ route('ledger.ledger_index') }}">
+                                <span class="sidenav-mini-icon">
+                                    <i class="fas fa-desktop-invoice text-white"></i>
+                                </span>
+                                <span class="nav-link-text ms-1 text-white">Ledger Nilai</span>
+                            </a>
+                        </li>
+
                         {{-- MENU BARU: Cetak Rapor --}}
                         <li class="nav-item">
                             <a class="nav-link {{ Route::is('rapornilai.cetak') ? 'active' : '' }}" href="{{ route('rapornilai.cetak') }}">
