@@ -20,9 +20,12 @@ class BobotNilaiController extends Controller
 
         $defaultTahunAjaran = $request->tahun_ajaran ?? $tahunAjaranList[0];
 
+        $historyBobot = BobotNilai::orderBy('created_at', 'desc')->get();
+
         return view('data.bobot_index', compact(
             'tahunAjaranList',
-            'defaultTahunAjaran'
+            'defaultTahunAjaran',
+            'historyBobot'
         ));
     }
 
@@ -49,7 +52,7 @@ class BobotNilaiController extends Controller
 
         BobotNilai::updateOrCreate(
             [
-                'tahun_ajaran' => now()->year,
+                'tahun_ajaran' => $request->tahun_ajaran,
                 'semester' => $request->semester,
             ],
             [
