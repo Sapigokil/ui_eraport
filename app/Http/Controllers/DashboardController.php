@@ -10,6 +10,7 @@ use App\Models\MataPelajaran;
 use App\Models\NilaiAkhir;
 use App\Models\Pembelajaran;
 use App\Models\Event;
+use App\Models\Notifikasi;
 use Carbon\Carbon;
 
 use Illuminate\Support\Facades\DB;
@@ -94,6 +95,9 @@ if ($request->filled('kelas')) {
             ->orderBy('tanggal')
             ->get();
 
+        // Ambil notifikasi terbaru (misal 5 notifikasi terakhir)
+        $notifications = Notifikasi::latest('created_at')->take(5)->get();
+
         return view('dashboard', compact(
             'totalSiswa',
             'totalGuru',
@@ -105,7 +109,8 @@ if ($request->filled('kelas')) {
             'kelasList',
             'statistikNilai',
             'statusRapor',
-            'events'
+            'events',
+            'notifications'
         ));
     }
 

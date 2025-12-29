@@ -449,6 +449,13 @@ linear-gradient(180deg, #0f172a, #020617);">
                                 <span class="sidenav-normal"> Bobot Nilai </span>
                             </a>
                         </li>
+                        {{-- Pengaturan Input Event Dashboard --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('pengaturan.input.index') ? 'active' : 'text-white' }}" href="{{ route('pengaturan.input.index') }}">
+                                <span class="sidenav-mini-icon"> B </span>
+                                <span class="sidenav-normal"> Input Event </span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </li>

@@ -28,6 +28,8 @@ use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\SetKokurikulerController;
 use App\Http\Controllers\RaporController;
 use App\Http\Controllers\BobotNilaiController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InputController;
 
 
 /*
@@ -241,6 +243,13 @@ Route::group(['prefix' => 'pengaturan', 'as' => 'pengaturan.'], function () {
     Route::get('/bobot-nilai', [BobotNilaiController::class, 'index'])->name('bobot.index');
     Route::post('/bobot-nilai', [BobotNilaiController::class, 'store'])->name('bobot.store');
     Route::put('/bobot-nilai/{id}', [BobotNilaiController::class, 'update'])->name('bobot.update');
+
+    //input event
+    Route::get('/input', [InputController::class, 'index'])->name('input.index');
+    Route::post('/input', [InputController::class, 'storeEvent'])->name('input.store');
+    Route::delete('/input/{id}', [InputController::class, 'destroy'])->name('input.delete');
+    Route::put('/input/{id}', [InputController::class, 'update'])->name('input.update');
+
 });
 
 Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.'], function () {

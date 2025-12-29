@@ -12,6 +12,59 @@
         {{-- HEADER --}}
         <h3 class="mb-3">Hello, {{ auth()->user()->name ?? 'Pengguna' }}</h3>
 
+    @forelse($notifications as $notif)
+<div class="notification-card" style="
+    background-color: #d4f5d4;
+    border-left: 4px solid #3ac13a;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    position: relative;
+    font-size: 13px;
+    width: 100%;               /* 🔥 full width */
+    max-width: 100%;           /* 🔥 sejajar card statistik */
+">
+
+    {{-- Tombol close --}}
+    <span style="
+        position: absolute;
+        top: 6px;
+        right: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+    " onclick="this.parentElement.style.display='none'">&times;</span>
+
+    <h6 style="
+        margin-bottom: 4px;     /* 🔥 dipadatin */
+        font-size: 14px;
+        font-weight: 600;
+    ">
+        Notifikasi Terbaru
+    </h6>
+
+    <div class="notif-deskripsi" style="
+        margin-bottom: 4px;     /* 🔥 dipadatin */
+        line-height: 1.3;
+        color: #555; 
+    ">
+        {{ $notif->deskripsi }}
+    </div>
+
+    <div class="notif-tanggal" style="
+        font-size: 11px;
+        color: #555;
+        line-height: 1.2;
+    ">
+        ({{ \Carbon\Carbon::parse($notif->tanggal)->format('d-m-Y') }})
+    </div>
+</div>
+
+@empty
+<p style="font-size: 13px; color: #555;">Belum ada notifikasi.</p>
+@endforelse
+
+
         {{-- Debug Data --}}
 <!-- <pre>
 {{ json_encode($progressData) }}
@@ -93,19 +146,19 @@
       <div class="card-body">
 
     <!-- FORM INPUT -->
-        <form action="{{ route('dashboard.event.store') }}" method="POST">
-          @csrf
+        <!-- <form action="{{ route('dashboard.event.store') }}" method="POST">
+          @csrf -->
 
         <!-- FORM INPUT -->
-        <h6 class="mb-3">Form Input</h6>
+        <!-- <h6 class="mb-3">Form Input</h6> -->
 
-        <textarea
+        <!-- <textarea
         name="deskripsi"
         class="form-control mb-2"
         placeholder="Deskripsi ..."
-        required></textarea>
+        required></textarea> -->
 
-        <input type="date" name="tanggal" class="form-control mb-2" required>
+        <!-- <input type="date" name="tanggal" class="form-control mb-2" required> -->
 
         <!-- <select class="form-control mb-3">
           <option selected disabled>Kategori</option>
@@ -114,12 +167,12 @@
           <option>Ujian</option>
         </select> -->
 
-        <button type="submit" class="btn btn-info w-100 mb-4">
+        <!-- <button type="submit" class="btn btn-info w-100 mb-4">
           Tambah Event
-        </button>
+        </button> -->
 
         <!-- GARIS PEMBATAS -->
-        <hr>
+        <!-- <hr> -->
 
         <!-- UPCOMING EVENT -->
         <h6 class="mb-3">Upcoming Event</h6>
@@ -167,15 +220,15 @@
   <div class="d-flex gap-4">
 
     <!-- EDIT -->
-    <button
+    <!-- <button
       class="btn btn-sm btn-link text-warning p-0"
       data-bs-toggle="modal"
       data-bs-target="#editEvent{{ $event->id_event }}">
       <i class="fa-solid fa-pen fs-6"></i>
-    </button>
+    </button> -->
 
     <!-- DELETE -->
-    <form action="{{ route('dashboard.event.destroy', $event->id_event) }}"
+    <!-- <form action="{{ route('dashboard.event.destroy', $event->id_event) }}"
           method="POST"
           onsubmit="return confirm('Yakin hapus event ini?')">
       @csrf
@@ -183,13 +236,13 @@
       <button class="btn btn-sm btn-link text-danger p-0">
         <i class="fa-solid fa-trash fs-6"></i>
       </button>
-    </form>
+    </form> -->
 
   </div>
 </div>
 
 <!-- MODAL EDIT -->
-<div class="modal fade" id="editEvent{{ $event->id_event }}" tabindex="-1">
+<!-- <div class="modal fade" id="editEvent{{ $event->id_event }}" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4">
       <form action="{{ route('dashboard.event.update', $event->id_event) }}" method="POST">
@@ -218,7 +271,7 @@
       </form>
     </div>
   </div>
-</div>
+</div> -->
 
 @empty
   <p class="text-muted">Belum ada event mendatang</p>
