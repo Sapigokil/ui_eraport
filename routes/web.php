@@ -28,6 +28,7 @@ use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\SetKokurikulerController;
 use App\Http\Controllers\RaporController;
 use App\Http\Controllers\BobotNilaiController;
+use App\Http\Controllers\DashboardController;
 
 
 /*
@@ -45,7 +46,11 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard
 Route::get('/tables', fn () => view('tables'))->name('tables')->middleware('auth');
 Route::get('/wallet', fn () => view('wallet'))->name('wallet')->middleware('auth');
 Route::get('/RTL', fn () => view('RTL'))->name('RTL')->middleware('auth');
-Route::get('/profile', fn () => view('account-pages.profile'))->name('profile')->middleware('auth');
+// Route::get('/profile', fn () => view('account-pages.profile'))->name('profile')->middleware('auth');
+//Profile User
+Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
 Route::get('/laravel-examples/users-management', [UserController::class, 'index'])->name('users-management.index')->middleware('auth');
 
 Route::post('/dashboard/event/store', [DashboardController::class, 'storeEvent'])->name('dashboard.event.store');

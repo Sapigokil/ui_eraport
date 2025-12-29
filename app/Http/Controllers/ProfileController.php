@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
@@ -24,24 +25,32 @@ class ProfileController extends Controller
         $request->validate([
             'name' => 'required|min:3|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . Auth::id(),
-            'location' => 'max:255',
-            'phone' => 'numeric|digits:10',
-            'about' => 'max:255',
-        ], [
-            'name.required' => 'Name is required',
-            'email.required' => 'Email is required',
+            'password' => 'nullable|min:8|confirmed',
         ]);
+        // [
+        //     'name.required' => 'Name is required',
+        //     'email.required' => 'Email is required',
+        //     'password.required' => 'Password is required',
+        // ]);
 
         $user = User::find(Auth::id());
 
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'location' => $request->location,
-            'phone' => $request->phone,
-            'about' => $request->about,
-        ]);
+        $data = [
+        'name' => $request->name,
+        'email' => $request->email,
+        'location' => $request->location,
+        'phone' => $request->phone,
+        'about' => $request->about,
+    ];
 
-        return back()->with('success', 'Profile updated successfully.');
+    if ($request->filled('password')) {
+        $data['password'] = Hash::make($request->password);
+    }
+
+        $user->update($data);
+        Auth::logout();
+
+        return redirect()->route('sign-in')
+        ->with('success', 'Password berhasil diubah. Silakan login kembali.');
     }
 }

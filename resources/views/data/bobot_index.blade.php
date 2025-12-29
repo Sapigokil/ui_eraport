@@ -137,6 +137,7 @@
                             </div>
 
                         </form>
+                        @include('data.partials.history_bobot')
                     </div>
                 </div>
             </div>

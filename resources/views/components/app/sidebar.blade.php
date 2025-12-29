@@ -1,5 +1,5 @@
 <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 fixed-start" id="sidenav-main" style="background:
-linear-gradient(180deg, #0f172a, #020617);">
+linear-gradient(180deg, #212121, #212121);">
 
     <div class="sidenav-header">
         <i class="fas fa-times p-3 cursor-pointer text-secondary opacity-5 position-absolute end-0 top-0 d-none d-xl-none"
@@ -458,7 +458,7 @@ linear-gradient(180deg, #0f172a, #020617);">
             {{-- 7. PROFIL SAYA --}}
             @php $isProfileActive = false; @endphp
             <li class="nav-item">
-                <a class="nav-link {{ $isProfileActive ? 'active' : 'text-white' }}" href="#">
+                <a class="nav-link {{ $isProfileActive ? 'active' : 'text-white' }}" href="{{ route('profile.index') }}">
                     <div class="me-2 d-flex align-items-center justify-content-center">
                         <i class="fas fa-user text-white"></i>
                     </div>
