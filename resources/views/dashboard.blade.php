@@ -114,6 +114,45 @@
             <div style="height:300px;">
                 <canvas id="chart-donut"></canvas>
             </div>
+            {{-- DETAIL SISWA NILAI MERAH --}}
+<div class="card shadow-sm mt-3">
+    <div class="card-header bg-light">
+        <h5 class="text-sm font-weight-bold mb-2">
+        Detail Siswa Nilai di Bawah 78
+    </h5></div>
+
+    <div class="card-body p-2" style="max-height: 260px; overflow-y: auto;">
+        @if($detailNilaiMerah->count() > 0)
+            <table class="table table-sm table-hover mb-0">
+                <thead>
+                    <tr class="text-muted text-xs">
+                        <th>Nama Siswa</th>
+                        <th>Mata Pelajaran</th>
+                        <th class="text-center">Nilai</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($detailNilaiMerah as $row)
+                        <tr>
+                            <td>{{ $row->siswa->nama_siswa ?? '-' }}</td>
+                            <td>{{ $row->mapel->nama_mapel ?? '-' }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-danger">
+                                    {{ number_format($row->nilai_akhir, 1) }}
+                                </span>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        @else
+            <div class="text-success text-sm text-center py-3">
+                🎉 Tidak ada nilai di bawah 78
+            </div>
+        @endif
+    </div>
+</div>
+
         </div>
 
         {{-- PROGRESS INPUT NILAI --}}
@@ -135,6 +174,41 @@
             <div class="card-body" style="height:250px;">
                 <canvas id="progressChart"></canvas>
             </div>
+            <div class="mt-3">
+    <div class="card-header bg-light">
+            <h5 class="text-sm font-weight-bold mb-2">
+        Detail Mapel Belum Input Nilai
+    </h5></div>
+
+    @foreach($progressDetail as $tingkat => $detail)
+<div class="mb-3">
+    <strong>Kelas {{ $tingkat }} ({{ $detail['progress'] }}%)</strong>
+
+    @if($detail['belum']->count() > 0)
+    <div class="text-warning text-sm mt-1">
+        Mapel belum lengkap:
+    </div>
+    <ul class="mb-0">
+        @foreach($detail['belum'] as $mapel)
+            <li>{{ $mapel }}</li>
+        @endforeach
+    </ul>
+@else
+    <div class="text-success mt-1">
+        Semua mapel sudah menginput nilai ✓
+    </div>
+@endif
+
+</div>
+@endforeach
+
+    @if(collect($progressDetail)->every(fn($d) => $d['progress'] == 100))
+    <p class="text-success text-sm mb-0">
+        Semua mapel sudah menginput nilai ✔
+    </p>
+@endif
+    </div>
+
         </div>
 
 
@@ -362,6 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const progressData   = @json($progressData);
     const statistikNilai = @json($statistikNilai);
+    const progressDetail = @json($progressDetail);
 
     // BAR CHART
 const progressCanvas = document.getElementById('progressChart');

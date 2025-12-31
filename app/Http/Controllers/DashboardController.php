@@ -15,7 +15,6 @@ use Carbon\Carbon;
 
 use Illuminate\Support\Facades\DB;
 
-
 class DashboardController extends Controller
 {
     public function index(Request $request)
@@ -51,14 +50,27 @@ class DashboardController extends Controller
         // =====================
         $progressLabels = ['10','11','12']; // contoh
         $progressData = [];
+        $progressDetail = [];
 
-foreach ($progressLabels as $label => $tingkat) {
-    $progressData[] = $this->hitungProgressByTingkat(
+foreach ($progressLabels as $tingkat) {
+    $progress = $this->hitungProgressByTingkat(
         $tingkat,
         $jurusan,
         $tahunAjaranAktif,
         $semesterAktif
     );
+$progressData[] = $progress;
+
+    // 🔥 DETAIL MAPEL BELUM INPUT
+    $progressDetail[$tingkat] = [
+        'progress' => $progress,
+        'belum' => $this->getDetailMapelBelumInput(
+            $tingkat,
+            $jurusan,
+            $tahunAjaranAktif,
+            $semesterAktif
+        )
+    ];
 }
 
 // =====================
@@ -84,6 +96,23 @@ if ($request->filled('kelas')) {
         ];
 
         // =====================
+        // DETAIL SISWA NILAI MERAH (<78) + MAPEL
+        // =====================
+        $detailNilaiMerahQuery = NilaiAkhir::with(['siswa', 'mapel'])
+            ->where('tahun_ajaran', $tahunAjaranAktif)
+            ->where('semester', $semesterAktif)
+            ->where('nilai_akhir', '<', 78);
+
+        if ($request->filled('kelas')) {
+            $detailNilaiMerahQuery->where('id_kelas', $request->kelas);
+        }
+
+        $detailNilaiMerah = $detailNilaiMerahQuery
+            ->orderBy('id_siswa')
+            ->orderBy('nilai_akhir')
+            ->get();
+
+        // =====================
         // STATUS RAPOR
         // =====================
         $statusRapor = $this->getStatusRapor();
@@ -106,11 +135,13 @@ if ($request->filled('kelas')) {
             'jurusanList',
             'progressLabels',
             'progressData',
+            'progressDetail',
             'kelasList',
             'statistikNilai',
             'statusRapor',
             'events',
-            'notifications'
+            'notifications',
+            'detailNilaiMerah'
         ));
     }
 
@@ -123,7 +154,6 @@ if ($request->filled('kelas')) {
     $tahunAjaran,
     $semester
 ) {
-    // 1. Ambil ID kelas berdasarkan tingkat (+ jurusan kalau ada)
     $kelasQuery = Kelas::where('tingkat', $tingkat);
 
     if ($jurusan) {
@@ -136,30 +166,88 @@ if ($request->filled('kelas')) {
         return 0;
     }
 
-    // 2. TOTAL YANG SEHARUSNYA DIISI
-    // Berdasarkan data REAL di tabel nilai_akhir
-    $totalHarusDiisi = NilaiAkhir::whereIn('id_kelas', $kelasIds)
-    ->where('tahun_ajaran', $tahunAjaran)
-    ->where('semester', $semester)
-    ->select('id_siswa', 'id_mapel')
-    ->distinct()
-    ->count();
+    // TOTAL SISWA
+    $totalSiswa = Siswa::whereIn('id_kelas', $kelasIds)->count();
 
-    if ($totalHarusDiisi === 0) {
+    if ($totalSiswa === 0) {
         return 0;
     }
 
-    // 3. TOTAL YANG SUDAH TERISI
-    $totalTerisi = NilaiAkhir::whereIn('id_kelas', $kelasIds)
+    // MAPEL YANG DIAJARKAN
+    $totalMapel = Pembelajaran::whereIn('id_kelas', $kelasIds)
+        ->distinct('id_mapel')
+        ->count('id_mapel');
+
+    if ($totalMapel === 0) {
+        return 0;
+    }
+
+    // MAPEL YANG SUDAH LENGKAP (SEMUA SISWA ADA NILAI)
+    $mapelLengkap = NilaiAkhir::whereIn('id_kelas', $kelasIds)
     ->where('tahun_ajaran', $tahunAjaran)
     ->where('semester', $semester)
-    ->where('nilai_akhir', '>', 0) // 🔥 FIX PENTING
-    ->select('id_siswa', 'id_mapel')
-    ->distinct()
-    ->count();
+    ->where('nilai_akhir', '>', 0)
+    ->select('id_mapel') // ✅ WAJIB
+    ->groupBy('id_mapel')
+    ->havingRaw('COUNT(DISTINCT id_siswa) = ?', [$totalSiswa])
+    ->get()              // ✅ ambil dulu
+    ->count();           // ✅ hitung di PHP
 
-    // 4. HITUNG PROGRESS (%)
-    return round(($totalTerisi / $totalHarusDiisi) * 100, 1);
+    return round(($mapelLengkap / $totalMapel) * 100, 1);
+}
+
+// =====================
+// DETAIL MAPEL BELUM INPUT NILAI
+// =====================
+private function getDetailMapelBelumInput(
+    $tingkat,
+    $jurusan,
+    $tahunAjaran,
+    $semester
+) {
+    $kelasQuery = Kelas::where('tingkat', $tingkat);
+
+    if ($jurusan) {
+        $kelasQuery->where('jurusan', $jurusan);
+    }
+
+    $kelasIds = $kelasQuery->pluck('id_kelas');
+
+    if ($kelasIds->isEmpty()) {
+        return collect();
+    }
+
+    // TOTAL SISWA
+    $totalSiswa = Siswa::whereIn('id_kelas', $kelasIds)
+        ->distinct('id_siswa')
+        ->count('id_siswa');
+
+    // SEMUA MAPEL DI TINGKAT INI
+    $mapelList = Pembelajaran::whereIn('id_kelas', $kelasIds)
+        ->distinct()
+        ->pluck('id_mapel');
+
+    $mapelBelum = collect();
+
+    foreach ($mapelList as $id_mapel) {
+
+        $sudah = NilaiAkhir::whereIn('id_kelas', $kelasIds)
+            ->where('id_mapel', $id_mapel)
+            ->where('tahun_ajaran', $tahunAjaran)
+            ->where('semester', $semester)
+            ->where('nilai_akhir', '>', 0)
+            ->distinct('id_siswa')
+            ->count('id_siswa');
+
+        // 🔥 KUNCI LOGIKA
+        if ($sudah < $totalSiswa) {
+            $mapelBelum->push(
+                MataPelajaran::where('id_mapel', $id_mapel)->value('nama_mapel')
+            );
+        }
+    }
+
+    return $mapelBelum;
 }
 
 // =====================
@@ -252,6 +340,10 @@ public function update(Request $request, $id)
 
     return redirect()->back()->with('success', 'Event berhasil diperbarui');
 }
+
+
+
+
 
 
 }
