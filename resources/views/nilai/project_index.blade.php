@@ -1,7 +1,7 @@
 {{-- File: resources/views/nilai/project_index.blade.php --}}
 @extends('layouts.app') 
 
-@section('title', 'Input Nilai Project')
+@section('page-title', 'Input Nilai Project')
 
 @php
    // LOGIKA TAHUN AJARAN & SEMESTER

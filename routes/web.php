@@ -32,7 +32,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InputController;
 use App\Http\Controllers\LedgerController;
 
-
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -49,6 +48,7 @@ Route::get('/tables', fn () => view('tables'))->name('tables')->middleware('auth
 Route::get('/wallet', fn () => view('wallet'))->name('wallet')->middleware('auth');
 Route::get('/RTL', fn () => view('RTL'))->name('RTL')->middleware('auth');
 // Route::get('/profile', fn () => view('account-pages.profile'))->name('profile')->middleware('auth');
+
 //Profile User
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
 Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Pengaturan Event & Notifikasi')
+@section('page-title', 'Pengaturan Event & Notifikasi')
 
 @section('content')
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -98,7 +98,7 @@
                             {{-- ACTION --}}
                             <div class="text-end">
                                 <button type="submit" class="btn bg-gradient-primary">
-                                    <i class="fas fa-plus me-1"></i> Simpan
+                                Simpan
                                 </button>
                             </div>
                         </form>
@@ -110,13 +110,10 @@
 
 </div>
    
-
                     </div>
                 </div>
-
             </div>
         </div>
-
         <x-app.footer />
     </div>
 </main>

@@ -2,7 +2,7 @@
 
 @extends('layouts.app')
 
-@section('title', 'Catatan Wali Kelas')
+@section('page-title', 'Catatan Wali Kelas')
 
 @php
     $request = request();

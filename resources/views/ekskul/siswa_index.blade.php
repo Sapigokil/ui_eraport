@@ -1,7 +1,7 @@
 {{-- File: resources/views/ekskul/siswa_index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Daftar Peserta Ekstrakurikuler')
+@section('page-title', 'Daftar Peserta Ekstrakurikuler')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

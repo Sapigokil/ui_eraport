@@ -1,7 +1,7 @@
 {{-- File: resources/views/mapel/index.blade.php --}}
 @extends('layouts.app') 
 
-@section('title', 'Data Master Mata Pelajaran')
+@section('page-title', 'Data Master Mata Pelajaran')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

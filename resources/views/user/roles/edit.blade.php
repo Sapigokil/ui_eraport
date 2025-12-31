@@ -1,6 +1,6 @@
 @extends('layouts.app') 
 
-@section('title', 'Edit Role: ' . $role->name) 
+@section('page-title', 'Edit Role: ' . $role->name) 
 
 @section('content')
     {{-- START: Pembungkus Main Content agar Navbar tampil --}}

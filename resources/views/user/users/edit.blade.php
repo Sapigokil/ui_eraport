@@ -1,6 +1,6 @@
 @extends('layouts.app') 
 
-@section('title', 'Edit Pengguna: ' . $user->name)
+@section('page-title', 'Edit Pengguna: ' . $user->name)
 
 @section('content')
     {{-- START: Pembungkus Main Content --}}

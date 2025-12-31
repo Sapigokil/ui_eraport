@@ -1,7 +1,7 @@
 {{-- File: resources/views/ekskul/siswa_create.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Tambah Peserta Ekskul')
+@section('page-title', 'Tambah Peserta Ekskul')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

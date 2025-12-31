@@ -201,7 +201,7 @@ linear-gradient(180deg, #212121, #212121);">
             {{-- ============================================================= --}}
             @php
                 $nilaiRoutes = [
-                    'master.sumatif.*', 
+                    'master.sumatif.*', 'master.project.*', 'master.catatan.*', 'master.nilaiakhir.*'
                 ];
                 $isNilaiActive = request()->routeIs($nilaiRoutes); 
             @endphp
@@ -388,8 +388,9 @@ linear-gradient(180deg, #212121, #212121);">
             
             {{-- 6. MANAJEMEN PENGGUNA --}}
             @php 
-                $managementRoutes = ['users.index', 'users.create', 'users.edit', 'roles.index', 'roles.create', 'roles.edit'];
-                $isManagementActive = request()->routeIs($managementRoutes) || request()->is('pengaturan/*');
+                $managementRoutes = ['master.users.*',
+                                    'master.roles.*'];
+                $isManagementActive = request()->routeIs($managementRoutes)
             @endphp
             
             @can('pengaturan-manage-users')
@@ -422,7 +423,9 @@ linear-gradient(180deg, #212121, #212121);">
 
             {{-- 🛑 6. MENU BARU: PENGATURAN 🛑 --}}
             @php 
-                $pengaturanRoutes = ['pengaturan.kok.index'];
+                $pengaturanRoutes = ['pengaturan.kok.index',
+                                    'pengaturan.bobot.index',
+                                    'pengaturan.input.index',];
                 $isPengaturanActive = request()->routeIs($pengaturanRoutes);
             @endphp
             @can('pengaturan-manage-users') {{-- Gunakan permission yang sesuai --}}
