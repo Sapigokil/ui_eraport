@@ -3,7 +3,7 @@
 @extends('layouts.app') 
 
 {{-- HEADER DINAMIS --}}
-@section('title', 'Rekapitulasi Nilai Akhir')
+@section('page-title', 'Rekapitulasi Nilai Akhir')
 
 @php
     // --- LOGIKA TAHUN AJARAN & SEMESTER ---
@@ -178,12 +178,12 @@
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Sumatif 2</th>
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Sumatif 3</th>
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Rata-rata</th>
-                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Bobot (40%)</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Bobot Sumatif</th>
 
                                                     {{-- 3. PROJECT (Hijau Tua) --}}
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Project</th>
                                                     {{-- <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Rata P</th> --}}
-                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Bobot (60%)</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Bobot Project</th>
                                                     
                                                     {{-- 4. AKHIR (Warna Berbeda) --}}
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-danger text-bold">NILAI AKHIR</th>

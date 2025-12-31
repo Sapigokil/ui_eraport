@@ -29,11 +29,7 @@ use App\Http\Controllers\SetKokurikulerController;
 use App\Http\Controllers\RaporController;
 use App\Http\Controllers\BobotNilaiController;
 use App\Http\Controllers\DashboardController;
-<<<<<<< HEAD
 use App\Http\Controllers\InputController;
-=======
->>>>>>> f710046e4fe74df7efac675c78106d9272b5c361
-
 
 /*
 |--------------------------------------------------------------------------
@@ -51,6 +47,7 @@ Route::get('/tables', fn () => view('tables'))->name('tables')->middleware('auth
 Route::get('/wallet', fn () => view('wallet'))->name('wallet')->middleware('auth');
 Route::get('/RTL', fn () => view('RTL'))->name('RTL')->middleware('auth');
 // Route::get('/profile', fn () => view('account-pages.profile'))->name('profile')->middleware('auth');
+
 //Profile User
 Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
 Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

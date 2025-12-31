@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Ledger Nilai Siswa')
+@section('page-title', 'Ledger Nilai Siswa')
 
 @section('content')
 <style>

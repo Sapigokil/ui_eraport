@@ -1,7 +1,7 @@
 {{-- File: resources/views/pembelajaran/index.blade.php --}}
 @extends('layouts.app') 
 
-@section('title', 'Data Pembelajaran Mata Pelajaran per Kelas')
+@section('page-title', 'Data Pembelajaran Mata Pelajaran per Kelas')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

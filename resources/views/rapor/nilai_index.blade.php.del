@@ -2,7 +2,7 @@
 
 @extends('layouts.app') {{-- Menggunakan base layout Corporate UI --}}
 
-@section('title', 'Data Nilai Rapor (Dashboard Progress)')
+@section('page-title', 'Data Nilai Rapor (Dashboard Progress)')
 
 @php
     // --- LOGIKA DEFAULT TA/SEMESTER (Untuk keperluan inisialisasi filter di view) ---

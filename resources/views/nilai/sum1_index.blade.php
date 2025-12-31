@@ -2,7 +2,7 @@
 
 @extends('layouts.app') 
 
-@section('title', 'Input Nilai Sumatif ' . $sumatifId)
+@section('page-title', 'Input Nilai Sumatif ' . $sumatifId)
 
 @php
     // LOGIKA TAHUN AJARAN & SEMESTER

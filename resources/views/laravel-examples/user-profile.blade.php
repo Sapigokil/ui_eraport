@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Profil Pengguna')
+@section('page-title', 'Profil Pengguna')
 
 @section('content')
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -14,7 +14,7 @@
 
                     {{-- Header --}}
                     <div class="card-header bg-gradient-primary text-white">
-                        <h6 class="mb-0 text-white">Formulir Profil Pengguna</h6>
+                        <h6 class="mb-0 text-white">Profil Pengguna</h6>
                     </div>
 
                     <div class="card-body">
@@ -98,7 +98,7 @@
                             {{-- Action --}}
                             <div class="text-end">
                                 <button type="submit" class="btn bg-gradient-primary">
-                                    Simpan Perubahan
+                                    Simpan
                                 </button>
                             </div>
 

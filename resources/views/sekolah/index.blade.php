@@ -1,6 +1,6 @@
 @extends('layouts.app') 
 
-@section('title', 'Master Data Sekolah')
+@section('page-title', 'Master Data Sekolah')
 
 @section('content')
     {{-- START: Pembungkus Main Content agar Navbar tampil konsisten --}}
