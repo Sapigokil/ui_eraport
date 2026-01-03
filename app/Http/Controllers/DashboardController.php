@@ -20,7 +20,24 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
 
-        
+        // =====================
+        // LOGIKA DEFAULT TAHUN AJARAN & SEMESTER
+        // =====================
+        $tahunSekarang = date('Y');
+        $bulanSekarang = date('n');
+
+        if ($bulanSekarang < 7) {
+            $defaultTA1 = $tahunSekarang - 1;
+            $defaultTA2 = $tahunSekarang;
+            $defaultSemester = 'Genap';
+        } else {
+            $defaultTA1 = $tahunSekarang;
+            $defaultTA2 = $tahunSekarang + 1;
+            $defaultSemester = 'Ganjil';
+        }
+
+        $defaultTahunAjaran = $defaultTA1 . '/' . $defaultTA2;
+                
         // =====================
         // CARD STATISTIK
         // =====================
@@ -29,11 +46,18 @@ class DashboardController extends Controller
         $totalKelas = Kelas::count();
         $totalMapel = MataPelajaran::count();
 
-        // =====================
-        // TAHUN AJARAN & SEMESTER AKTIF
-        // =====================
-        $tahunAjaranAktif = '2025/2026';
-        $semesterAktif = 1; // 1 = Ganjil, 2 = Genap
+            // =====================
+            // TAHUN AJARAN & SEMESTER AKTIF (DARI REQUEST / DEFAULT)
+            // =====================
+            $tahunAjaranAktif = $request->tahun_ajaran ?? $defaultTahunAjaran;
+
+            $semesterRequest = $request->semester ?? $defaultSemester;
+
+            $semesterAktif = match ($semesterRequest) {
+                'Ganjil' => 1,
+                'Genap'  => 2,
+                default  => 1
+            };
 
         // =====================
         // LIST JURUSAN
@@ -45,6 +69,17 @@ class DashboardController extends Controller
 
         $jurusan = $request->jurusan ?? null;
 
+        // =====================
+        // LIST TAHUN AJARAN
+        // =====================
+        $tahunAjaran = collect();
+
+        for ($i = -1; $i <= 5; $i++) {
+            $awal = $tahunSekarang + $i;
+            $akhir = $awal + 1;
+            $tahunAjaran->push($awal . '/' . $akhir);
+        }
+     
         // =====================
         // PROGRESS INPUT NILAI
         // =====================
@@ -77,8 +112,14 @@ $progressData[] = $progress;
 // FILTER KELAS (STATISTIK NILAI)
 // =====================
 $kelasList = Kelas::orderBy('nama_kelas')->get();
-$queryNilai = NilaiAkhir::where('tahun_ajaran', $tahunAjaranAktif)
-    ->where('semester', $semesterAktif);
+$queryNilai = NilaiAkhir::where('semester', $semesterAktif)
+    ->where('nilai_akhir', '>', 0);
+
+if ($request->filled('tahun_ajaran')) {
+    $queryNilai->where('tahun_ajaran', $request->tahun_ajaran);
+} else {
+    $queryNilai->where('tahun_ajaran', $tahunAjaranAktif);
+}
 
 if ($request->filled('kelas')) {
     $queryNilai->where('id_kelas', $request->kelas);
@@ -118,14 +159,30 @@ if ($request->filled('kelas')) {
         $statusRapor = $this->getStatusRapor();
 
         // =====================
-        // UPCOMING EVENT
+        // UPCOMING EVENT (H sampai H+2)
         // =====================
-        $events = Event::whereDate('tanggal', '>=', Carbon::today()->subDays(3))
+        $events = Event::whereBetween(
+                'tanggal',
+                [
+                    Carbon::today(),               // hari ini
+                    Carbon::today()->addDays(2)    // H+2
+                ]
+            )
             ->orderBy('tanggal')
             ->get();
 
-        // Ambil notifikasi terbaru (misal 5 notifikasi terakhir)
-        $notifications = Notifikasi::latest('created_at')->take(5)->get();
+            // =====================
+            // NOTIFIKASI (H sampai H+2)
+            // =====================
+            $notifications = Notifikasi::whereBetween(
+                    'tanggal',
+                    [
+                        Carbon::today(),
+                        Carbon::today()->addDays(2)
+                    ]
+                )
+                ->orderBy('tanggal')
+                ->get();
 
         return view('dashboard', compact(
             'totalSiswa',
@@ -141,7 +198,11 @@ if ($request->filled('kelas')) {
             'statusRapor',
             'events',
             'notifications',
-            'detailNilaiMerah'
+            'detailNilaiMerah',
+            'semesterAktif',
+            'tahunAjaran',
+            'defaultSemester',
+            'defaultTahunAjaran'
         ));
     }
 
@@ -177,30 +238,25 @@ if ($request->filled('kelas')) {
 
     foreach ($mapelList as $mapel) {
 
-        // kelas yang mengajarkan mapel ini
-        $kelasMapel = Pembelajaran::where('id_mapel', $mapel->id_mapel)
-            ->whereIn('id_kelas', $kelasIds)
-            ->pluck('id_kelas');
+    $kelasMapel = Pembelajaran::where('id_mapel', $mapel->id_mapel)
+        ->whereIn('id_kelas', $kelasIds)
+        ->pluck('id_kelas');
 
-        // total siswa target mapel ini
-        $totalTarget = Siswa::whereIn('id_kelas', $kelasMapel)
-            ->count();
+    $totalTarget = Siswa::whereIn('id_kelas', $kelasMapel)->count();
+    if ($totalTarget === 0) continue;
 
-        if ($totalTarget === 0) continue;
+    $totalSudah = NilaiAkhir::whereIn('id_kelas', $kelasMapel)
+        ->where('id_mapel', $mapel->id_mapel)
+        ->where('tahun_ajaran', $tahunAjaran)
+        ->where('semester', $semester)
+        ->where('nilai_akhir', '>', 0)
+        ->distinct('id_siswa')
+        ->count('id_siswa');
 
-        // siswa yang sudah punya nilai
-        $totalSudah = NilaiAkhir::whereIn('id_kelas', $kelasMapel)
-            ->where('id_mapel', $mapel->id_mapel)
-            ->where('tahun_ajaran', $tahunAjaran)
-            ->where('semester', $semester)
-            ->where('nilai_akhir', '>', 0)
-            ->distinct('id_siswa')
-            ->count('id_siswa');
-
-        if ($totalSudah === $totalTarget) {
-            $mapelLengkap++;
-        }
+    if ($totalSudah === $totalTarget) {
+        $mapelLengkap++;
     }
+}
 
     return $totalMapel > 0
         ? round(($mapelLengkap / $totalMapel) * 100, 1)
@@ -218,43 +274,41 @@ private function getDetailMapelBelumInput(
     $semester
 ) {
     $kelasQuery = Kelas::where('tingkat', $tingkat);
-
     if ($jurusan) {
         $kelasQuery->where('jurusan', $jurusan);
     }
 
     $kelasIds = $kelasQuery->pluck('id_kelas');
+    if ($kelasIds->isEmpty()) return collect();
 
-    if ($kelasIds->isEmpty()) {
-        return collect();
-    }
-
-    // TOTAL SISWA
-    $totalSiswa = Siswa::whereIn('id_kelas', $kelasIds)
-        ->distinct('id_siswa')
-        ->count('id_siswa');
-
-    // SEMUA MAPEL DI TINGKAT INI
     $mapelList = Pembelajaran::whereIn('id_kelas', $kelasIds)
+        ->select('id_mapel')
         ->distinct()
-        ->pluck('id_mapel');
+        ->get();
 
     $mapelBelum = collect();
 
-    foreach ($mapelList as $id_mapel) {
+    foreach ($mapelList as $mapel) {
 
-        $sudah = NilaiAkhir::whereIn('id_kelas', $kelasIds)
-            ->where('id_mapel', $id_mapel)
+        $kelasMapel = Pembelajaran::where('id_mapel', $mapel->id_mapel)
+            ->whereIn('id_kelas', $kelasIds)
+            ->pluck('id_kelas');
+
+        $totalTarget = Siswa::whereIn('id_kelas', $kelasMapel)->count();
+        if ($totalTarget === 0) continue;
+
+        $totalSudah = NilaiAkhir::whereIn('id_kelas', $kelasMapel)
+            ->where('id_mapel', $mapel->id_mapel)
             ->where('tahun_ajaran', $tahunAjaran)
             ->where('semester', $semester)
             ->where('nilai_akhir', '>', 0)
             ->distinct('id_siswa')
             ->count('id_siswa');
 
-        // 🔥 KUNCI LOGIKA
-        if ($sudah < $totalSiswa) {
+        if ($totalSudah < $totalTarget) {
             $mapelBelum->push(
-                MataPelajaran::where('id_mapel', $id_mapel)->value('nama_mapel')
+                MataPelajaran::where('id_mapel', $mapel->id_mapel)
+                    ->value('nama_mapel')
             );
         }
     }
@@ -276,8 +330,9 @@ private function getStatusRapor()
 
         // MAPEL YANG SUDAH ADA NILAI
         $mapelTerisi = NilaiAkhir::where('id_kelas', $kelas->id_kelas)
-            ->distinct()
-            ->count('id_mapel');
+        ->where('nilai_akhir', '>', 0)
+        ->distinct()
+        ->count('id_mapel');
 
         // LOGIKA STATUS
         if ($mapelTerisi === 0) {
@@ -352,10 +407,5 @@ public function update(Request $request, $id)
 
     return redirect()->back()->with('success', 'Event berhasil diperbarui');
 }
-
-
-
-
-
 
 }

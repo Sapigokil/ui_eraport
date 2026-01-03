@@ -64,13 +64,6 @@
 <p style="font-size: 13px; color: #555;">Belum ada notifikasi.</p>
 @endforelse
 
-
-        {{-- Debug Data --}}
-<!-- <pre>
-{{ json_encode($progressData) }}
-{{ json_encode($statistikNilai) }}
-</pre> -->
-
         {{-- CARD STATISTIK --}}
         <div class="row mb-4">
             @foreach ([
@@ -97,23 +90,59 @@
 
         {{-- STATISTIK NILAI --}}
         <div class="card shadow-sm">
-            <div class="card-header d-flex justify-content-between">
-                <h6 class="mb-0">Statistik Nilai Siswa</h6>
-                <form method="GET">
-                    <input type="hidden" name="jurusan" value="{{ request('jurusan') }}">
-                    <select name="kelas" class="form-select form-select-sm" style="min-width: 160px;" onchange="this.form.submit()">
-                        <option value="">Semua Kelas</option>
-                        @foreach ($kelasList as $k)
-                            <option value="{{ $k->id_kelas }}" {{ request('kelas') == $k->id_kelas ? 'selected' : '' }}>
-                                {{ $k->nama_kelas }}
-                            </option>
-                        @endforeach
-                    </select>
-                </form>
-            </div>
-            <div style="height:300px;">
-                <canvas id="chart-donut"></canvas>
-            </div>
+    <div class="card-header">
+        <h6 class="mb-3">Statistik Nilai</h6>
+
+        <form method="GET" class="d-flex gap-3">
+
+            {{-- KELAS --}}
+            <select name="kelas"
+                class="form-select"
+                style="min-width: 180px; height: 44px;"
+                onchange="this.form.submit()">
+                <option value="">-- Pilih Kelas --</option>
+                @foreach ($kelasList as $k)
+                    <option value="{{ $k->id_kelas }}"
+                        {{ request('kelas') == $k->id_kelas ? 'selected' : '' }}>
+                        {{ $k->nama_kelas }}
+                    </option>
+                @endforeach
+            </select>
+
+            {{-- SEMESTER --}}
+            <select name="semester"
+                class="form-select"
+                style="min-width: 160px; height: 44px;"
+                onchange="this.form.submit()">
+                <option value="Ganjil"
+                    {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>
+                    Ganjil
+                </option>
+                <option value="Genap"
+                    {{ request('semester', $defaultSemester) == 'Genap' ? 'selected' : '' }}>
+                    Genap
+                </option>
+            </select>
+
+            {{-- TAHUN AJARAN --}}
+            <select name="tahun_ajaran"
+                class="form-select"
+                style="min-width: 200px; height: 44px;"
+                onchange="this.form.submit()">
+                @foreach ($tahunAjaran as $ta)
+                    <option value="{{ $ta }}"
+                        {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
+                        {{ $ta }}
+                    </option>
+                @endforeach
+            </select>
+
+        </form>
+    </div>
+
+    <div class="card-body">
+        <canvas id="chart-donut"></canvas>
+    </div>
             {{-- DETAIL SISWA NILAI MERAH --}}
 <div class="card shadow-sm mt-3">
     <div class="card-header bg-light">
@@ -157,10 +186,11 @@
 
         {{-- PROGRESS INPUT NILAI --}}
         <div class="card shadow-sm">
-            <div class="card-header d-flex justify-content-between">
-                <h6 class="mb-0">Progress Input Nilai per Tingkat</h6>
-                <form method="GET">
+            <div class="card-header">
+        <h6 class="mb-0">Progress Input Nilai per Tingkat</h6>
+        <form method="GET" class="d-flex gap-3">
                     <input type="hidden" name="kelas" value="{{ request('kelas') }}">
+                    {{-- JURUSAN --}}
                     <select name="jurusan" class="form-select form-select-sm" style="min-width: 160px;" onchange="this.form.submit()">
                         <option value="">Semua Jurusan</option>
                         @foreach ($jurusanList as $j)
@@ -169,6 +199,32 @@
                             </option>
                         @endforeach
                     </select>
+            {{-- SEMESTER --}}
+            <select name="semester"
+                class="form-select"
+                style="min-width: 140px; height: 42px;"
+                onchange="this.form.submit()">
+                <option value="Ganjil"
+                    {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>
+                    Ganjil
+                </option>
+                <option value="Genap"
+                    {{ request('semester', $defaultSemester) == 'Genap' ? 'selected' : '' }}>
+                    Genap
+                </option>
+            </select>
+             {{-- TAHUN AJARAN --}}
+            <select name="tahun_ajaran"
+                class="form-select"
+                style="min-width: 180px; height: 42px;"
+                onchange="this.form.submit()">
+                @foreach ($tahunAjaran as $ta)
+                    <option value="{{ $ta }}"
+                        {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
+                        {{ $ta }}
+                    </option>
+                @endforeach
+            </select>
                 </form>
             </div>
             <div class="card-body" style="height:250px;">
