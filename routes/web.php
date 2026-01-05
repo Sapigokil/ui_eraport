@@ -249,18 +249,15 @@ Route::group(['prefix' => 'pengaturan', 'as' => 'pengaturan.'], function () {
     Route::post('/bobot-nilai', [BobotNilaiController::class, 'store'])->name('bobot.store');
     Route::put('/bobot-nilai/{id}', [BobotNilaiController::class, 'update'])->name('bobot.update');
 
-   Route::prefix('input')->group(function () {
-
+    // input event
+    Route::prefix('input')->group(function () {
     // HALAMAN
     Route::get('/', [InputController::class, 'index'])->name('input.index');
-
     // SIMPAN (EVENT / NOTIFIKASI)
     Route::post('/store', [InputController::class, 'store'])->name('input.store');
-
     // UPDATE
     Route::put('/event/{id}', [InputController::class, 'updateEvent'])->name('input.event.update');
     Route::put('/notifikasi/{id}', [InputController::class, 'updateNotifikasi'])->name('input.notifikasi.update');
-
     // DELETE
     Route::delete('/event/{id}', [InputController::class, 'destroyEvent'])->name('input.event.delete');
     Route::delete('/notifikasi/{id}', [InputController::class, 'destroyNotifikasi'])->name('input.notifikasi.delete');

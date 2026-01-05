@@ -11,7 +11,7 @@
 
         {{-- HEADER --}}
         <h3 class="mb-3">Hello, {{ auth()->user()->name ?? 'Pengguna' }}</h3>
-
+{{-- (NOTIFIKASI) --}}
     @forelse($notifications as $notif)
 <div class="notification-card" style="
     background-color: #d4f5d4;
@@ -24,7 +24,6 @@
     width: 100%;               /* 🔥 full width */
     max-width: 100%;           /* 🔥 sejajar card statistik */
 ">
-
     {{-- Tombol close --}}
     <span style="
         position: absolute;
@@ -52,16 +51,63 @@
     </div>
 
     <div class="notif-tanggal" style="
-        font-size: 11px;
-        color: #555;
-        line-height: 1.2;
-    ">
-        ({{ \Carbon\Carbon::parse($notif->tanggal)->format('d-m-Y') }})
-    </div>
+    font-size: 11px;
+    color: #555;
+    line-height: 1.2;
+">
+    ({{ \Carbon\Carbon::parse($notif->tanggal)->translatedFormat('d F Y') }})
+</div>
 </div>
 
 @empty
 <p style="font-size: 13px; color: #555;">Belum ada notifikasi.</p>
+@endforelse
+    {{-- EVENT (STYLE SAMA KAYAK NOTIFIKASI) --}}
+@forelse($events as $event)
+<div class="notification-card" style="
+    background-color: #FEEAC9;
+    border-left: 4px solid #FF6D1F;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    position: relative;
+    font-size: 13px;
+">
+{{-- Tombol close --}}
+    <span style="
+        position: absolute;
+        top: 6px;
+        right: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+    " onclick="this.parentElement.style.display='none'">&times;</span>
+    
+    <h6 style="
+        margin-bottom: 4px;
+        font-size: 14px;
+        font-weight: 600;
+    ">
+        Upcoming Event
+    </h6>
+
+    <div style="
+        margin-bottom: 4px;
+        line-height: 1.3;
+        color: #333;
+    ">
+        {{ $event->deskripsi }}
+    </div>
+
+    <div style="
+        font-size: 11px;
+        color: #555;
+    ">
+        ({{ \Carbon\Carbon::parse($event->tanggal)->translatedFormat('d F Y') }})
+    </div>
+</div>
+@empty
+<p style="font-size: 13px; color: #555;">Belum ada event.</p>
 @endforelse
 
         {{-- CARD STATISTIK --}}
@@ -98,9 +144,9 @@
             {{-- KELAS --}}
             <select name="kelas"
                 class="form-select"
-                style="min-width: 180px; height: 44px;"
+                style="min-width: 130px; height: 40px;"
                 onchange="this.form.submit()">
-                <option value="">-- Pilih Kelas --</option>
+                <option value="">Pilih Kelas</option>
                 @foreach ($kelasList as $k)
                     <option value="{{ $k->id_kelas }}"
                         {{ request('kelas') == $k->id_kelas ? 'selected' : '' }}>
@@ -112,7 +158,7 @@
             {{-- SEMESTER --}}
             <select name="semester"
                 class="form-select"
-                style="min-width: 160px; height: 44px;"
+                style="min-width: 130px; height: 40px;"
                 onchange="this.form.submit()">
                 <option value="Ganjil"
                     {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>
@@ -127,7 +173,7 @@
             {{-- TAHUN AJARAN --}}
             <select name="tahun_ajaran"
                 class="form-select"
-                style="min-width: 200px; height: 44px;"
+                style="min-width: 130px; height: 40px;"
                 onchange="this.form.submit()">
                 @foreach ($tahunAjaran as $ta)
                     <option value="{{ $ta }}"
@@ -191,7 +237,7 @@
         <form method="GET" class="d-flex gap-3">
                     <input type="hidden" name="kelas" value="{{ request('kelas') }}">
                     {{-- JURUSAN --}}
-                    <select name="jurusan" class="form-select form-select-sm" style="min-width: 160px;" onchange="this.form.submit()">
+                    <select name="jurusan" class="form-select form-select-sm" style="min-width: 130px;" onchange="this.form.submit()">
                         <option value="">Semua Jurusan</option>
                         @foreach ($jurusanList as $j)
                             <option value="{{ $j }}" {{ request('jurusan') == $j ? 'selected' : '' }}>
@@ -202,7 +248,7 @@
             {{-- SEMESTER --}}
             <select name="semester"
                 class="form-select"
-                style="min-width: 140px; height: 42px;"
+                style="min-width: 130px; height: 40px;"
                 onchange="this.form.submit()">
                 <option value="Ganjil"
                     {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>
@@ -216,7 +262,7 @@
              {{-- TAHUN AJARAN --}}
             <select name="tahun_ajaran"
                 class="form-select"
-                style="min-width: 180px; height: 42px;"
+                style="min-width: 130px; height: 40px;"
                 onchange="this.form.submit()">
                 @foreach ($tahunAjaran as $ta)
                     <option value="{{ $ta }}"
@@ -276,152 +322,12 @@
 <div class="row">
 <div class="col-12">
 
-    <!-- FRAME BESAR -->
-    <div class="card shadow-sm rounded-4 mb-4" style="max-width:700px;">
-      <div class="card-body">
 
-    <!-- FORM INPUT -->
-        <!-- <form action="{{ route('dashboard.event.store') }}" method="POST">
-          @csrf -->
-
-        <!-- FORM INPUT -->
-        <!-- <h6 class="mb-3">Form Input</h6> -->
-
-        <!-- <textarea
-        name="deskripsi"
-        class="form-control mb-2"
-        placeholder="Deskripsi ..."
-        required></textarea> -->
-
-        <!-- <input type="date" name="tanggal" class="form-control mb-2" required> -->
-
-        <!-- <select class="form-control mb-3">
-          <option selected disabled>Kategori</option>
-          <option>Akademik</option>
-          <option>Rapor</option>
-          <option>Ujian</option>
-        </select> -->
-
-        <!-- <button type="submit" class="btn btn-info w-100 mb-4">
-          Tambah Event
-        </button> -->
-
-        <!-- GARIS PEMBATAS -->
-        <!-- <hr> -->
-
-        <!-- UPCOMING EVENT -->
-        <h6 class="mb-3">Upcoming Event</h6>
-
-@forelse ($events as $event)
-
-@php
-  $eventDate = \Carbon\Carbon::parse($event->tanggal);
-
-  // DEFAULT
-  $bg = 'bg-secondary';
-  $icon = 'fa-book';
-
-  if ($eventDate->isToday()) {
-      $bg = 'bg-success';
-      $icon = 'fa-clock';
-  } elseif ($eventDate->isTomorrow()) {
-      $bg = 'bg-primary';
-      $icon = 'fa-pencil';
-  }
-@endphp
-
-<div class="d-flex align-items-center justify-content-between mb-3">
-
-<!-- KIRI : ICON + TEXT -->
-  <div class="d-flex align-items-center">
-
-  <!-- KOTAK ICON -->
-  <div class="rounded d-flex align-items-center justify-content-center {{ $bg }} me-3"
-       style="width:46px;height:46px;">
-    <i class="fa-solid {{ $icon }} text-white"></i>
-  </div>
-
-  <!-- TEXT EVENT -->
-  <div>
-    <strong>{{ $event->deskripsi }}</strong><br>
-    <small class="text-muted">
-      {{ $eventDate->translatedFormat('d F Y') }}
-    </small>
-  </div>
-
-</div>
-
-<!-- KANAN : ACTION -->
-  <div class="d-flex gap-4">
-
-    <!-- EDIT -->
-    <!-- <button
-      class="btn btn-sm btn-link text-warning p-0"
-      data-bs-toggle="modal"
-      data-bs-target="#editEvent{{ $event->id_event }}">
-      <i class="fa-solid fa-pen fs-6"></i>
-    </button> -->
-
-    <!-- DELETE -->
-    <!-- <form action="{{ route('dashboard.event.destroy', $event->id_event) }}"
-          method="POST"
-          onsubmit="return confirm('Yakin hapus event ini?')">
-      @csrf
-      @method('DELETE')
-      <button class="btn btn-sm btn-link text-danger p-0">
-        <i class="fa-solid fa-trash fs-6"></i>
-      </button>
-    </form> -->
-
-  </div>
-</div>
-
-<!-- MODAL EDIT -->
-<!-- <div class="modal fade" id="editEvent{{ $event->id_event }}" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content rounded-4">
-      <form action="{{ route('dashboard.event.update', $event->id_event) }}" method="POST">
-        @csrf
-        @method('PUT')
-
-        <div class="modal-header">
-          <h6 class="modal-title">Edit Event</h6>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-
-        <div class="modal-body">
-          <textarea name="deskripsi" class="form-control mb-2" required>
-{{ $event->deskripsi }}</textarea>
-
-          <input type="date" name="tanggal"
-                 class="form-control"
-                 value="{{ $event->tanggal }}"
-                 required>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-          <button class="btn btn-warning">Simpan</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div> -->
-
-@empty
-  <p class="text-muted">Belum ada event mendatang</p>
-@endforelse
-
-      </div>
-    </div>
-    <!-- END FRAME -->
 
   </div>
 </div>
 
     </div>
-
-    
 
     {{-- KOLOM KANAN --}}
     <div class="col-md-6">

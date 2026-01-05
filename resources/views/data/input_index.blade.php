@@ -62,7 +62,7 @@
                                 </div>
 
                                 {{-- TANGGAL --}}
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label text-xs font-weight-bolder text-uppercase">
                                         Tanggal
                                     </label>
@@ -76,19 +76,42 @@
                                 </div>
 
                                 {{-- KATEGORI --}}
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label text-xs font-weight-bolder text-uppercase">
                                         Kategori
                                     </label>
                                     <div class="input-group input-group-outline">
-                                        <select name="kategori" class="form-select" required>
-                                            <option value="" disabled selected>-- Pilih Kategori --</option>
+                                        <select name="kategori"
+                                            id="kategori"
+                                            class="form-select"
+                                            required>
+                                            <option value="" disabled selected>Pilih Kategori</option>
                                             <option value="event" {{ old('kategori') == 'event' ? 'selected' : '' }}>
-                                                Event
+                                                Upcoming Event
                                             </option>
                                             <option value="notifikasi" {{ old('kategori') == 'notifikasi' ? 'selected' : '' }}>
                                                 Notifikasi
                                             </option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {{-- JADWALKAN (UPCOMING EVENT) --}}
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label text-xs font-weight-bolder text-uppercase">
+                                        Jadwalkan
+                                    </label>
+                                    <div class="input-group input-group-outline">
+                                        <select name="jadwalkan"
+                                                id="jadwalkan"
+                                                class="form-select"
+                                                disabled>
+                                            <option value="" selected> Pilih Jadwal </option>
+                                            <option value="1_hari">1 Hari</option>
+                                            <option value="3_hari">3 Hari</option>
+                                            <option value="7_hari">7 Hari</option>
+                                            <option value="15_hari">15 Hari</option>
+                                            <option value="1_bulan">1 Bulan</option>
                                         </select>
                                     </div>
                                 </div>
@@ -117,4 +140,28 @@
         <x-app.footer />
     </div>
 </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const kategori   = document.getElementById('kategori');
+    const jadwalkan  = document.getElementById('jadwalkan');
+
+    function toggleJadwal() {
+        if (kategori.value === 'event') {
+            jadwalkan.disabled = false;
+        } else {
+            jadwalkan.disabled = true;
+            jadwalkan.value = '';
+        }
+    }
+
+    // saat kategori berubah
+    kategori.addEventListener('change', toggleJadwal);
+
+    // saat reload (old value)
+    toggleJadwal();
+});
+</script>
+
 @endsection

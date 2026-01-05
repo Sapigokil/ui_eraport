@@ -32,11 +32,13 @@ class InputController extends Controller
         if ($request->kategori === 'event') {
             $request->validate([
                 'deskripsi' => 'required|string',
+                'jadwalkan' => 'required|in:1_hari,3_hari,7_hari,15_hari,1_bulan',
             ]);
 
             Event::create([
                 'deskripsi' => $request->deskripsi,
                 'tanggal'   => $request->tanggal,
+                'jadwalkan' => $request->jadwalkan,
             ]);
 
             return back()->with('success', 'Event berhasil ditambahkan');
