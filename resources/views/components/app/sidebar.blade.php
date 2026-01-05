@@ -296,7 +296,7 @@ linear-gradient(180deg, #212121, #212121);">
             @can('manage-master') 
             @php
                 // Logika untuk mengecek apakah sedang di halaman rapor agar menu otomatis terbuka
-                $isRaporActive = request()->routeIs('rapornilai.*');
+                $isRaporActive = request()->routeIs('rapornilai.*', 'ledger.*');
             @endphp
 
             <li class="nav-item">

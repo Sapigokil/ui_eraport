@@ -59,7 +59,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <label class="form-label font-weight-bold">Semester</label>
                         <select name="semester" class="form-select" onchange="this.form.submit()">
                             @foreach($semesterList as $smt)
@@ -75,7 +75,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <button type="submit" class="btn btn-dark w-100 mb-0">Tampilkan</button>
                     </div>
                 </form>

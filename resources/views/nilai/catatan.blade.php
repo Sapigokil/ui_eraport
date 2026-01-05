@@ -94,7 +94,7 @@
                                 </div>
                                 <div class="col-md-3 mb-3 text-start">
                                     <label class="form-label text-xs font-weight-bold text-uppercase">Pilih Siswa</label>
-                                    <select name="id_siswa" id="siswaSelect" required class="form-select border ps-2">
+                                    <select name="id_siswa" id="siswaSelect" required class="form-select border ps-2" onchange="this.form.submit()">
                                         <option value="">-- Pilih Siswa --</option>
                                         @foreach ($siswa as $s)
                                             <option value="{{ $s->id_siswa }}" {{ $request->id_siswa == $s->id_siswa ? 'selected' : '' }}>{{ $s->nama_siswa }}</option>

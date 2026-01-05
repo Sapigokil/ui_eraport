@@ -72,7 +72,7 @@
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label">Mata Pelajaran:</label>
-                                    <select name="id_mapel" id="id_mapel" class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }}>
+                                    <select name="id_mapel" id="id_mapel" class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }} onchange="this.form.submit()">
                                         <option value="">Pilih Mapel</option>
                                         @foreach($mapel as $m)
                                             <option value="{{ $m->id_mapel }}" {{ request('id_mapel') == $m->id_mapel ? 'selected' : '' }}>{{ $m->nama_mapel }}</option>

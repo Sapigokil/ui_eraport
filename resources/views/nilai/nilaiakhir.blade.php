@@ -104,7 +104,7 @@
                                     {{-- 2. Mapel --}}
                                     <div class="col-md-3 mb-3">
                                         <label for="id_mapel" class="form-label">Mata Pelajaran:</label>
-                                        <select name="id_mapel" id="id_mapel" required class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }}>
+                                        <select name="id_mapel" id="id_mapel" required class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }} onchange="this.form.submit()">
                                             <option value="">Pilih Mapel</option>
                                             @foreach ($mapel as $m)
                                                 <option value="{{ $m->id_mapel }}" 

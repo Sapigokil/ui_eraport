@@ -71,7 +71,6 @@
                             @endif
                             
                             {{-- Form Filter --}}
-                            <div id="container-siswa">
                             <div class="p-4 border-bottom">
                                 <form action="{{ route('master.sumatif.s1') }}" method="GET" class="row align-items-end">
                                     <div class="col-md-2 mb-3">
@@ -84,7 +83,7 @@
 
                                     <div class="col-md-3 mb-3">
                                         <label for="id_kelas" class="form-label">Kelas:</label>
-                                        <select name="id_kelas" id="id_kelas" required class="form-select">
+                                        <select name="id_kelas" id="id_kelas" required class="form-select" onchange="this.form.submit()">
                                             <option value="">Pilih Kelas</option>
                                             @foreach(\App\Models\Kelas::orderBy('nama_kelas')->get() as $k)
                                                 <option value="{{ $k->id_kelas }}" {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
@@ -94,7 +93,7 @@
                                     
                                     <div class="col-md-3 mb-3">
                                         <label for="id_mapel" class="form-label">Mata Pelajaran:</label>
-                                        <select name="id_mapel" id="id_mapel" required class="form-select" disabled>
+                                        <select name="id_mapel" id="id_mapel" required class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }} onchange="this.form.submit()">
                                             <option value="">Pilih Mapel</option>
                                             @foreach ($mapel as $m)
                                                 <option value="{{ $m->id_mapel }}" {{ request('id_mapel') == $m->id_mapel ? 'selected' : '' }}>{{ $m->nama_mapel }}</option>
@@ -120,11 +119,11 @@
                                         </select>
                                     </div>
                                     
-                                    <!-- <div class="col-12 text-end">
+                                    <div class="col-12 text-end">
                                         <button type="submit" class="btn bg-gradient-info w-25 mb-0">Tampilkan Siswa</button>
-                                    </div> -->
+                                    </div>
                                 </form>
-                            </div></div>
+                            </div>
 
                             <div class="p-4">
                                 @if(!request('id_kelas') || !request('id_mapel'))
@@ -337,76 +336,4 @@
             });
         });
     </script>
-<script>
-$('#id_mapel').on('change', function () {
-    let kelas = $('#id_kelas').val();
-    let mapel = $(this).val();
-    let semester = $('select[name="semester"]').val();
-    let tahun = $('select[name="tahun_ajaran"]').val();
-    let sumatif = '{{ $sumatifId }}';
-
-    if (!kelas || !mapel) return;
-
-    $('#container-siswa').html(
-        '<p class="text-center text-secondary p-4">Memuat data siswa...</p>'
-    );
-
-    $.ajax({
-        url: "{{ route('master.sumatif.s1') }}",
-        method: "GET",
-        data: {
-            id_kelas: kelas,
-            id_mapel: mapel,
-            semester: semester,
-            tahun_ajaran: tahun,
-            sumatif: sumatif
-        },
-        success: function (res) {
-            // Ambil hanya isi tabel siswa
-            let html = $(res).find('#container-siswa').html();
-            $('#container-siswa').html(html);
-        },
-        error: function () {
-            $('#container-siswa').html(
-                '<p class="text-danger text-center p-4">Gagal memuat data siswa</p>'
-            );
-        }
-    });
-});
-</script>
-<script>
-$(document).ready(function () {
-
-    // PILIH KELAS → LOAD MAPEL
-    $('#id_kelas').on('change', function () {
-        let idKelas = $(this).val();
-        let mapel = $('#id_mapel');
-
-        mapel.prop('disabled', true);
-        mapel.html('<option value="">Memuat mapel...</option>');
-
-        if (idKelas) {
-            $.ajax({
-                url: "{{ route('master.sumatif.get_mapel', '') }}/" + idKelas,
-                type: "GET",
-                success: function (res) {
-                    let html = '<option value="">Pilih Mapel</option>';
-                    res.forEach(item => {
-                        html += `<option value="${item.id_mapel}">${item.nama_mapel}</option>`;
-                    });
-                    mapel.html(html);
-                    mapel.prop('disabled', false);
-                },
-                error: function () {
-                    mapel.html('<option value="">Gagal memuat mapel</option>');
-                }
-            });
-        } else {
-            mapel.html('<option value="">Pilih Kelas Terlebih Dahulu</option>');
-        }
-    });
-
-});
-</script>
-
 @endsection

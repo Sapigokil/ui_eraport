@@ -74,7 +74,7 @@
                                     {{-- Filter Guru --}}
                                     <div class="col-md-3 mb-3">
                                         <label for="id_guru" class="form-label">Guru Pengampu:</label>
-                                        <select name="id_guru" id="id_guru" class="form-select">
+                                        <select name="id_guru" id="id_guru" class="form-select" onchange="this.form.submit()">
                                             <option value="">Semua Guru</option>
                                             @foreach($guru_list as $g)
                                                 <option value="{{ $g->id_guru }}" 

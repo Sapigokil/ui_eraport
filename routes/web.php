@@ -298,6 +298,8 @@ Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.'], function () {
 Route::group(['prefix' => 'ledger', 'as' => 'ledger.'], function () {
     Route::get('/data-nilai', [LedgerController::class, 'index'])->name('ledger_index');
     // Jika nanti butuh export excel, bisa ditambahkan di sini:
+    Route::get('/export/excel', [LedgerController::class, 'exportExcel'])->name('export.excel');
+    Route::get('/export/pdf', [LedgerController::class, 'exportPdf'])->name('export.pdf');
     // Route::get('/export-excel', [LedgerController::class, 'exportExcel'])->name('export_excel');
 });
 

@@ -6,39 +6,108 @@
 <style>
     .table-responsive {
         /* Hapus max-height agar scroll halaman, bukan scroll elemen */
-        overflow-x: auto; 
-        overflow-y: visible; 
-        border: 1px solid #c1d6e0; /* Border container lebih tegas */
-        border-radius: 8px;
+        max-height: 90vh;          
+        overflow: auto;
+        /* overflow-x: auto; 
+        overflow-y: visible;  */
+        /* border: 1px solid #c1d6e0; Border container lebih tegas */
+        border-radius: 2px;
         margin-bottom: 20px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
     
     /* REVISI 1 & 2: Styling Header yang Konsisten & Tegas */
     .table-ledger {
-        border-collapse: separate; /* Penting untuk Sticky Header & Border */
+        border-collapse: collapse !important; /* Penting untuk Sticky Header & Border */
         border-spacing: 0;
         width: 100%;
+    }
+    .table-ledger tbody tr:hover {
+        background-color: #f9fafb;
+    }
+
+    .table-ledger thead th[class^="kategori-"] {
+        color: #fff;
+        font-weight: 700;
     }
 
     .table-ledger thead th {
         position: sticky;
         top: 0;
         z-index: 20;
-        background-color: #f0f5fa !important; /* Biru Soft Seragam */
-        color: #344767;
-        border: 1px solid #c1d6e0 !important; /* Warna border lebih gelap sedikit */
+        border: none !important;
+        border-bottom: 0 !important;  
         padding: 6px 4px !important;
         text-align: center;
         vertical-align: middle;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        line-height: 1.2;
     }
 
-    /* Baris kedua (Nama Mapel) - Background disamakan */
-    .table-ledger thead tr:nth-child(2) th {
-        top: 36px; /* Offset tinggi baris 1 */
-        background-color: #f0f5fa !important; /* SAMAKAN DENGAN HEADER ATAS */
-        border-top: none !important; /* Hindari garis ganda */
+    /* HEADER KATEGORI (ROW 1) */
+    .table-ledger thead tr:first-child th {
+        top: 0;
+        height: : 32px;
+        color: #fff;
+        font-weight: 700;
+        font-size: 0.8rem;
     }
+
+    .table-ledger thead tr:nth-child(2) th.kategori-sub {
+        background-color: #f8f9fa !important;
+        color: #495057;
+        font-weight: 600;
+        border-bottom: 2px solid transparent;
+    }
+
+    /* WARNA KATEGORI */
+    .kategori-1 { background-color: #b0bec5  !important; } /* Umum */
+    .kategori-2 { background-color: #b0bec5  !important; } /* Kejuruan */
+    .kategori-3 { background-color: #b0bec5  !important; } /* Pilihan */
+    .kategori-4 { background-color: #b0bec5  !important; } /* Mulok */
+    .kategori-5 { background-color: #b0bec5  !important; } /* Rekap */
+    .kategori-6 { background-color: #b0bec5  !important; } /* Absen */
+
+    /* Baris kedua (Nama Mapel) - Background disamakan */
+    /* .table-ledger thead tr:nth-child(2) th {
+        background-color: #f7f7f7 !important;
+        color: #fff;
+        font-weight: 600;
+        top: 36px;
+    } */
+
+    /* ===== Style Sub Header ===== */
+    .table-ledger thead tr:nth-child(2) th.kategori-1 {
+        background-color: #cfd8dc !important; /* pastel merah */
+        color: #37474f;
+    }
+
+    .table-ledger thead tr:nth-child(2) th.kategori-2 {
+        background-color: #cfd8dc !important; /* pastel kuning */
+        color: #37474f;
+    }
+
+    .table-ledger thead tr:nth-child(2) th.kategori-3 {
+        background-color: #cfd8dc !important; /* pastel hijau */
+        color: #37474f;
+    }
+
+    .table-ledger thead tr:nth-child(2) th.kategori-4 {
+        background-color: #cfd8dc !important; /* pastel biru */
+        color: #37474f;
+    }
+
+    .table-ledger thead tr:nth-child(2) th.kategori-5 {
+        background-color: #cfd8dc !important; /* pastel coklat */
+        color: #37474f;
+    }
+
+    .table-ledger thead tr:nth-child(2) th.kategori-6 {
+        background-color: #cfd8dc !important; /* pastel abu */
+        color: #37474f;
+    }
+
 
     /* Styling Kolom Nama & No (Sticky Left) */
     .sticky-col {
@@ -46,17 +115,25 @@
         left: 0;
         z-index: 10;
         background-color: #ffffff !important; 
-        border-right: 2px solid #c1d6e0 !important;
+        border-right: 1px solid #d0d7de  !important;
         border-bottom: 1px solid #e9ecef !important;
     }
     
     .sticky-col-header {
-        position: sticky;
+        /* position: sticky;
         left: 0;
         z-index: 30 !important;
         background-color: #f0f5fa !important;
         border-right: 2px solid #c1d6e0 !important;
-        border: 1px solid #c1d6e0 !important;
+        border: 1px solid #c1d6e0 !important; */
+        border: none !important;
+        background-color: #f7f7f7 !important;
+    }
+
+    /* ===== HEADER NO & NAMA ===== */
+    .table-ledger thead th.sticky-col-header {
+        background-color: #37474f !important;
+        color: #fff !important;
     }
 
     /* REVISI 3: Indikator Sorting */
@@ -97,9 +174,10 @@
     .bg-absen { background-color: #e3f2fd !important; color: #344767; }
     
     /* Border Body */
-    .table-ledger td {
-        border: 1px solid #dee2e6 !important;
-        vertical-align: middle;
+    .table-ledger tbody td {
+        border: none !important;
+        border-bottom: 1px solid #e0e0e0 !important;
+        padding: 8px 6px;
     }
 </style>
 
@@ -123,7 +201,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                          <label class="form-label font-weight-bold">Semester</label>
                          <select name="semester" class="form-select" onchange="this.form.submit()">
                              <option value="Ganjil" {{ $semesterRaw == 'Ganjil' ? 'selected' : '' }}>Ganjil</option>
@@ -139,7 +217,7 @@
                              @endforeach
                          </select>
                     </div>
-                    <div class="col-md-4 text-end">
+                    <div class="col-md-3 text-end">
                         <button type="submit" class="btn btn-dark mb-0">Tampilkan Ledger</button>
                     </div>
                 </form>
@@ -151,7 +229,7 @@
                 @endphp
 
                 <div class="table-responsive p-0">
-                    <table id="ledgerTable" class="table table-bordered table-ledger align-items-center mb-0">
+                    <table id="ledgerTable" class="table table-ledger align-items-center mb-0">
                         <thead>
                             <tr>
                                 <th rowspan="2" class="sticky-col-header" style="width: 45px;">No</th>
@@ -161,34 +239,33 @@
                                 </th>
                                 
                                 @foreach($groupedMapel as $catId => $mapels)
-                                    <th colspan="{{ count($mapels) }}" class="kategori-header border-bottom">
+                                    <th colspan="{{ count($mapels)}}" class="kategori-header kategori-{{ $catId }}">
                                         {{ $catLabels[$catId] ?? 'Lainnya' }}
                                     </th>
                                 @endforeach
 
-                                <th colspan="2" class="text-xxs font-weight-bolder bg-rekap">REKAP</th>
-                                <th colspan="3" class="text-xxs font-weight-bolder bg-absen">ABSEN</th>
+                                <th colspan="2" class="kategori-header kategori-5">REKAP</th>
+                                <th colspan="3" class="kategori-header kategori-6">ABSEN</th>
                             </tr>
 
                             <tr>
                                 @foreach($groupedMapel as $catId => $mapels)
                                     @foreach($mapels as $mp)
-                                        <th class="text-xxs font-weight-bolder col-nilai" 
+                                        <th class="col-nilai kategori-sub kategori-{{ $catId }}" 
                                             data-bs-toggle="tooltip" title="{{ $mp->nama_mapel }}">
                                             {{ substr($mp->nama_singkat ?? $mp->nama_mapel, 0, 5) }}
                                         </th>
                                     @endforeach
                                 @endforeach
 
-                                <th class="col-nilai text-xxs font-weight-bolder bg-rekap">JML</th>
+                                <th class="kategori-sub kategori-5">JML</th>
                                 {{-- SORTING AVG --}}
-                                <th class="col-nilai text-xxs font-weight-bolder bg-rekap sortable" onclick="sortByAvg()">
+                                <th class="kategori-sub kategori-5" onclick="sortByAvg()">
                                     AVG <i class="fas fa-sort sort-icon"></i>
                                 </th>
-                                <th class="col-nilai text-xxs font-weight-bolder bg-absen">S</th>
-                                <th class="col-nilai text-xxs font-weight-bolder bg-absen">I</th>
-                                <th class="col-nilai text-xxs font-weight-bolder bg-absen">A</th>
-                            </tr>
+                                <th class="kategori-sub kategori-6">S</th>
+                                <th class="kategori-sub kategori-6">I</th>
+                                <th class="kategori-sub kategori-6">A</th>
                         </thead>
                         <tbody id="ledgerBody">
                             @forelse($dataLedger as $idx => $row)
@@ -220,6 +297,20 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+
+                {{-- EXPORT BUTTON --}}
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                    <a href="{{ route('ledger.export.excel', request()->query()) }}"
+                    class="btn btn-success btn-sm">
+                        <i class="fas fa-file-excel me-1"></i> Export Excel
+                    </a>
+
+                    <a href="{{ route('ledger.export.pdf', request()->query()) }}"
+                    target="_blank"
+                    class="btn btn-danger btn-sm">
+                        <i class="fas fa-file-pdf me-1"></i> Export PDF
+                    </a>
                 </div>
                 @endif
             </div>
