@@ -3,22 +3,49 @@
 <head>
     <meta charset="utf-8">
     <style>
+        @page {
+            margin: 120px 30px 40px 30px;
+        }
+
         body {
             font-family: DejaVu Sans, sans-serif;
             font-size: 10px;
         }
+
+        .header {
+            position: fixed;
+            top: -100px;
+            left: 0;
+            right: 0;
+            text-align: center;
+        }
+
+        .header h3 {
+            margin: 0;
+            font-size: 18px;
+             font-weight: bold;
+        }
+
+        .header .info {
+            margin-top: 6px;
+            font-size: 12px;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
         }
+
         th, td {
             border: 1px solid #000;
             padding: 4px;
             text-align: center;
         }
+
         th {
             background: #f1f1f1;
         }
+
         .text-left {
             text-align: left;
         }
@@ -26,9 +53,15 @@
 </head>
 <body>
 
-<h3 style="text-align:center">
-    LEDGER NILAI SISWA
-</h3>
+{{-- HEADER (muncul di setiap halaman) --}}
+<div class="header">
+    <h3>{{ $namaSekolah }}</h3>
+    <div class="info">
+        Kelas: {{ $kelas->nama_kelas ?? '-' }} |
+        Semester: {{ $semesterRaw }} |
+        Tahun Ajaran: {{ $tahun_ajaran }}
+    </div>
+</div>
 
 <table>
     <thead>
@@ -47,6 +80,7 @@
             <th>A</th>
         </tr>
     </thead>
+
     <tbody>
         @foreach($dataLedger as $i => $row)
         <tr>

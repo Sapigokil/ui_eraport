@@ -144,6 +144,10 @@ class LedgerController extends Controller
         $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
         $semesterInt = strtoupper($semesterRaw) === 'GANJIL' ? 1 : 2;
 
+        $kelas = Kelas::find($id_kelas);
+        
+        $namaSekolah = DB::table('info_sekolah')->value('nama_sekolah') ?? 'NAMA SEKOLAH';
+
         $daftarMapel = DB::table('pembelajaran')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
             ->where('pembelajaran.id_kelas', $id_kelas)
@@ -200,6 +204,8 @@ class LedgerController extends Controller
         }
 
         return compact(
+            'namaSekolah',
+            'kelas',
             'daftarMapel',
             'dataLedger',
             'semesterRaw',

@@ -98,7 +98,7 @@
             {{-- KELAS --}}
             <select name="kelas"
                 class="form-select"
-                style="min-width: 180px; height: 44px;"
+                style="min-width: 130px; height: 40px;"
                 onchange="this.form.submit()">
                 <option value="">-- Pilih Kelas --</option>
                 @foreach ($kelasList as $k)
@@ -112,7 +112,7 @@
             {{-- SEMESTER --}}
             <select name="semester"
                 class="form-select"
-                style="min-width: 160px; height: 44px;"
+                style="min-width: 130px; height: 40px;"
                 onchange="this.form.submit()">
                 <option value="Ganjil"
                     {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>
@@ -127,7 +127,7 @@
             {{-- TAHUN AJARAN --}}
             <select name="tahun_ajaran"
                 class="form-select"
-                style="min-width: 200px; height: 44px;"
+                style="min-width: 130px; height: 40px;"
                 onchange="this.form.submit()">
                 @foreach ($tahunAjaran as $ta)
                     <option value="{{ $ta }}"

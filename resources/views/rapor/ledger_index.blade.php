@@ -11,7 +11,7 @@
         /* overflow-x: auto; 
         overflow-y: visible;  */
         /* border: 1px solid #c1d6e0; Border container lebih tegas */
-        border-radius: 2px;
+        border-radius: 3px;
         margin-bottom: 20px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
