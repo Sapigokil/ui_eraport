@@ -1,7 +1,7 @@
 {{-- File: resources/views/ekskul/siswa_create.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Tambah Peserta Ekskul')
+@section('page-title', 'Tambah Peserta Ekskul')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -130,44 +130,59 @@
             const checkAllCheckbox = document.getElementById('check_all_siswa');
             
             const allSiswas = @json($siswas); 
+            const pesertaEkskul = @json($pesertaEkskul);
+
 
             function renderSiswaCheckboxes() {
                 const selectedKelasId = filterKelas.value;
+                const selectedEkskulId = document.getElementById('id_ekskul').value;
                 let htmlContent = '';
                 let count = 0;
                 
                 idKelasFilterHidden.value = selectedKelasId;
 
-                if (selectedKelasId === "") {
-                    htmlContent = `
+                if (!selectedKelasId || !selectedEkskulId) {
+                    siswaListArea.innerHTML = `
                         <tr>
                             <td colspan="2">
-                                <p class="text-secondary text-sm m-0 ps-3">Silakan pilih kelas terlebih dahulu.</p>
+                                <p class="text-secondary text-sm m-0 ps-3">
+                                    Pilih ekskul dan kelas terlebih dahulu.
+                                </p>
                             </td>
                         </tr>
                     `;
-                    siswaListArea.innerHTML = htmlContent;
                     checkAllCheckbox.disabled = true;
-                    return; 
+                    return;
                 }
+                //mengambil data siswa yang sudah terdaftar di ekskul
+                const siswaTerdaftar = pesertaEkskul[selectedEkskulId]
+                    ? pesertaEkskul[selectedEkskulId].map(item => item.id_siswa)
+                    : [];
 
                 allSiswas.forEach(siswa => {
-                    const matchClass = siswa.id_kelas == selectedKelasId;
-
-                    if (matchClass) {
+                    if (siswa.id_kelas == selectedKelasId) {
                         count++;
+
+                        const sudahTerdaftar = siswaTerdaftar.includes(siswa.id_siswa);
+
                         htmlContent += `
                             <tr>
                                 <td class="align-middle text-sm ps-3">
-                                    ${siswa.nama_siswa} (<span class="text-xs text-secondary">${siswa.kelas.nama_kelas || 'Tanpa Kelas'}</span>)
+                                    ${siswa.nama_siswa}
+                                    ${
+                                        sudahTerdaftar
+                                        ? `<span class="badge bg-gradient-success text-white fw-bold ms-2">Sudah Terdaftar</span>`
+                                        : ''
+                                    }
                                 </td>
-                                
+
                                 <td class="align-middle text-center">
                                     <div class="form-check">
-                                        <input class="form-check-input my-0 mx-auto siswa-checkbox" type="checkbox" 
-                                               value="${siswa.id_siswa}" 
-                                               id="siswa_${siswa.id_siswa}" 
-                                               name="siswa_ids[]">
+                                        <input class="form-check-input my-0 mx-auto siswa-checkbox"
+                                            type="checkbox"
+                                            name="siswa_ids[]"
+                                            value="${siswa.id_siswa}"
+                                            ${sudahTerdaftar ? 'checked disabled' : ''}>
                                     </div>
                                 </td>
                             </tr>
@@ -200,6 +215,7 @@
             });
 
             filterKelas.addEventListener('change', renderSiswaCheckboxes);
+            selectEkskul.addEventListener('change', renderSiswaCheckboxes);
         });
     </script>
     @endpush

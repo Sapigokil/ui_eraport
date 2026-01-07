@@ -1,6 +1,6 @@
 @extends('layouts.app') 
 
-@section('title', 'Daftar Master Data Guru')
+@section('page-title', 'Daftar Master Data Guru')
 
 @section('content')
     {{-- START: Pembungkus Main Content --}}

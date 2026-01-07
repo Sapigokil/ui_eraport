@@ -1,5 +1,5 @@
 <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 fixed-start" id="sidenav-main" style="background:
-linear-gradient(180deg, #0f172a, #020617);">
+linear-gradient(180deg, #212121, #212121);">
 
     <div class="sidenav-header">
         <i class="fas fa-times p-3 cursor-pointer text-secondary opacity-5 position-absolute end-0 top-0 d-none d-xl-none"
@@ -201,7 +201,7 @@ linear-gradient(180deg, #0f172a, #020617);">
             {{-- ============================================================= --}}
             @php
                 $nilaiRoutes = [
-                    'master.sumatif.*', 
+                    'master.sumatif.*', 'master.project.*', 'master.catatan.*', 'master.nilaiakhir.*'
                 ];
                 $isNilaiActive = request()->routeIs($nilaiRoutes); 
             @endphp
@@ -296,7 +296,7 @@ linear-gradient(180deg, #0f172a, #020617);">
             @can('manage-master') 
             @php
                 // Logika untuk mengecek apakah sedang di halaman rapor agar menu otomatis terbuka
-                $isRaporActive = request()->routeIs('rapornilai.*');
+                $isRaporActive = request()->routeIs('rapornilai.*', 'ledger.*');
             @endphp
 
             <li class="nav-item">
@@ -388,8 +388,9 @@ linear-gradient(180deg, #0f172a, #020617);">
             
             {{-- 6. MANAJEMEN PENGGUNA --}}
             @php 
-                $managementRoutes = ['users.index', 'users.create', 'users.edit', 'roles.index', 'roles.create', 'roles.edit'];
-                $isManagementActive = request()->routeIs($managementRoutes) || request()->is('pengaturan/*');
+                $managementRoutes = ['master.users.*',
+                                    'master.roles.*'];
+                $isManagementActive = request()->routeIs($managementRoutes)
             @endphp
             
             @can('pengaturan-manage-users')
@@ -422,7 +423,9 @@ linear-gradient(180deg, #0f172a, #020617);">
 
             {{-- 🛑 6. MENU BARU: PENGATURAN 🛑 --}}
             @php 
-                $pengaturanRoutes = ['pengaturan.kok.index'];
+                $pengaturanRoutes = ['pengaturan.kok.index',
+                                    'pengaturan.bobot.index',
+                                    'pengaturan.input.index',];
                 $isPengaturanActive = request()->routeIs($pengaturanRoutes);
             @endphp
             @can('pengaturan-manage-users') {{-- Gunakan permission yang sesuai --}}
@@ -442,14 +445,30 @@ linear-gradient(180deg, #0f172a, #020617);">
                                 <span class="sidenav-normal"> Kokurikuler </span>
                             </a>
                         </li>
+                        {{-- Pengaturan Bobot Nilai --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('pengaturan.bobot.index') ? 'active' : 'text-white' }}" href="{{ route('pengaturan.bobot.index') }}">
+                                <span class="sidenav-mini-icon"> B </span>
+                                <span class="sidenav-normal"> Bobot Nilai </span>
+                            </a>
+                        </li>
+                        {{-- Pengaturan Input Event Dashboard --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('pengaturan.input.index') ? 'active' : 'text-white' }}" href="{{ route('pengaturan.input.index') }}">
+                                <span class="sidenav-mini-icon"> B </span>
+                                <span class="sidenav-normal"> Input Event </span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </li>
 
+            
+
             {{-- 7. PROFIL SAYA --}}
             @php $isProfileActive = false; @endphp
             <li class="nav-item">
-                <a class="nav-link {{ $isProfileActive ? 'active' : 'text-white' }}" href="#">
+                <a class="nav-link {{ $isProfileActive ? 'active' : 'text-white' }}" href="{{ route('profile.index') }}">
                     <div class="me-2 d-flex align-items-center justify-content-center">
                         <i class="fas fa-user text-white"></i>
                     </div>

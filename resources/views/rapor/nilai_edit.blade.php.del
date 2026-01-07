@@ -2,7 +2,7 @@
 
 @extends('layouts.app')
 
-@section('title', 'Edit Nilai Akhir')
+@section('page-title', 'Edit Nilai Akhir')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

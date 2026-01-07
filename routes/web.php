@@ -27,8 +27,10 @@ use App\Http\Controllers\NilaiAkhirController;
 use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\SetKokurikulerController;
 use App\Http\Controllers\RaporController;
+use App\Http\Controllers\BobotNilaiController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InputController;
 use App\Http\Controllers\LedgerController;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -41,13 +43,21 @@ use App\Http\Controllers\LedgerController;
 // =========================================================
 
 Route::get('/', fn () => redirect('/dashboard'))->middleware('auth');
-Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard')->middleware('auth');
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('auth');
 Route::get('/tables', fn () => view('tables'))->name('tables')->middleware('auth');
 Route::get('/wallet', fn () => view('wallet'))->name('wallet')->middleware('auth');
 Route::get('/RTL', fn () => view('RTL'))->name('RTL')->middleware('auth');
-Route::get('/profile', fn () => view('account-pages.profile'))->name('profile')->middleware('auth');
+// Route::get('/profile', fn () => view('account-pages.profile'))->name('profile')->middleware('auth');
+
+//Profile User
+Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
 Route::get('/laravel-examples/users-management', [UserController::class, 'index'])->name('users-management.index')->middleware('auth');
 
+Route::post('/dashboard/event/store', [DashboardController::class, 'storeEvent'])->name('dashboard.event.store');
+Route::put('/dashboard/event/{id}', [DashboardController::class, 'update'])->name('dashboard.event.update');
+Route::delete('/dashboard/event/{id}', [DashboardController::class, 'destroy'])->name('dashboard.event.destroy');
 
 Route::group(['middleware' => 'guest'], function () {
     Route::get('/signin', fn () => view('account-pages.signin'))->name('signin');
@@ -227,11 +237,34 @@ Route::group(['prefix' => 'master', 'as' => 'master.', 'middleware' => 'auth'], 
 }); // END GROUP MASTER (URL: /master)
 
 Route::group(['prefix' => 'pengaturan', 'as' => 'pengaturan.'], function () {
+    //kokurikuler
     Route::get('/kokurikuler', [SetKokurikulerController::class, 'index'])->name('kok.index');
     Route::post('/kokurikuler', [SetKokurikulerController::class, 'store'])->name('kok.store');
     Route::put('/kokurikuler/{id}', [SetKokurikulerController::class, 'update'])->name('kok.update');
     Route::delete('/kokurikuler/{id}', [SetKokurikulerController::class, 'destroy'])->name('kok.destroy');
     Route::patch('/kokurikuler/{id}/toggle', [SetKokurikulerController::class, 'toggleStatus'])->name('kok.toggle');
+
+    //bobot nilai
+    Route::get('/bobot-nilai', [BobotNilaiController::class, 'index'])->name('bobot.index');
+    Route::post('/bobot-nilai', [BobotNilaiController::class, 'store'])->name('bobot.store');
+    Route::put('/bobot-nilai/{id}', [BobotNilaiController::class, 'update'])->name('bobot.update');
+
+    // input event
+    Route::prefix('input')->group(function () {
+    // HALAMAN
+    Route::get('/', [InputController::class, 'index'])->name('input.index');
+    // SIMPAN (EVENT / NOTIFIKASI)
+    Route::post('/store', [InputController::class, 'store'])->name('input.store');
+    // UPDATE
+    Route::put('/event/{id}', [InputController::class, 'updateEvent'])->name('input.event.update');
+    Route::put('/notifikasi/{id}', [InputController::class, 'updateNotifikasi'])->name('input.notifikasi.update');
+    // DELETE
+    Route::delete('/event/{id}', [InputController::class, 'destroyEvent'])->name('input.event.delete');
+    Route::delete('/notifikasi/{id}', [InputController::class, 'destroyNotifikasi'])->name('input.notifikasi.delete');
+
+});
+
+
 });
 
 Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.'], function () {
@@ -262,6 +295,8 @@ Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.'], function () {
 Route::group(['prefix' => 'ledger', 'as' => 'ledger.'], function () {
     Route::get('/data-nilai', [LedgerController::class, 'index'])->name('ledger_index');
     // Jika nanti butuh export excel, bisa ditambahkan di sini:
+    Route::get('/export/excel', [LedgerController::class, 'exportExcel'])->name('export.excel');
+    Route::get('/export/pdf', [LedgerController::class, 'exportPdf'])->name('export.pdf');
     // Route::get('/export-excel', [LedgerController::class, 'exportExcel'])->name('export_excel');
 });
 

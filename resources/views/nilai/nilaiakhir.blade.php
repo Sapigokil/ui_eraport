@@ -3,7 +3,7 @@
 @extends('layouts.app') 
 
 {{-- HEADER DINAMIS --}}
-@section('title', 'Rekapitulasi Nilai Akhir')
+@section('page-title', 'Rekapitulasi Nilai Akhir')
 
 @php
     // --- LOGIKA TAHUN AJARAN & SEMESTER ---
@@ -104,7 +104,7 @@
                                     {{-- 2. Mapel --}}
                                     <div class="col-md-3 mb-3">
                                         <label for="id_mapel" class="form-label">Mata Pelajaran:</label>
-                                        <select name="id_mapel" id="id_mapel" required class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }}>
+                                        <select name="id_mapel" id="id_mapel" required class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }} onchange="this.form.submit()">
                                             <option value="">Pilih Mapel</option>
                                             @foreach ($mapel as $m)
                                                 <option value="{{ $m->id_mapel }}" 
@@ -178,12 +178,12 @@
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Sumatif 2</th>
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Sumatif 3</th>
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Rata-rata</th>
-                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Bobot (40%)</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-primary">Bobot Sumatif</th>
 
                                                     {{-- 3. PROJECT (Hijau Tua) --}}
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Project</th>
                                                     {{-- <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Rata P</th> --}}
-                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Bobot (60%)</th>
+                                                    <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-success">Bobot Project</th>
                                                     
                                                     {{-- 4. AKHIR (Warna Berbeda) --}}
                                                     <th class="text-uppercase text-white text-xxs font-weight-bolder opacity-9 text-center bg-danger text-bold">NILAI AKHIR</th>

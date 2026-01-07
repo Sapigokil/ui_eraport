@@ -1,6 +1,6 @@
 @extends('layouts.app') 
 
-@section('title', 'List Pengguna Sistem')
+@section('page-title', 'List Pengguna Sistem')
 
 @section('content')
     {{-- START: Pembungkus Main Content agar Navbar tampil konsisten --}}

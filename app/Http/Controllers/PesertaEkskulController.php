@@ -70,7 +70,11 @@ class PesertaEkskulController extends Controller
                        ->orderBy('nama_siswa')
                        ->get();
 
-        return view('ekskul.siswa_create', compact('ekskuls', 'kelas', 'siswas'));
+        $pesertaEkskul = EkskulSiswa::select('id_ekskul', 'id_siswa')
+        ->get()
+        ->groupBy('id_ekskul');
+
+        return view('ekskul.siswa_create', compact('ekskuls', 'kelas', 'siswas', 'pesertaEkskul'));
     }
 
     // === 3. Simpan Peserta Ekskul ===

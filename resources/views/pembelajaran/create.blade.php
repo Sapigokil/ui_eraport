@@ -1,7 +1,7 @@
 {{-- File: resources/views/pembelajaran/create.blade.php (Pilihan Guru Selalu Aktif) --}}
 @extends('layouts.app') 
 
-@section('title', 'Tautkan Mata Pelajaran ke Kelas dan Guru')
+@section('page-title', 'Tautkan Mata Pelajaran ke Kelas dan Guru')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

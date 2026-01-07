@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\NilaiAkhirController;
 
 
-
 class SumatifController extends Controller
 {
     // Method Helper (tujuanPembelajaran)

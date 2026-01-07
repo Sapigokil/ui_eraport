@@ -1,7 +1,7 @@
 {{-- File: resources/views/kelas/show.blade.php --}}
 @extends('layouts.app') 
 
-@section('title', 'Detail Kelas: ' . $kelas->nama_kelas)
+@section('page-title', 'Detail Kelas: ' . $kelas->nama_kelas)
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
