@@ -1,7 +1,7 @@
 {{-- File: resources/views/guru/edit.blade.php --}}
 @extends('layouts.app') 
 
-@section('title', 'Edit Data Guru: ' . $guru->nama_guru)
+@section('page-title', 'Edit Data Guru: ' . $guru->nama_guru)
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

@@ -1,7 +1,7 @@
 {{-- File: resources/views/ekskul/siswa_index.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Daftar Peserta Ekstrakurikuler')
+@section('page-title', 'Daftar Peserta Ekstrakurikuler')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -61,7 +61,7 @@
                                     
                                     <div class="col-md-4 mb-3">
                                         <label for="id_kelas" class="form-label">Kelas:</label>
-                                        <select class="form-select" id="id_kelas" name="id_kelas">
+                                        <select class="form-select" id="id_kelas" name="id_kelas" onchange="this.form.submit()">
                                             <option value="">-- Semua Kelas --</option>
                                             @foreach ($kelas as $k)
                                                 <option value="{{ $k->id_kelas }}" 

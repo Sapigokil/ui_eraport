@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Monitoring Nilai per Mata Pelajaran')
+@section('page-title', 'Monitoring Nilai per Mata Pelajaran')
 
 @section('content')
 @php

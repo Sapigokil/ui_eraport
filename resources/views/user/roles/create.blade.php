@@ -1,6 +1,6 @@
 @extends('layouts.app') 
 
-@section('title', 'Tambah Role Baru')
+@section('page-title', 'Tambah Role Baru')
 
 @section('content')
     {{-- START: Pembungkus Main Content --}}

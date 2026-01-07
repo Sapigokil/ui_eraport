@@ -1,7 +1,7 @@
 {{-- File: resources/views/pembelajaran/index.blade.php --}}
 @extends('layouts.app') 
 
-@section('title', 'Data Pembelajaran Mata Pelajaran per Kelas')
+@section('page-title', 'Data Pembelajaran Mata Pelajaran per Kelas')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -74,7 +74,7 @@
                                     {{-- Filter Guru --}}
                                     <div class="col-md-3 mb-3">
                                         <label for="id_guru" class="form-label">Guru Pengampu:</label>
-                                        <select name="id_guru" id="id_guru" class="form-select">
+                                        <select name="id_guru" id="id_guru" class="form-select" onchange="this.form.submit()">
                                             <option value="">Semua Guru</option>
                                             @foreach($guru_list as $g)
                                                 <option value="{{ $g->id_guru }}" 

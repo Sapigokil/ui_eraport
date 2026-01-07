@@ -8,11 +8,13 @@ class Event extends Model
 {
     protected $table = 'event';
     protected $primaryKey = 'id_event';
-    public $timestamps = false;
+    // public $timestamps = false;
 
     protected $fillable = [
         'deskripsi',
-        'tanggal'
+        'tanggal',
+        'kategori',
+        'jadwalkan'
     ];
 
 }

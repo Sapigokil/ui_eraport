@@ -1,7 +1,7 @@
 {{-- File: resources/views/guru/create.blade.php --}}
 @extends('layouts.app') 
 
-@section('title', 'Tambah Data Guru Baru')
+@section('page-title', 'Tambah Data Guru Baru')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

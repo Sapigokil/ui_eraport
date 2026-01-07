@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Pengaturan Bobot Nilai')
+@section('page-title', 'Pengaturan Bobot Nilai')
 
 @section('content')
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -130,13 +130,14 @@
                             </div>
 
                             {{-- ACTION --}}
-                            <div class="text-center">
-                                <button type="submit" id="btn-simpan" class="btn bg-gradient-primary" disabled>
-                                    <i class="fas fa-save me-1"></i> Simpan
+                            <div class="text-end">
+                                <button type="submit" id="btn-simpan" class="btn bg-gradient-primary">
+                                Simpan
                                 </button>
                             </div>
 
                         </form>
+                        @include('data.partials.history_bobot')
                     </div>
                 </div>
             </div>

@@ -1,7 +1,7 @@
 {{-- File: resources/views/siswa/index.blade.php (FULL CODE REVISI) --}}
 @extends('layouts.app') 
 
-@section('title', 'Daftar Master Data Siswa')
+@section('page-title', 'Daftar Master Data Siswa')
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

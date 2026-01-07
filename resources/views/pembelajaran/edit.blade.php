@@ -1,7 +1,7 @@
 {{-- File: resources/views/pembelajaran/edit.blade.php --}}
 @extends('layouts.app') 
 
-@section('title', 'Edit Tautan Pembelajaran Mapel: ' . $mapel_edit->nama_mapel)
+@section('page-title', 'Edit Tautan Pembelajaran Mapel: ' . $mapel_edit->nama_mapel)
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">

@@ -1,7 +1,7 @@
 {{-- File: resources/views/ekskul/siswa_edit.blade.php --}}
 @extends('layouts.app')
 
-@section('title', 'Edit Peserta Ekstrakurikuler: ' . $ekskul_edit->nama_ekskul)
+@section('page-title', 'Edit Peserta Ekstrakurikuler: ' . $ekskul_edit->nama_ekskul)
 
 @section('content')
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
