@@ -430,6 +430,14 @@ class RaporController extends Controller
         );
     }
 
+    /**
+     * Fungsi Sinkronisasi Utama (FORCE UPDATE VERSION)
+     * Memaksa nilai_akhir mengikuti rata-rata sumatif, apapun kondisinya.
+     */
+    /**
+     * Fungsi Sinkronisasi Utama (FORCE UPDATE + PROJECT SUPPORT)
+     * Menghitung Sumatif + Project, lalu update status berdasarkan Catatan Wali.
+     */
     public function sinkronkanKelas(Request $request)
     {
         $id_kelas = $request->id_kelas;
@@ -437,43 +445,63 @@ class RaporController extends Controller
         $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
         $semesterInt = (strtoupper($semesterRaw) == 'GANJIL' || $semesterRaw == '1') ? 1 : 2;
 
+        if (!$id_kelas) {
+            return response()->json(['message' => 'Kelas tidak ditemukan'], 400);
+        }
+
         $siswaList = Siswa::where('id_kelas', $id_kelas)->get();
         $daftarMapel = DB::table('pembelajaran')->where('id_kelas', $id_kelas)->get();
 
         foreach ($siswaList as $siswa) {
+            // A. Update Nilai Akhir (Loop semua mapel)
             foreach ($daftarMapel as $mapel) {
-                // Hitung rata-rata sumatif
-                $avgSumatif = DB::table('sumatif')
-                    ->where([
-                        'id_siswa' => $siswa->id_siswa, 
-                        'id_mapel' => $mapel->id_mapel, 
-                        'semester' => $semesterInt, 
-                        'tahun_ajaran' => $tahun_ajaran
-                    ])
-                    ->avg('nilai') ?? 0;
+                $whereClause = [
+                    'id_siswa' => $siswa->id_siswa, 
+                    'id_mapel' => $mapel->id_mapel, 
+                    'semester' => $semesterInt, 
+                    'tahun_ajaran' => $tahun_ajaran
+                ];
 
-                if ($avgSumatif > 0) {
-                    DB::table('nilai_akhir')->updateOrInsert(
-                        [
-                            'id_siswa' => $siswa->id_siswa, 
-                            'id_mapel' => $mapel->id_mapel, 
-                            'semester' => $semesterInt, 
-                            'tahun_ajaran' => $tahun_ajaran
-                        ],
-                        [
-                            'id_kelas' => $id_kelas,
-                            'nilai_akhir' => (int)round($avgSumatif),
-                            'updated_at' => now()
-                        ]
-                    );
+                // 1. Ambil Rata-rata SUMATIF
+                $avgSumatif = DB::table('sumatif')->where($whereClause)->avg('nilai');
+
+                // 2. Ambil Rata-rata PROJECT (PENTING: Jangan dilupakan)
+                $avgProject = DB::table('project')->where($whereClause)->avg('nilai');
+
+                // 3. Kalkulasi Gabungan (Rata-rata dari keduanya)
+                $totalNilai = 0;
+                $pembagi = 0;
+
+                if ($avgSumatif !== null) { 
+                    $totalNilai += $avgSumatif; 
+                    $pembagi++; 
                 }
+                if ($avgProject !== null) { 
+                    $totalNilai += $avgProject; 
+                    $pembagi++; 
+                }
+
+                // Jika ada nilai masuk, hitung rata-rata. Jika tidak, nilai 0.
+                $nilaiFinal = ($pembagi > 0) ? (int) round($totalNilai / $pembagi) : 0;
+
+                // 4. FORCE UPDATE ke Tabel Nilai Akhir
+                // Apapun hasilnya (naik, turun, atau 0), simpan agar data konsisten.
+                DB::table('nilai_akhir')->updateOrInsert(
+                    $whereClause,
+                    [
+                        'id_kelas' => $id_kelas,
+                        'nilai_akhir' => $nilaiFinal,
+                        'updated_at' => now()
+                    ]
+                );
             }
             
-            // Panggil perbaruiStatusRapor yang SUDAH DIPERBAIKI (tanpa parameter sumatifCount)
+            // B. Perbarui Status Monitoring (Cek Kelengkapan Nilai & Catatan Wali)
+            // Fungsi ini akan melihat tabel 'catatan' dan 'nilai_akhir' terbaru.
             $this->perbaruiStatusRapor($siswa->id_siswa, $semesterRaw, $tahun_ajaran);
         }
 
-        return response()->json(['message' => 'Data nilai berhasil diperbaharui dan disinkronkan.']);
+        return response()->json(['message' => 'Sinkronisasi Nilai (Sumatif & Project) serta Status Rapor berhasil.']);
     }
 
     /**
