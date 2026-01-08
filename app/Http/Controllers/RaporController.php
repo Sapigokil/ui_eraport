@@ -374,6 +374,8 @@ class RaporController extends Controller
             'semesterInt'   => $semesterInt,
             'nama_wali'     => $namaWali,
             'nip_wali'      => $dataGuru->nip ?? '-',
+            'nama_kepsek'   => $getSekolah->nama_kepsek ?? 'NAMA KEPALA SEKOLAH',
+            'nip_kepsek'    => $getSekolah->nip_kepsek ?? '-',
         ];
     }
 
@@ -509,6 +511,8 @@ class RaporController extends Controller
             'semesterInt'   => $semesterInt,
             'nama_wali'     => $namaWali,
             'nip_wali'      => $dataGuru->nip ?? '-',
+            'nama_kepsek'   => $getSekolah->nama_kepsek ?? 'NAMA KEPALA SEKOLAH',
+            'nip_kepsek'    => $getSekolah->nip_kepsek ?? '-',
         ];
     }
 

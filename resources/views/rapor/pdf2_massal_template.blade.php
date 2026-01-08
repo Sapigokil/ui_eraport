@@ -9,9 +9,9 @@
     }
 
     body {
-        font-family: Arial, Helvetica, sans-serif;
+        font-family: Arial, sans-serif;
         font-size: 11pt;
-        line-height: 1.3;
+        line-height: 1.45;
         margin: 0;
         padding: 0;
     }
@@ -20,8 +20,8 @@
     .rapor-header {
         width: 100%;
         border-collapse: collapse;
-        font-size: 11pt;
-        margin-bottom: 12px;
+        font-size: 13pt;
+        margin-bottom: 10px;
     }
 
     .rapor-header td {
@@ -35,10 +35,11 @@
         text-align: center;
         font-size: 22pt;
         font-weight: bold;
-        padding: 24px 0 12px;
+        padding: 12px 0 12px;
+        margin-top: 50px;
     }
 
-    .h-label { display:inline-block; width:160px; white-space:nowrap; }
+    .h-label { display:inline-block; width:110px; white-space:nowrap; }
     .h-sep   { display:inline-block; width:12px; text-align:center; }
     .h-val   { display:inline-block; }
     .nama-siswa { font-weight:bold; }
@@ -136,6 +137,18 @@
         height: 70px;
     }
 
+    .ttd-kepsek {
+        width: 100%;
+        margin-top: 30px; /* Jarak dari tabel TTD di atasnya */
+        text-align: center;
+    }
+    .ttd-kepsek .nama-kepsek {
+        font-weight: bold;
+        text-decoration: underline;
+        display: block;
+        margin-top: 70px; /* Ruang kosong untuk tanda tangan & stempel */
+    }
+
     .blok-akhir {
         page-break-before: always;
         page-break-inside: avoid;
@@ -188,7 +201,7 @@
         <tr>
             <th width="5%">No</th>
             <th width="25%">Mata Pelajaran</th>
-            <th width="10%">Nilai</th>
+            <th width="10%">Nilai Akhir</th>
             <th>Capaian Kompetensi</th>
         </tr>
     </thead>
@@ -221,25 +234,37 @@
     </tr>
     @endforeach
 @endforeach
-
     </tbody>
 </table>
+
+
+<div class="page-break"></div>
+
+<!-- ================= EKSKUL, ABSENSI & CATATAN ================= -->
+<div class="blok-akhir">
 
     {{-- KOKURIKULER --}}
     <table class="main-table page-avoid">
         <thead>
+            <tr>
+                <td colspan="4" class="no-border-header">
+                    @include('rapor.rapor_header', ['data' => $data])
+                </td>
+            </tr>
             <tr class="bg-light">
-                <th>KOKURIKULER</th>
+                <th colspan="4">KOKURIKULER</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td>{{ $data['catatan']->kokurikuler ?? '-' }}</td>
+                <td colspan="4">
+                    {{ $data['catatan']->kokurikuler ?? '-' }}
+                </td>
             </tr>
         </tbody>
     </table>
 
-    {{-- EKSKUL --}}
+{{-- EKSKUL --}}
     <table class="main-table page-avoid">
         <thead>
             <tr class="bg-light">
@@ -265,18 +290,7 @@
         </tbody>
     </table>
 
-
-<div class="page-break"></div>
-
-<!-- ================= ABSENSI & CATATAN ================= -->
-<div class="blok-akhir">
 <table class="container-bawah">
-
-    <tr>
-        <td colspan="4" class="no-border-header">
-            @include('rapor.rapor_header', ['data' => $data])
-        </td>
-    </tr>
 
     <tr>
         <td width="45%">
@@ -310,6 +324,20 @@
         </td>
     </tr>
 </table>
+
+<div class="ttd-kepsek">
+    <p style="margin-bottom: 5px;">Mengetahui,</p>
+    <p style="margin-top: 0;">Kepala Sekolah</p>
+
+    {{-- Nama Kepala Sekolah diambil dari variabel info --}}
+    <span class="nama-kepsek">
+        {{ $data['nama_kepsek'] }}
+    </span>
+
+    {{-- NIP Kepala Sekolah --}}
+    <span>NIP. {{ $data['nip_kepsek'] }}</span>
+</div>
+
 </div>
 
 <div style="page-break-after: always;"></div>

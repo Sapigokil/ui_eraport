@@ -9,26 +9,18 @@ class BobotNilaiController extends Controller
 {
     public function index(Request $request)
     {
-        // Generate list tahun ajaran (5 tahun ke belakang & depan)
-        $currentYear = now()->year;
-        $tahunAjaranList = [];
-
-        for ($i = 0; $i < 5; $i++) {
-            $start = $currentYear + $i;
-            $tahunAjaranList[] = $start . '/' . ($start + 1);
-        }
-
-        $defaultTahunAjaran = $request->tahun_ajaran ?? $tahunAjaranList[0];
-
         $historyBobot = BobotNilai::orderBy('created_at', 'desc')->get();
 
+        $editData = null;
+        if ($request->filled('edit')) {
+            $editData = BobotNilai::findOrFail($request->edit);
+        }
+
         return view('data.bobot_index', compact(
-            'tahunAjaranList',
-            'defaultTahunAjaran',
+            'editData',
             'historyBobot'
         ));
     }
-
 
     public function store(Request $request)
     {
@@ -64,5 +56,47 @@ class BobotNilaiController extends Controller
 
         return back()->with('success', 'Bobot nilai berhasil disimpan.');
     }
+
+    public function update(Request $request, $id)
+{
+    $request->validate([
+        'jumlah_sumatif' => 'required|integer|min:1|max:5',
+        'semester'       => 'required',
+        'tahun_ajaran'   => 'required',
+        'bobot_sumatif'  => 'required|integer|min:0|max:100',
+        'bobot_project'  => 'required|integer|min:0|max:100',
+    ]);
+
+    if (($request->bobot_sumatif + $request->bobot_project) !== 100) {
+        return back()->withErrors([
+            'total' => 'Total bobot Sumatif + Project harus 100%'
+        ]);
+    }
+
+    $bobot = BobotNilai::findOrFail($id);
+
+    $bobot->update([
+        'jumlah_sumatif' => $request->jumlah_sumatif,
+        'semester'       => $request->semester,
+        'tahun_ajaran'   => $request->tahun_ajaran,
+        'bobot_sumatif'  => $request->bobot_sumatif,
+        'bobot_project'  => $request->bobot_project,
+    ]);
+
+    return redirect()
+        ->route('pengaturan.bobot.index')
+        ->with('success', 'Data bobot berhasil diperbarui');
+}
+
+
+    public function destroy($id)
+    {
+        BobotNilai::findOrFail($id)->delete();
+
+        return redirect()
+            ->route('pengaturan.bobot.index')
+            ->with('success', 'Data bobot berhasil dihapus');
+    }
+
 
 }

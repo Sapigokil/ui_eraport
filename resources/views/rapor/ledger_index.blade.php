@@ -303,13 +303,13 @@
                 <div class="d-flex justify-content-end gap-2 mt-3">
                     <a href="{{ route('ledger.export.excel', request()->query()) }}"
                     class="btn btn-success btn-sm">
-                        <i class="fas fa-file-excel me-1"></i> Export Excel
+                        <i class="fas fa-file-excel me-1"></i> Download Excel
                     </a>
 
                     <a href="{{ route('ledger.export.pdf', request()->query()) }}"
                     target="_blank"
                     class="btn btn-danger btn-sm">
-                        <i class="fas fa-file-pdf me-1"></i> Export PDF
+                        <i class="fas fa-file-pdf me-1"></i> Download PDF
                     </a>
                 </div>
                 @endif

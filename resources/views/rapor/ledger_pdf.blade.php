@@ -88,10 +88,15 @@
             <td class="text-left">{{ $row->nama_siswa }}</td>
 
             @foreach($daftarMapel as $mp)
-                <td>{{ $row->scores[$mp->id_mapel] ?? '-' }}</td>
+                @php
+                    $nilai = $row->scores[$mp->id_mapel] ?? 0;
+                @endphp
+                <td>
+                    {{ $nilai > 0 ? (int) $nilai : '-' }}
+                </td>
             @endforeach
 
-            <td>{{ $row->total }}</td>
+            <td>{{ (int) $row->total }}</td>
             <td>{{ $row->rata_rata }}</td>
             <td>{{ $row->absensi->sakit }}</td>
             <td>{{ $row->absensi->izin }}</td>

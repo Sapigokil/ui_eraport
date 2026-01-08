@@ -24,9 +24,11 @@
     $selectedTA = $tahun_ajaran ?? $defaultTahunAjaran;
     $selectedSemester = $semesterRaw ?? $defaultSemester;
 
-    $tahunMulai = 2024; 
-    $tahunAkhir = date('Y') + 2; 
+    $tahunMulai = $tahunSekarang - 3; // 3 tahun ke belakang
+    $tahunAkhir = $tahunSekarang + 3; // 3 tahun ke depan
+
     $tahunAjaranList = [];
+
     for ($tahun = $tahunAkhir; $tahun >= $tahunMulai; $tahun--) {
         $tahunAjaranList[] = $tahun . '/' . ($tahun + 1);
     }
