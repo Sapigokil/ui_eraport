@@ -21,9 +21,11 @@
 
     $defaultTahunAjaran = $defaultTA1 . '/' . $defaultTA2;
     
-    $tahunMulai = 2025; 
-    $tahunAkhir = date('Y') + 5; 
+    $tahunMulai = $tahunSekarang - 3; // 3 tahun ke belakang
+    $tahunAkhir = $tahunSekarang + 3; // 3 tahun ke depan
+
     $tahunAjaranList = [];
+
     for ($tahun = $tahunAkhir; $tahun >= $tahunMulai; $tahun--) {
         $tahunAjaranList[] = $tahun . '/' . ($tahun + 1);
     }

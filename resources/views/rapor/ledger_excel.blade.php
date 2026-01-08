@@ -11,7 +11,7 @@
             <th>S</th>
             <th>I</th>
             <th>A</th>
-        </tr>
+        </tr> 
     </thead>
     <tbody>
         @foreach($dataLedger as $i => $row)

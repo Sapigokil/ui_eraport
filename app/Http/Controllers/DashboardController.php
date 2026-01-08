@@ -82,27 +82,41 @@ class DashboardController extends Controller
         }
      
         // =====================
-        // PROGRESS INPUT NILAI
-        // =====================
-        $progressLabels = ['10','11','12']; // contoh
-        $progressData = [];
-        $progressDetail = [];
+// PROGRESS INPUT NILAI (PER JURUSAN BERDASARKAN TINGKAT)
+// =====================
 
-foreach ($progressLabels as $tingkat) {
-    $progress = $this->hitungProgressByTingkat(
-        $tingkat,
-        $jurusan,
+$tingkatFilter = $request->tingkat ?? null;
+
+$progressLabels = [];
+$progressData   = [];
+$progressDetail = [];
+
+// ambil jurusan yang ADA di tingkat tsb
+$jurusanListProgress = Kelas::when($tingkatFilter, function ($q) use ($tingkatFilter) {
+        $q->where('tingkat', $tingkatFilter);
+    })
+    ->select('jurusan')
+    ->distinct()
+    ->orderBy('jurusan')
+    ->pluck('jurusan');
+
+foreach ($jurusanListProgress as $jurusanNama) {
+
+    $progress = $this->hitungProgressByJurusan(
+        $jurusanNama,
+        $tingkatFilter,
         $tahunAjaranAktif,
         $semesterAktif
     );
-$progressData[] = $progress;
 
-    // 🔥 DETAIL MAPEL BELUM INPUT
-    $progressDetail[$tingkat] = [
+    $progressLabels[] = $jurusanNama;
+    $progressData[]   = $progress;
+
+    $progressDetail[$jurusanNama] = [
         'progress' => $progress,
-        'belum' => $this->getDetailMapelBelumInput(
-            $tingkat,
-            $jurusan,
+        'belum' => $this->getDetailMapelBelumInputByJurusan(
+            $jurusanNama,
+            $tingkatFilter,
             $tahunAjaranAktif,
             $semesterAktif
         )
@@ -236,25 +250,18 @@ switch ($rentangNilai) {
     // =====================
     // HITUNG PROGRESS PER TINGKAT
     // =====================
-   private function hitungProgressByTingkat(
+   private function hitungProgressByJurusan(
+    $jurusan,
     $tingkat,
-    $jurusan = null,
     $tahunAjaran,
     $semester
 ) {
-    $kelasQuery = Kelas::where('tingkat', $tingkat);
+    $kelasIds = Kelas::where('jurusan', $jurusan)
+        ->when($tingkat, fn($q) => $q->where('tingkat', $tingkat))
+        ->pluck('id_kelas');
 
-    if ($jurusan) {
-        $kelasQuery->where('jurusan', $jurusan);
-    }
+    if ($kelasIds->isEmpty()) return 0;
 
-    $kelasIds = $kelasQuery->pluck('id_kelas');
-
-    if ($kelasIds->isEmpty()) {
-        return 0;
-    }
-
-    // ambil semua mapel yang diajarkan di tingkat tsb
     $mapelList = Pembelajaran::whereIn('id_kelas', $kelasIds)
         ->select('id_mapel')
         ->distinct()
@@ -265,47 +272,44 @@ switch ($rentangNilai) {
 
     foreach ($mapelList as $mapel) {
 
-    $kelasMapel = Pembelajaran::where('id_mapel', $mapel->id_mapel)
-        ->whereIn('id_kelas', $kelasIds)
-        ->pluck('id_kelas');
+        $kelasMapel = Pembelajaran::where('id_mapel', $mapel->id_mapel)
+            ->whereIn('id_kelas', $kelasIds)
+            ->pluck('id_kelas');
 
-    $totalTarget = Siswa::whereIn('id_kelas', $kelasMapel)->count();
-    if ($totalTarget === 0) continue;
+        $totalTarget = Siswa::whereIn('id_kelas', $kelasMapel)->count();
+        if ($totalTarget === 0) continue;
 
-    $totalSudah = NilaiAkhir::whereIn('id_kelas', $kelasMapel)
-        ->where('id_mapel', $mapel->id_mapel)
-        ->where('tahun_ajaran', $tahunAjaran)
-        ->where('semester', $semester)
-        ->where('nilai_akhir', '>', 0)
-        ->distinct('id_siswa')
-        ->count('id_siswa');
+        $totalSudah = NilaiAkhir::whereIn('id_kelas', $kelasMapel)
+            ->where('id_mapel', $mapel->id_mapel)
+            ->where('tahun_ajaran', $tahunAjaran)
+            ->where('semester', $semester)
+            ->where('nilai_akhir', '>', 0)
+            ->distinct('id_siswa')
+            ->count('id_siswa');
 
-    if ($totalSudah === $totalTarget) {
-        $mapelLengkap++;
+        if ($totalSudah === $totalTarget) {
+            $mapelLengkap++;
+        }
     }
-}
 
     return $totalMapel > 0
-        ? round(($mapelLengkap / $totalMapel) * 100, 1)
+        ? round(($mapelLengkap / $totalMapel) * 100)
         : 0;
 }
-
 
 // =====================
 // DETAIL MAPEL BELUM INPUT NILAI
 // =====================
-private function getDetailMapelBelumInput(
-    $tingkat,
+private function getDetailMapelBelumInputByJurusan(
     $jurusan,
+    $tingkat,
     $tahunAjaran,
     $semester
 ) {
-    $kelasQuery = Kelas::where('tingkat', $tingkat);
-    if ($jurusan) {
-        $kelasQuery->where('jurusan', $jurusan);
-    }
+    $kelasIds = Kelas::where('jurusan', $jurusan)
+        ->when($tingkat, fn($q) => $q->where('tingkat', $tingkat))
+        ->pluck('id_kelas');
 
-    $kelasIds = $kelasQuery->pluck('id_kelas');
     if ($kelasIds->isEmpty()) return collect();
 
     $mapelList = Pembelajaran::whereIn('id_kelas', $kelasIds)

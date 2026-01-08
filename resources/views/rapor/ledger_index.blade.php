@@ -179,7 +179,60 @@
         border-bottom: 1px solid #e0e0e0 !important;
         padding: 8px 6px;
     }
+    /* =============================== */
+    /* FIX FREEZE 2 BARIS HEADER LEDGER */
+    /* =============================== */
+
+    /* BARIS 1 : UMUM / KEJURUAN / DLL */
+    .table-ledger thead tr:first-child th {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+    }
+
+    /* BARIS 2 : NAMA MAPEL */
+    .table-ledger thead tr:nth-child(2) th {
+        position: sticky;
+        top: 27px; /* tinggi baris kategori */
+        z-index: 25;
+    }
+
+    /* HEADER NO & NAMA SISWA */
+    .table-ledger thead th.sticky-col-header {
+        position: sticky;
+        top: 0;
+        left: 0;
+        z-index: 40 !important;
+    }
+
 </style>
+
+@php
+    $tahunSekarang = date('Y');
+    $bulanSekarang = date('n');
+
+    if ($bulanSekarang < 7) {
+        $defaultTA1 = $tahunSekarang - 1;
+        $defaultTA2 = $tahunSekarang;
+        $defaultSemester = 'Genap';
+    } else {
+        $defaultTA1 = $tahunSekarang;
+        $defaultTA2 = $tahunSekarang + 1;
+        $defaultSemester = 'Ganjil';
+    }
+
+    $defaultTahunAjaran = $defaultTA1 . '/' . $defaultTA2;
+
+    $tahunMulai = $tahunSekarang - 3;
+    $tahunAkhir = $tahunSekarang + 3;
+
+    $tahunAjaranList = [];
+    for ($tahun = $tahunAkhir; $tahun >= $tahunMulai; $tahun--) {
+        $tahunAjaranList[] = $tahun . '/' . ($tahun + 1);
+    }
+
+    $semesterList = ['Ganjil', 'Genap'];
+@endphp
 
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
     <x-app.navbar />
@@ -202,20 +255,26 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                         <label class="form-label font-weight-bold">Semester</label>
-                         <select name="semester" class="form-select" onchange="this.form.submit()">
-                             <option value="Ganjil" {{ $semesterRaw == 'Ganjil' ? 'selected' : '' }}>Ganjil</option>
-                             <option value="Genap" {{ $semesterRaw == 'Genap' ? 'selected' : '' }}>Genap</option>
-                         </select>
+                        <label class="form-label font-weight-bold">Semester</label>
+                        <select name="semester" class="form-select" onchange="this.form.submit()">
+                            @foreach($semesterList as $sem)
+                                <option value="{{ $sem }}"
+                                    {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>
+                                    {{ $sem }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-3">
-                         <label class="form-label font-weight-bold">Tahun Ajaran</label>
-                         <select name="tahun_ajaran" class="form-select" onchange="this.form.submit()">
-                             @php $years = ['2024/2025', '2025/2026', '2026/2027']; @endphp
-                             @foreach($years as $year)
-                                 <option value="{{ $year }}" {{ $tahun_ajaran == $year ? 'selected' : '' }}>{{ $year }}</option>
-                             @endforeach
-                         </select>
+                        <label class="form-label font-weight-bold">Tahun Ajaran</label>
+                        <select name="tahun_ajaran" class="form-select" onchange="this.form.submit()">
+                            @foreach($tahunAjaranList as $ta)
+                                <option value="{{ $ta }}"
+                                    {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
+                                    {{ $ta }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-3 text-end">
                         <button type="submit" class="btn btn-dark mb-0">Tampilkan Ledger</button>
