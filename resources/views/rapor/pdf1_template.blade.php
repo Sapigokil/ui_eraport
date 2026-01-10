@@ -489,7 +489,7 @@
         // Coba gunakan nama font standar yang biasanya memiliki varian italic otomatis di DomPDF
         // Jika 'Arial' tidak mau miring, gunakan 'Helvetica-Oblique'
         $font = $fontMetrics->get_font("helvetica", "italic");
-        
+
         $size = 9;
         $color = array(0, 0, 0);
         $width = $pdf->get_width();
@@ -500,7 +500,12 @@
         $y = $height - 33; 
 
         // --- TEKS KIRI: Identitas Siswa ---
-        $leftText = "{{ $siswa->kelas->nama_kelas }} / {{ strtoupper($siswa->nama_siswa) }} / {{ $siswa->nipd }}";
+        $leftText = html_entity_decode(
+            "{{ $siswa->kelas->nama_kelas }} / {{ strtoupper($siswa->nama_siswa) }} / {{ $siswa->nipd }}",
+            ENT_QUOTES,
+            'UTF-8'
+        );
+
         $pdf->page_text($marginSide, $y, $leftText, $font, $size, $color);
 
         // --- TEKS KANAN: Penomoran Halaman ---

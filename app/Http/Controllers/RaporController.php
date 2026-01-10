@@ -529,6 +529,27 @@ class RaporController extends Controller
         $mapelTuntas = 0;
 
         foreach ($daftarMapel as $id_mapel) {
+            //tambahan
+            $sumatifCount = DB::table('sumatif')
+                ->where([
+                    'id_siswa' => $id_siswa,
+                    'id_mapel' => $id_mapel,
+                    'semester' => $semesterInt,
+                    'tahun_ajaran' => $tahun_ajaran,
+                ])
+                ->where('nilai', '>', 0)
+                ->count();
+
+            $projectCount = DB::table('project')
+                ->where([
+                    'id_siswa' => $id_siswa,
+                    'id_mapel' => $id_mapel,
+                    'semester' => $semesterInt,
+                    'tahun_ajaran' => $tahun_ajaran,
+                ])
+                ->where('nilai', '>', 0)
+                ->count();
+
             $nilaiAkhir = DB::table('nilai_akhir')
                 ->where(['id_siswa' => $id_siswa, 'id_mapel' => $id_mapel, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran])
                 ->where('nilai_akhir', '>', 0)
