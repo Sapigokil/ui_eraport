@@ -537,13 +537,29 @@ class RaporController extends Controller
         // 3. Cek Kelengkapan Nilai Akhir per Mapel
         // Kita cek ke tabel nilai_akhir karena fungsi sinkronkanKelas sudah mengisi tabel tersebut
         foreach ($daftarMapel as $id_mapel) {
-            $adaNilai = DB::table('nilai_akhir')
+            //tambahan
+            $sumatifCount = DB::table('sumatif')
                 ->where([
                     'id_siswa' => $id_siswa,
                     'id_mapel' => $id_mapel,
                     'semester' => $semesterInt,
-                    'tahun_ajaran' => (string)$tahun_ajaran
+                    'tahun_ajaran' => $tahun_ajaran,
                 ])
+                ->where('nilai', '>', 0)
+                ->count();
+
+            $projectCount = DB::table('project')
+                ->where([
+                    'id_siswa' => $id_siswa,
+                    'id_mapel' => $id_mapel,
+                    'semester' => $semesterInt,
+                    'tahun_ajaran' => $tahun_ajaran,
+                ])
+                ->where('nilai', '>', 0)
+                ->count();
+
+            $nilaiAkhir = DB::table('nilai_akhir')
+                ->where(['id_siswa' => $id_siswa, 'id_mapel' => $id_mapel, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran])
                 ->where('nilai_akhir', '>', 0)
                 ->exists();
 
