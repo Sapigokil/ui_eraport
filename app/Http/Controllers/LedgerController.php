@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Siswa;
 use App\Models\Kelas;
+use App\Models\InfoSekolah;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Exports\LedgerTemplateExport;
@@ -31,7 +32,7 @@ class LedgerController extends Controller
                 // Urutan: Umum(1) -> Kejuruan(2) -> Pilihan(3) -> Mulok(4)
                 ->orderBy('mata_pelajaran.kategori', 'asc') 
                 // Sub-urutan: Berdasarkan Nama Mapel
-                ->orderBy('mata_pelajaran.nama_mapel', 'asc') 
+                ->orderBy('mata_pelajaran.urutan', 'asc') 
                 ->select(
                     'mata_pelajaran.id_mapel', 
                     'mata_pelajaran.nama_mapel', 
@@ -146,7 +147,17 @@ class LedgerController extends Controller
 
         $kelas = Kelas::find($id_kelas);
         
-        $namaSekolah = DB::table('info_sekolah')->value('nama_sekolah') ?? 'NAMA SEKOLAH';
+        $infoSekolah = InfoSekolah::first(); // pakai model
+
+        $namaSekolah   = $infoSekolah->nama_sekolah ?? 'NAMA SEKOLAH';
+        $alamatSekolah = implode(', ', array_filter([
+        $infoSekolah->jalan ?? null,
+        $infoSekolah->kelurahan ?? null,
+        $infoSekolah->kecamatan ?? null,
+        $infoSekolah->kota_kab ?? null,
+        $infoSekolah->provinsi ?? null,
+        $infoSekolah->kode_pos ?? null
+    ]));
 
         $daftarMapel = DB::table('pembelajaran')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
@@ -205,6 +216,7 @@ class LedgerController extends Controller
 
         return compact(
             'namaSekolah',
+            'alamatSekolah',
             'kelas',
             'daftarMapel',
             'dataLedger',

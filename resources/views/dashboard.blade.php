@@ -65,7 +65,7 @@
             {{-- EVENT (STYLE SAMA KAYAK NOTIFIKASI) --}}
         @forelse($events as $event)
         <div class="notification-card" style="
-            background-color: #FAF3E1;
+            background-color: #FFFFE0;
             border-left: 4px solid #FFCB61;
             padding: 10px 14px;
             margin-bottom: 12px;
@@ -210,7 +210,6 @@
         <div class="card shadow-sm">
     <div class="card-header">
         <h6 class="mb-3">Statistik Nilai</h6>
-
         <form method="GET" id="filterForm" class="d-flex gap-3">
 
     {{-- KELAS --}}
@@ -281,7 +280,7 @@
 
     <select name="rentang_nilai"
             class="form-select form-select-sm"
-            style="min-width: 180px"
+            style="min-width: 110px"
             onchange="this.form.submit()">
         <option value="lt78" {{ request('rentang_nilai')=='lt78'?'selected':'' }}>
             Nilai < 78
@@ -348,21 +347,26 @@
         {{-- PROGRESS INPUT NILAI --}}
         <div class="card shadow-sm">
             <div class="card-header">
-        <h6 class="mb-0">Progress Input Nilai per Tingkat</h6>
+        <h6 class="mb-0">
+    Progress Input Nilai per Jurusan
+    <span class="text-muted text-sm">
+        (Tingkat {{ request('tingkat', 'Semua') }})
+    </span>
+</h6>
         <form method="GET" id="barFilterForm" class="d-flex gap-3">
     <input type="hidden" name="kelas" value="{{ request('kelas') }}">
 
-    {{-- JURUSAN --}}
-    <select name="jurusan"
-        id="jurusanSelect"
-        class="form-select form-select-sm"
-        style="min-width: 130px;">
-        <option value="">Semua Jurusan</option>
-        @foreach ($jurusanList as $j)
-            <option value="{{ $j }}" {{ request('jurusan') == $j ? 'selected' : '' }}>
-                {{ $j }}
-            </option>
-        @endforeach
+    {{-- TINGKAT --}}
+    <select name="tingkat"
+        id="tingkatSelect"
+        class="form-select"
+        style="min-width:130px; height:40px;">
+        <option value="" disabled {{ request('tingkat') ? '' : 'selected' }}>
+            Pilih Tingkat
+        </option>
+        <option value="10" {{ request('tingkat') == '10' ? 'selected' : '' }}>10</option>
+        <option value="11" {{ request('tingkat') == '11' ? 'selected' : '' }}>11</option>
+        <option value="12" {{ request('tingkat') == '12' ? 'selected' : '' }}>12</option>
     </select>
 
     {{-- SEMESTER --}}
@@ -371,12 +375,10 @@
         class="form-select"
         style="min-width: 130px; height: 40px;">
         <option value="Ganjil"
-            {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>
-            Ganjil
+            {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>Ganjil
         </option>
         <option value="Genap"
-            {{ request('semester', $defaultSemester) == 'Genap' ? 'selected' : '' }}>
-            Genap
+            {{ request('semester', $defaultSemester) == 'Genap' ? 'selected' : '' }}>Genap
         </option>
     </select>
 
@@ -611,29 +613,40 @@ if (progressCanvas) {
         });
     }
 
-    // BAR CHART : 
-    const barForm     = document.getElementById('barFilterForm');
-    const jurusan     = document.getElementById('jurusanSelect');
+    // BAR CHART FILTER (TINGKAT)
+const barForm     = document.getElementById('barFilterForm');
+    const tingkatBar  = document.getElementById('tingkatSelect');
     const semesterBar = document.getElementById('semesterBarSelect');
     const tahunBar    = document.getElementById('tahunBarSelect');
 
-    if (!barForm || !semesterBar || !tahunBar) return;
+    if (!barForm || !tingkatBar || !semesterBar || !tahunBar) return;
 
-    // sudah pernah submit kalau semester / tahun ada di URL
-    let sudahSubmit = {{ request()->has('semester') || request()->has('tahun_ajaran') ? 'true' : 'false' }};
+    // 🔑 FLAG: apakah sudah pernah submit?
+    let sudahSubmitBar = {{ 
+        request()->has('semester') || request()->has('tahun_ajaran') 
+        ? 'true' : 'false' 
+    }};
 
-    // semester & tahun → selalu submit
-    semesterBar.addEventListener('change', () => barForm.submit());
-    tahunBar.addEventListener('change', () => barForm.submit());
+    // SEMESTER → submit & aktifkan auto-load
+    semesterBar.addEventListener('change', () => {
+        sudahSubmitBar = true;
+        barForm.submit();
+    });
 
-    // jurusan → submit hanya setelah pernah filter
-    if (jurusan) {
-        jurusan.addEventListener('change', () => {
-            if (sudahSubmit) {
-                barForm.submit();
-            }
-        });
-    }
+    // TAHUN → submit & aktifkan auto-load
+    tahunBar.addEventListener('change', () => {
+        sudahSubmitBar = true;
+        barForm.submit();
+    });
+
+    // TINGKAT
+    tingkatBar.addEventListener('change', () => {
+        // ❗ hanya submit kalau sudah pernah filter sebelumnya
+        if (sudahSubmitBar) {
+            barForm.submit();
+        }
+    });
+    
 });
 </script>
 @endpush

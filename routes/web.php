@@ -248,6 +248,8 @@ Route::group(['prefix' => 'pengaturan', 'as' => 'pengaturan.'], function () {
     Route::get('/bobot-nilai', [BobotNilaiController::class, 'index'])->name('bobot.index');
     Route::post('/bobot-nilai', [BobotNilaiController::class, 'store'])->name('bobot.store');
     Route::put('/bobot-nilai/{id}', [BobotNilaiController::class, 'update'])->name('bobot.update');
+    Route::delete('/bobot-nilai/{id}', [BobotNilaiController::class, 'destroy'])->name('bobot.destroy');
+
 
     // input event
     Route::prefix('input')->group(function () {

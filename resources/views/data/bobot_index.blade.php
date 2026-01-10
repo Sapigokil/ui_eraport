@@ -41,7 +41,7 @@
                             </div>
                         @endif
 
-                        <form action="{{ route('pengaturan.bobot.store') }}" method="POST">
+                         <form action="{{ route('pengaturan.bobot.store') }}" method="POST">
                             @csrf
 
                             <div class="row mb-4">
@@ -81,10 +81,28 @@
                                         Tahun Ajaran
                                     </label>
                                     <div class="input-group input-group-outline">
+                                        @php
+                                            $tahunSekarang = now()->year;
+                                            $bulanSekarang = now()->month;
+
+                                            // Tentukan tahun ajaran aktif
+                                            $tahunAjaranAktif = $bulanSekarang >= 7
+                                                ? $tahunSekarang . '/' . ($tahunSekarang + 1)
+                                                : ($tahunSekarang - 1) . '/' . $tahunSekarang;
+
+                                            $tahunMulai = $tahunSekarang - 3; // 3 tahun ke belakang
+                                            $tahunAkhir = $tahunSekarang + 3; // 3 tahun ke depan
+
+                                            $tahunAjaranList = [];
+
+                                            for ($tahun = $tahunAkhir; $tahun >= $tahunMulai; $tahun--) {
+                                                $tahunAjaranList[] = $tahun . '/' . ($tahun + 1);
+                                            }
+                                        @endphp
                                         <select name="tahun_ajaran" class="form-select" required>
                                             @foreach ($tahunAjaranList as $ta)
                                                 <option value="{{ $ta }}"
-                                                    {{ old('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
+                                                    {{ old('tahun_ajaran', $tahunAjaranAktif) == $ta ? 'selected' : '' }}>
                                                     {{ $ta }}
                                                 </option>
                                             @endforeach
@@ -137,6 +155,7 @@
                             </div>
 
                         </form>
+
                         @include('data.partials.history_bobot')
                     </div>
                 </div>
