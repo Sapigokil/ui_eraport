@@ -234,29 +234,29 @@
     <select name="semester"
         id="semesterSelect"
         class="form-select"
-        style="min-width:130px; height:40px;">
-        <option value="Ganjil"
-            {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>
-            Ganjil
+        style="min-width:130px; height:40px;"
+        required>
+    @foreach($semesterList as $sem)
+        <option value="{{ $sem }}"
+            {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>
+            {{ $sem }}
         </option>
-        <option value="Genap"
-            {{ request('semester', $defaultSemester) == 'Genap' ? 'selected' : '' }}>
-            Genap
-        </option>
+    @endforeach
     </select>
 
     {{-- TAHUN AJARAN --}}
     <select name="tahun_ajaran"
         id="tahunSelect"
         class="form-select"
-        style="min-width:130px; height:40px;">
-        @foreach ($tahunAjaran as $ta)
-            <option value="{{ $ta }}"
-                {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
-                {{ $ta }}
-            </option>
-        @endforeach
-    </select>
+        style="min-width:130px; height:40px;"
+        required>
+        @foreach($tahunAjaranList as $ta)
+    <option value="{{ $ta }}"
+        {{ $tahunAjaranAktif == $ta ? 'selected' : '' }}>
+        {{ $ta }}
+    </option>
+@endforeach
+</select>
 
 </form>
 
@@ -373,38 +373,39 @@
     <select name="semester"
         id="semesterBarSelect"
         class="form-select"
-        style="min-width: 130px; height: 40px;">
-        <option value="Ganjil"
-            {{ request('semester', $defaultSemester) == 'Ganjil' ? 'selected' : '' }}>Ganjil
+        style="min-width:130px; height:40px;"
+        required>
+    @foreach($semesterList as $sem)
+        <option value="{{ $sem }}"
+            {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>
+            {{ $sem }}
         </option>
-        <option value="Genap"
-            {{ request('semester', $defaultSemester) == 'Genap' ? 'selected' : '' }}>Genap
-        </option>
+    @endforeach
     </select>
 
     {{-- TAHUN AJARAN --}}
     <select name="tahun_ajaran"
         id="tahunBarSelect"
         class="form-select"
-        style="min-width: 130px; height: 40px;">
-        @foreach ($tahunAjaran as $ta)
-            <option value="{{ $ta }}"
-                {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
-                {{ $ta }}
-            </option>
-        @endforeach
+        style="min-width:130px; height:40px;"
+        required>
+        @foreach($tahunAjaranList as $ta)
+    <option value="{{ $ta }}"
+        {{ $tahunAjaranAktif == $ta ? 'selected' : '' }}>
+        {{ $ta }}
+    </option>
+    @endforeach
     </select>
-</form>
 
             </div>
             <div class="card-body" style="height:250px;">
                 <canvas id="progressChart"></canvas>
             </div>
             <div class="mt-3">
-    <div class="card-header" style="background:#DDDDDD;">
-            <h5 class="text-sm font-weight-bold mb-2">
-        Detail Mapel Belum Input Nilai
-    </h5></div>
+            <div class="card-header" style="background:#DDDDDD;">
+                    <h5 class="text-sm font-weight-bold mb-2">
+                Detail Mapel Belum Input Nilai
+            </h5></div>
     <div style="
         max-height: 300px;
         overflow-y: auto;
@@ -519,7 +520,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const progressLabels = @json($progressLabels);
-
     const progressData   = @json($progressData);
     const statistikNilai = @json($statistikNilai);
     const progressDetail = @json($progressDetail);
@@ -601,10 +601,17 @@ if (progressCanvas) {
 
     if (form && kelas && semester && tahun) {
 
-        let sudahSubmit = {{ request()->has('semester') || request()->has('tahun_ajaran') ? 'true' : 'false' }};
+        let sudahSubmit = {{ request()->has('kelas') ? 'true' : 'false' }};
 
-        semester.addEventListener('change', () => form.submit());
-        tahun.addEventListener('change', () => form.submit());
+        semester.addEventListener('change', () => {
+    sudahSubmit = true;
+    form.submit();
+});
+
+tahun.addEventListener('change', () => {
+    sudahSubmit = true;
+    form.submit();
+});
 
         kelas.addEventListener('change', () => {
             if (sudahSubmit) {

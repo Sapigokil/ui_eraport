@@ -38,6 +38,11 @@ class DashboardController extends Controller
         }
 
         $defaultTahunAjaran = $defaultTA1 . '/' . $defaultTA2;
+
+        // =====================
+        // LIST SEMESTER (UNTUK DROPDOWN)
+        // =====================
+        $semesterList = ['Ganjil', 'Genap'];
                 
         // =====================
         // CARD STATISTIK
@@ -73,13 +78,12 @@ class DashboardController extends Controller
         // =====================
         // LIST TAHUN AJARAN
         // =====================
-        $tahunAjaran = collect();
+        $tahunAjaranList = collect();
 
-        for ($i = -1; $i <= 5; $i++) {
-            $awal = $tahunSekarang + $i;
-            $akhir = $awal + 1;
-            $tahunAjaran->push($awal . '/' . $akhir);
-        }
+for ($i = -3; $i <= 3; $i++) {
+    $awal = $tahunSekarang + $i;
+    $tahunAjaranList->push($awal . '/' . ($awal + 1));
+}
      
         // =====================
 // PROGRESS INPUT NILAI (PER JURUSAN BERDASARKAN TINGKAT)
@@ -128,18 +132,12 @@ foreach ($jurusanListProgress as $jurusanNama) {
 // =====================
 $kelasList = Kelas::orderBy('nama_kelas')->get();
 $queryNilai = NilaiAkhir::where('semester', $semesterAktif)
+    ->where('tahun_ajaran', $tahunAjaranAktif)
     ->where('nilai_akhir', '>', 0);
-
-if ($request->filled('tahun_ajaran')) {
-    $queryNilai->where('tahun_ajaran', $request->tahun_ajaran);
-} else {
-    $queryNilai->where('tahun_ajaran', $tahunAjaranAktif);
-}
 
 if ($request->filled('kelas')) {
     $queryNilai->where('id_kelas', $request->kelas);
 }
-
 
         // =====================
         // STATISTIK NILAI
@@ -196,7 +194,7 @@ switch ($rentangNilai) {
         // =====================
         // STATUS RAPOR
         // =====================
-        $statusRapor = $this->getStatusRapor();
+        $statusRapor = $this->getStatusRapor($tahunAjaranAktif, $semesterAktif);
 
         // =====================
         // UPCOMING EVENT (H sampai H+2)
@@ -240,7 +238,9 @@ switch ($rentangNilai) {
             'notifications',
             'detailNilaiMerah',
             'semesterAktif',
-            'tahunAjaran',
+            'semesterList',  
+            'tahunAjaranAktif',
+            'tahunAjaranList',   
             'defaultSemester',
             'defaultTahunAjaran',
             'judulDetailNilai'
@@ -350,9 +350,10 @@ private function getDetailMapelBelumInputByJurusan(
 // =====================
 // STATUS RAPOR
 // =====================
-private function getStatusRapor()
+private function getStatusRapor($tahunAjaranAktif, $semesterAktif)
 {
-    return Kelas::orderBy('nama_kelas')->get()->map(function ($kelas) {
+    return Kelas::orderBy('nama_kelas')->get()->map(
+        function ($kelas) use ($tahunAjaranAktif, $semesterAktif) {
 
         // TOTAL MAPEL SESUAI PEMBELAJARAN KELAS
         $totalMapel = Pembelajaran::where('id_kelas', $kelas->id_kelas)
@@ -361,6 +362,8 @@ private function getStatusRapor()
 
         // MAPEL YANG SUDAH ADA NILAI
         $mapelTerisi = NilaiAkhir::where('id_kelas', $kelas->id_kelas)
+        ->where('tahun_ajaran', $tahunAjaranAktif)
+        ->where('semester', $semesterAktif)
         ->where('nilai_akhir', '>', 0)
         ->distinct()
         ->count('id_mapel');
