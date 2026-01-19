@@ -187,7 +187,7 @@
                                                         </td>
                                                         <td>
                                                             <div class="input-group input-group-outline">
-                                                                <input type="number" name="nilai[]" min="0" max="100" class="form-control text-center" {{ !$seasonOpen ? 'disabled' : '' }}>
+                                                                <input type="number" name="nilai[]" min="0" max="100" class="form-control text-center" {{ !$seasonOpen ? 'disabled' : '' }}></input>
                                                             </div>
                                                         </td>
                                                         <td>

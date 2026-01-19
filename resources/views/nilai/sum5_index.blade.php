@@ -151,6 +151,11 @@
                                 @elseif($siswa->isEmpty())
                                     <p class="text-danger mt-3 p-3 text-center border rounded">Data siswa tidak ditemukan.</p>
                                 @else
+                                @if(!$seasonOpen)
+                                    <div class="alert alert-warning text-sm mb-3">
+                                        🔒 Input nilai dikunci karena season tidak aktif.
+                                    </div>
+                                @endif
                                     <form action="{{ route('master.sumatif.store') }}" method="POST">
                                         @csrf
                                         <input type="hidden" name="id_kelas" value="{{ request('id_kelas') }}">
@@ -182,12 +187,12 @@
                                                         </td>
                                                         <td>
                                                             <div class="input-group input-group-outline">
-                                                                <input type="number" name="nilai[]" min="0" max="100" class="form-control text-center" value="{{ old('nilai.' . $i, $nilaiLama->nilai) }}">
+                                                                <input type="number" name="nilai[]" min="0" max="100" class="form-control text-center" {{ !$seasonOpen ? 'disabled' : '' }}></input>
                                                             </div>
                                                         </td>
                                                         <td>
                                                             <div class="input-group input-group-outline">
-                                                                <textarea name="tujuan_pembelajaran[]" rows="2" class="form-control text-sm">@php echo trim(old('tujuan_pembelajaran.' . $i, $nilaiLama->tujuan_pembelajaran)); @endphp</textarea>
+                                                                <textarea name="tujuan_pembelajaran[]" rows="2" class="form-control text-sm" {{ !$seasonOpen ? 'disabled' : '' }}></textarea>
                                                             </div>
                                                         </td>
                                                     </tr>

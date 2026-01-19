@@ -140,6 +140,7 @@ class SumatifController extends Controller
         // Parameter Sumatif ID = 4
         $data = $this->loadSumatifData($request, 4);
         $data['sumatifId'] = 4;
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI
         return view('nilai.sum4_index', $data); 
     }
 
@@ -148,12 +149,13 @@ class SumatifController extends Controller
         // Parameter Sumatif ID = 5
         $data = $this->loadSumatifData($request, 5);
         $data['sumatifId'] = 5;
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI
         return view('nilai.sum5_index', $data); 
     }
 
     public function project(Request $request)
     {
-        // Parameter Sumatif ID = 4 (asumsi Project)
+        // Parameter Project (asumsi Project)
         $data = $this->loadSumatifData($request, 4); 
         $data['sumatifId'] = 4;
         return view('nilai.project_index', $data);
@@ -232,7 +234,6 @@ class SumatifController extends Controller
             }
         }
 
-
             $nilai = (int) $request->nilai[$i];
             
             $tujuanPembelajaran = trim(
@@ -242,8 +243,6 @@ class SumatifController extends Controller
             if ($tujuanPembelajaran === '') {
                 return back()->with('error', 'Tujuan Pembelajaran wajib dipilih untuk setiap nilai.');
             }
-
- 
 
             Sumatif::updateOrCreate(
                 [

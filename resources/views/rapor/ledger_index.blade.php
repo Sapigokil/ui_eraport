@@ -243,78 +243,103 @@
                 <h6 class="text-white mb-0"><i class="fas fa-table me-2"></i> Ledger Nilai Siswa</h6>
             </div>
             <div class="card-body">
-                {{-- Form Filter (Tetap Sama) --}}
-                <form action="{{ route('ledger.ledger_index') }}" method="GET" class="row align-items-end mb-4">
-                {{-- MODE LEDGER --}}
-                <div class="col-md-2">
-                    <label class="form-label fw-bold">Mode Ledger</label>
-                    <select name="mode" class="form-select" onchange="this.form.submit()">
-                        <option value="kelas" {{ request('mode','kelas') == 'kelas' ? 'selected' : '' }}>
-                            Per Kelas
-                        </option>
-                        <option value="jurusan" {{ request('mode') == 'jurusan' ? 'selected' : '' }}>
-                            Per Jurusan
-                        </option>
-                    </select>
-                </div>
-                {{-- FILTER KELAS --}}
-                   <div class="col-md-2">
-                        <label class="form-label font-weight-bold">Kelas</label>
-                        <select name="id_kelas" class="form-select" {{ request('mode','kelas') == 'jurusan' ? 'disabled' : '' }}
-                        onchange="this.form.submit()">
-                            <option value="">-- Pilih Kelas --</option>
-                            @foreach($kelas as $k)
-                                <option value="{{ $k->id_kelas }}"
-                                {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>
-                                {{ $k->nama_kelas }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    {{-- FILTER JURUSAN --}}
-                    <div class="col-md-2">
-                        <label class="form-label fw-bold">Jurusan</label>
-                        <select name="jurusan"
-                            class="form-select"
-                            {{ request('mode','kelas') == 'kelas' ? 'disabled' : '' }}
-                            onchange="this.form.submit()">
-                            <option value="">-- Pilih Jurusan --</option>
-                            @foreach($jurusanList as $j)
-                                <option value="{{ $j }}"
-                                    {{ request('jurusan') == $j ? 'selected' : '' }}>
-                                    {{ $j }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    {{-- SEMESTER --}}
-                    <div class="col-md-2">
-                        <label class="form-label font-weight-bold">Semester</label>
-                        <select name="semester" class="form-select" onchange="this.form.submit()">
-                            @foreach($semesterList as $sem)
-                                <option value="{{ $sem }}"
-                                    {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>
-                                    {{ $sem }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    {{-- TAHUN AJARAN --}}
-                    <div class="col-md-2">
-                        <label class="form-label font-weight-bold">Tahun Ajaran</label>
-                        <select name="tahun_ajaran" class="form-select" onchange="this.form.submit()">
-                            @foreach($tahunAjaranList as $ta)
-                                <option value="{{ $ta }}"
-                                    {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
-                                    {{ $ta }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-2 text-end">
-                        <button type="submit" class="btn btn-dark mb-0">Tampilkan Ledger</button>
-                    </div>
-                </form>
+                <form action="{{ route('ledger.ledger_index') }}" method="GET" class="mb-4">
+
+    {{-- ================= ROW 1 ================= --}}
+    <div class="row align-items-end">
+        {{-- MODE LEDGER --}}
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Mode Ledger</label>
+            <select name="mode" class="form-select" onchange="this.form.submit()">
+                <option value="kelas" {{ request('mode','kelas') == 'kelas' ? 'selected' : '' }}>
+                    Per Kelas
+                </option>
+                <option value="jurusan" {{ request('mode') == 'jurusan' ? 'selected' : '' }}>
+                    Per Jurusan
+                </option>
+            </select>
+        </div>
+
+        {{-- KELAS --}}
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Kelas</label>
+            <select name="id_kelas" class="form-select"
+                {{ request('mode','kelas') == 'jurusan' ? 'disabled' : '' }}
+                onchange="this.form.submit()">
+                <option value="">-- Pilih Kelas --</option>
+                @foreach($kelas as $k)
+                    <option value="{{ $k->id_kelas }}"
+                        {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>
+                        {{ $k->nama_kelas }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- JURUSAN --}}
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Jurusan</label>
+            <select name="jurusan" class="form-select"
+                {{ request('mode','kelas') == 'kelas' ? 'disabled' : '' }}
+                onchange="this.form.submit()">
+                <option value="">-- Pilih Jurusan --</option>
+                @foreach($jurusanList as $j)
+                    <option value="{{ $j }}" {{ request('jurusan') == $j ? 'selected' : '' }}>
+                        {{ $j }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- SEMESTER --}}
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Semester</label>
+            <select name="semester" class="form-select" onchange="this.form.submit()">
+                @foreach($semesterList as $sem)
+                    <option value="{{ $sem }}"
+                        {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>
+                        {{ $sem }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- TAHUN AJARAN --}}
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Tahun Ajaran</label>
+            <select name="tahun_ajaran" class="form-select" onchange="this.form.submit()">
+                @foreach($tahunAjaranList as $ta)
+                    <option value="{{ $ta }}"
+                        {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
+                        {{ $ta }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- BUTTON --}}
+        <div class="col-md-2 text-end">
+            <button type="submit" class="btn btn-dark mb-0">
+                Tampilkan Ledger
+            </button>
+        </div>
+    </div>
+
+    {{-- ================= ROW 2 (KHUSUS URUT) ================= --}}
+    <div class="col-md-2 mt-2">
+    <label class="form-label fw-bold">Urutkan Berdasarkan</label>
+    <select name="urut" class="form-select" onchange="this.form.submit()">
+        <option value="ranking" {{ request('urut','ranking') == 'ranking' ? 'selected' : '' }}>
+            Ranking Nilai
+        </option>
+        <option value="absen" {{ request('urut') == 'absen' ? 'selected' : '' }}>
+            Nomor Absen
+        </option>
+    </select>
+</div>
+
+</form>
+
 
                 @if(
                     (request('mode','kelas') == 'kelas' && request('id_kelas')) ||
@@ -329,7 +354,12 @@
                     <table id="ledgerTable" class="table table-ledger align-items-center mb-0">
                         <thead>
                             <tr>
-                                <th rowspan="2" class="sticky-col-header">Rank</th>
+                                <th rowspan="2" class="sticky-col-header">
+                                    Rank
+                                    @if(request('urut') == 'absen')
+                                        <small class="d-block text-xs">(nonaktif)</small>
+                                    @endif
+                                </th>
                                 <th rowspan="2" class="sticky-col-header" style="width: 45px;">No</th>
                                 {{-- SORTING NAMA --}}
                                 <th rowspan="2" class="sticky-col-header col-nama">
@@ -369,8 +399,12 @@
                             @forelse($dataLedger as $idx => $row)
                             <tr>
                             {{-- RANK (sementARA) --}}
-                            <td class="text-center text-sm sticky-col row-number">
-                                {{ $idx + 1 }}
+                            <td class="text-center text-sm sticky-col">
+                                @if(request('urut','ranking') === 'ranking')
+                                    {{ $loop->iteration }}
+                                @else
+                                    -
+                                @endif
                             </td>
 
                             {{-- NO --}}
