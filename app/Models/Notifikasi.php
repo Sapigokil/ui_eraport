@@ -12,6 +12,8 @@ class Notifikasi extends Model
     protected $fillable = [
         'deskripsi',
         'tanggal',
-        'kategori'
+        'kategori',
+        'created_at',
+        'updated_at'
     ];
 }

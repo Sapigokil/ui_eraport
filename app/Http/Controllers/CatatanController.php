@@ -8,6 +8,7 @@ use App\Models\Siswa;
 use App\Models\Ekskul;
 use App\Models\NilaiAkhir;
 use App\Models\SetKokurikuler;
+use App\Models\Season;
 use App\Exports\CatatanTemplateExport; 
 use App\Imports\CatatanImport;         
 use Maatwebsite\Excel\Facades\Excel;
@@ -57,6 +58,8 @@ class CatatanController extends Controller
      */
     public function inputCatatan(Request $request)
     {
+        $seasonOpen = \App\Models\Season::currentOpen(); // 🔒 cek season aktif
+
         // Ambil semua kelas untuk filter dropdown
         $kelas = Kelas::all();
         
@@ -137,7 +140,8 @@ class CatatanController extends Controller
             'siswaTerpilih', 
             'dataEkskulTersimpan', 
             'templateKokurikuler',
-            'set_kokurikuler'
+            'set_kokurikuler',
+            'seasonOpen'
         ));
     }
 
@@ -161,6 +165,10 @@ class CatatanController extends Controller
      */
     public function simpanCatatan(Request $request)
     {
+        $seasonOpen = \App\Models\Season::currentOpen();
+        if (!$seasonOpen) {
+            return back()->with('error', '🔒 Input catatan dikunci karena season tidak aktif.');
+        }
         $semesterInt = $this->mapSemesterToInt($request->semester);
         
         $validIds = [];

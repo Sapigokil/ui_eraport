@@ -36,6 +36,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SetKokurikulerController;
 use App\Http\Controllers\BobotNilaiController;
 use App\Http\Controllers\InputController;
+use App\Http\Controllers\SeasonController;
 
 /*
 |--------------------------------------------------------------------------
@@ -288,6 +289,15 @@ Route::middleware(['auth'])->group(function () {
                     Route::put('/{id}', 'update')->name('update');
                     Route::delete('/{id}', 'destroy')->name('destroy');
                 });
+            });
+
+            // MODULE: SEASON
+            Route::prefix('season')->middleware(['auth'])->group(function () {
+                Route::get('/', [SeasonController::class, 'index'])->name('season.index');
+                Route::post('/store', [SeasonController::class, 'store'])->name('season.store');
+                Route::put('/{id}', [SeasonController::class, 'update'])->name('season.update');
+                Route::put('/settings/erapor/season/{id}', [SeasonController::class, 'update'])->name('settings.erapor.season.update');
+                Route::delete('/{id}', [SeasonController::class, 'destroy'])->name('season.destroy');
             });
 
             // Input Event

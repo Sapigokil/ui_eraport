@@ -11,6 +11,8 @@ use App\Models\NilaiAkhir;
 use App\Models\Pembelajaran;
 use App\Models\Event;
 use App\Models\Notifikasi;
+use App\Models\Season;
+
 use Carbon\Carbon;
 
 use Illuminate\Support\Facades\DB;
@@ -22,22 +24,29 @@ class DashboardController extends Controller
         $rentangNilai = $request->rentang_nilai ?? 'lt78';
 
         // =====================
-        // LOGIKA DEFAULT TAHUN AJARAN & SEMESTER
+        // SEASON AKTIF
         // =====================
-        $tahunSekarang = date('Y');
-        $bulanSekarang = date('n');
+        $season = Season::where('is_active', 1)->first();
 
-        if ($bulanSekarang < 7) {
-            $defaultTA1 = $tahunSekarang - 1;
-            $defaultTA2 = $tahunSekarang;
-            $defaultSemester = 'Genap';
+        // =====================
+        // DEFAULT TAHUN AJARAN & SEMESTER (DARI SEASON)
+        // =====================
+        if ($season) {
+            $defaultTahunAjaran = $season->tahun_ajaran;
+            $defaultSemester   = $season->semester == 1 ? 'Ganjil' : 'Genap';
         } else {
-            $defaultTA1 = $tahunSekarang;
-            $defaultTA2 = $tahunSekarang + 1;
-            $defaultSemester = 'Ganjil';
-        }
+            // fallback jika season belum diset
+            $tahunSekarang = date('Y');
+            $bulanSekarang = date('n');
 
-        $defaultTahunAjaran = $defaultTA1 . '/' . $defaultTA2;
+            if ($bulanSekarang < 7) {
+                $defaultTahunAjaran = ($tahunSekarang - 1) . '/' . $tahunSekarang;
+                $defaultSemester = 'Genap';
+            } else {
+                $defaultTahunAjaran = $tahunSekarang . '/' . ($tahunSekarang + 1);
+                $defaultSemester = 'Ganjil';
+            }
+        }
 
         // =====================
         // LIST SEMESTER (UNTUK DROPDOWN)
@@ -79,32 +88,33 @@ class DashboardController extends Controller
         // LIST TAHUN AJARAN
         // =====================
         $tahunAjaranList = collect();
+        $tahunSekarang = date('Y'); 
 
-for ($i = -3; $i <= 3; $i++) {
-    $awal = $tahunSekarang + $i;
-    $tahunAjaranList->push($awal . '/' . ($awal + 1));
-}
+        for ($i = -3; $i <= 3; $i++) {
+            $awal = $tahunSekarang + $i;
+            $tahunAjaranList->push($awal . '/' . ($awal + 1));
+        }
      
         // =====================
-// PROGRESS INPUT NILAI (PER JURUSAN BERDASARKAN TINGKAT)
-// =====================
+        // PROGRESS INPUT NILAI (PER JURUSAN BERDASARKAN TINGKAT)
+        // =====================
 
-$tingkatFilter = $request->tingkat ?? null;
+        $tingkatFilter = $request->tingkat ?? null;
 
-$progressLabels = [];
-$progressData   = [];
-$progressDetail = [];
+        $progressLabels = [];
+        $progressData   = [];
+        $progressDetail = [];
 
-// ambil jurusan yang ADA di tingkat tsb
-$jurusanListProgress = Kelas::when($tingkatFilter, function ($q) use ($tingkatFilter) {
-        $q->where('tingkat', $tingkatFilter);
-    })
-    ->select('jurusan')
-    ->distinct()
-    ->orderBy('jurusan')
-    ->pluck('jurusan');
+        // ambil jurusan yang ADA di tingkat tsb
+        $jurusanListProgress = Kelas::when($tingkatFilter, function ($q) use ($tingkatFilter) {
+                $q->where('tingkat', $tingkatFilter);
+            })
+            ->select('jurusan')
+            ->distinct()
+            ->orderBy('jurusan')
+            ->pluck('jurusan');
 
-foreach ($jurusanListProgress as $jurusanNama) {
+    foreach ($jurusanListProgress as $jurusanNama) {
 
     $progress = $this->hitungProgressByJurusan(
         $jurusanNama,
@@ -127,17 +137,17 @@ foreach ($jurusanListProgress as $jurusanNama) {
     ];
 }
 
-// =====================
-// FILTER KELAS (STATISTIK NILAI)
-// =====================
-$kelasList = Kelas::orderBy('nama_kelas')->get();
-$queryNilai = NilaiAkhir::where('semester', $semesterAktif)
-    ->where('tahun_ajaran', $tahunAjaranAktif)
-    ->where('nilai_akhir', '>', 0);
+        // =====================
+        // FILTER KELAS (STATISTIK NILAI)
+        // =====================
+        $kelasList = Kelas::orderBy('nama_kelas')->get();
+        $queryNilai = NilaiAkhir::where('semester', $semesterAktif)
+            ->where('tahun_ajaran', $tahunAjaranAktif)
+            ->where('nilai_akhir', '>', 0);
 
-if ($request->filled('kelas')) {
-    $queryNilai->where('id_kelas', $request->kelas);
-}
+        if ($request->filled('kelas')) {
+            $queryNilai->where('id_kelas', $request->kelas);
+        }
 
         // =====================
         // STATISTIK NILAI
@@ -153,27 +163,27 @@ if ($request->filled('kelas')) {
         // DETAIL SISWA NILAI MERAH (<78) + MAPEL
         // =====================
         $detailNilaiMerahQuery = NilaiAkhir::with(['siswa', 'mapel'])
-    ->where('tahun_ajaran', $tahunAjaranAktif)
-    ->where('semester', $semesterAktif)
-    ->where('nilai_akhir', '>', 0);
+        ->where('tahun_ajaran', $tahunAjaranAktif)
+        ->where('semester', $semesterAktif)
+        ->where('nilai_akhir', '>', 0);
 
-switch ($rentangNilai) {
-    case '78_85':
-        $detailNilaiMerahQuery->whereBetween('nilai_akhir', [78, 85]);
-        break;
+    switch ($rentangNilai) {
+        case '78_85':
+            $detailNilaiMerahQuery->whereBetween('nilai_akhir', [78, 85]);
+            break;
 
-    case '86_92':
-        $detailNilaiMerahQuery->whereBetween('nilai_akhir', [86, 92]);
-        break;
+        case '86_92':
+            $detailNilaiMerahQuery->whereBetween('nilai_akhir', [86, 92]);
+            break;
 
-    case 'gte93':
-        $detailNilaiMerahQuery->where('nilai_akhir', '>=', 93);
-        break;
+        case 'gte93':
+            $detailNilaiMerahQuery->where('nilai_akhir', '>=', 93);
+            break;
 
-    default: // lt78
-        $detailNilaiMerahQuery->where('nilai_akhir', '<', 78);
-        break;
-}
+        default: // lt78
+            $detailNilaiMerahQuery->where('nilai_akhir', '<', 78);
+            break;
+    }
 
         if ($request->filled('kelas')) {
             $detailNilaiMerahQuery->where('id_kelas', $request->kelas);
@@ -223,6 +233,7 @@ switch ($rentangNilai) {
                 ->get();
 
         return view('dashboard', compact(
+            'season',
             'totalSiswa',
             'totalGuru',
             'totalKelas',

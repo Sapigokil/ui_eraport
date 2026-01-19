@@ -109,6 +109,11 @@
                             @if($siswa->isEmpty())
                                 <p class="text-center text-secondary">Silakan pilih filter untuk menampilkan daftar siswa.</p>
                             @else
+                            @if(!$seasonOpen)
+                                <div class="alert alert-warning text-sm mb-3">
+                                    🔒 Input nilai dikunci karena season tidak aktif.
+                                </div>
+                            @endif
                                 <form action="{{ route('master.project.store') }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="id_kelas" value="{{ request('id_kelas') }}">
@@ -132,8 +137,16 @@
                                                 <tr>
                                                     <td class="text-center">{{ $i+1 }}</td>
                                                     <td>{{ $s->nama_siswa }}<input type="hidden" name="id_siswa[]" value="{{ $s->id_siswa }}"></td>
-                                                    <td><input type="number" name="nilai[]" class="form-control text-center" value="{{ old('nilai.'.$i, optional($p)->nilai) }}" min="0" max="100"></td>
-                                                    <td><textarea name="tujuan_pembelajaran[]" class="form-control text-sm" rows="2">{{ old('tujuan_pembelajaran.'.$i, optional($p)->tujuan_pembelajaran) }}</textarea></td>
+                                                    <td>
+                                                        <input type="number" name="nilai[]" class="form-control text-center" 
+                                                            value="{{ old('nilai.'.$i, optional($p)->nilai) }}" 
+                                                            min="0" max="100" 
+                                                            {{ !$seasonOpen ? 'disabled' : '' }}>
+                                                    </td>
+                                                    <td>
+                                                        <textarea name="tujuan_pembelajaran[]" class="form-control text-sm" rows="2" 
+                                                                {{ !$seasonOpen ? 'disabled' : '' }}>{{ old('tujuan_pembelajaran.'.$i, optional($p)->tujuan_pembelajaran) }}</textarea>
+                                                    </td>
                                                 </tr>
                                                 @endforeach
                                             </tbody>

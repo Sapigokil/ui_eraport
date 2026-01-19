@@ -143,7 +143,7 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.catatan.input') ? 'active' : 'text-white' }}" href="{{ route('master.catatan.input') }}"><span class="sidenav-normal"> Catatan Walikelas </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.nilaiakhir.index') ? 'active' : 'text-white' }}" href="{{ route('master.nilaiakhir.index') }}"><span class="sidenav-mini-icon"> NA </span><span class="sidenav-normal"> Nilai Akhir </span></a></li>
                     </ul>
-                </div>
+                </div> 
             </li>
             @endcan
 
@@ -213,6 +213,7 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.kok.index') ? 'active' : 'text-white' }}" href="{{ route('settings.erapor.kok.index') }}"><span class="sidenav-mini-icon"> K </span><span class="sidenav-normal"> Set Kokurikuler </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.bobot.index') ? 'active' : 'text-white' }}" href="{{ route('settings.erapor.bobot.index') }}"><span class="sidenav-mini-icon"> B </span><span class="sidenav-normal"> Bobot Nilai </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.input.index') ? 'active' : 'text-white' }}" href="{{ route('settings.erapor.input.index') }}"><span class="sidenav-mini-icon"> E </span><span class="sidenav-normal"> Event Dashboard </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.season.index') ? 'active' : 'text-white' }}" href="{{ route('settings.erapor.season.index') }}"><span class="sidenav-mini-icon"> S </span><span class="sidenav-normal"> Set Season </span></a></li>
                     </ul>
                 </div>
             </li>

@@ -8,6 +8,7 @@ use App\Models\Siswa;
 use App\Models\MataPelajaran;
 use App\Models\Project;
 use App\Models\Pembelajaran;
+use App\Models\Season;
 use App\Exports\ProjectTemplateExport; // 🛑 ASUMSI CLASS BARU
 use App\Imports\ProjectImport;         // 🛑 ASUMSI CLASS BARU
 use Maatwebsite\Excel\Facades\Excel;
@@ -60,6 +61,8 @@ class ProjectController extends Controller
 
         $siswa = collect();
         $rapor = collect();
+        // 🔽 TAMBAHKAN INI
+        $seasonOpen = Season::currentOpen();
 
         if ($request->id_kelas && $request->id_mapel && $request->semester && $request->tahun_ajaran) {
 
@@ -96,11 +99,14 @@ class ProjectController extends Controller
         }
 
         // Koreksi view name jika Anda menggunakan 'nilai.project_index'
-        return view('nilai.project_index', compact('kelas', 'mapel', 'siswa', 'rapor'));
+        return view('nilai.project_index', compact('kelas', 'mapel', 'siswa', 'rapor', 'seasonOpen'));
     }
 
     public function simpan(Request $request)
     {
+        if (!Season::currentOpen()) {
+    return back()->withInput()->withErrors('Input nilai sedang dikunci oleh season.');
+    }
         // 1. Validasi Input
         $request->validate([
             'id_kelas'              => 'required|exists:kelas,id_kelas',

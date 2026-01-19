@@ -9,12 +9,71 @@
 
     <div class="container-fluid py-4 px-5">
 
-        {{-- HEADER --}}
-        <h3 class="mb-3">Hello, {{ auth()->user()->name ?? 'Pengguna' }}</h3>
+    {{-- HEADER --}}
+    <h3 class="mb-3">Hello, {{ auth()->user()->name ?? 'Pengguna' }}</h3>
+
+    {{-- INFO SEASON (TETAP / TIDAK BISA DITUTUP) --}}
+@if($season)
+<div style="
+    background-color: #E8F9FF; 
+    border-left: 4px solid #77BEF0;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    border-radius: 6px;
+    font-size: 13px;
+">
+    <h6 style="margin-bottom:6px; font-weight:600;">
+        📅 Info Season Input Nilai
+    </h6>
+
+    <div style="line-height:1.5; color:#333;">
+        <strong>Semester:</strong>
+        {{ $season->semester == 1 ? 'Ganjil' : 'Genap' }} <br>
+
+        <strong>Tahun Ajaran:</strong>
+        {{ $season->tahun_ajaran }} <br>
+
+        <strong>Status Input Nilai:</strong>
+        @if($season->is_open)
+            <span style="
+                background:#93DA97;
+                color:#fff;
+                padding:2px 8px;
+                border-radius:12px;
+                font-size:11px;
+            ">
+                DIBUKA
+            </span>
+        @else
+            <span style="
+                background:#E57373;
+                color:#fff;
+                padding:2px 8px;
+                border-radius:12px;
+                font-size:11px;
+            ">
+                TERKUNCI
+            </span>
+        @endif
+    </div>
+</div>
+@else
+<div style="
+    background-color: #FFF3CD;
+    border-left: 5px solid #FFC107;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    border-radius: 6px;
+    font-size: 13px;
+">
+    ⚠️ Season belum diset. Silakan hubungi admin.
+</div>
+@endif
+
 {{-- (NOTIFIKASI) --}}
     @forelse($notifications as $notif)
 <div class="notification-card" style="
-    background-color: #DDF4E7;
+    background-color: #E8F5E9;
     border-left: 4px solid #93DA97;
     padding: 10px 14px;
     margin-bottom: 12px;
@@ -115,86 +174,65 @@
 
             {{-- JUMLAH SISWA --}}
             <div class="col-md-3">
-            <div class="card shadow-sm h-100 position-relative overflow-hidden">
-
-                {{-- garis warna --}}
-                <div style="
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 4px;
-                    height: 100%;
-                    background-color: #EA5B6F;
-                "></div>
-
-                <div class="card-body ps-3">
-                    <div class="text-muted text-xs">Jumlah Siswa</div>
-                    <div class="fs-4 fw-bold text-dark">
-                        {{ $totalSiswa }}
-                    </div>
+            <div style="
+                background-color: #FFDEE6;      /* warna utama */
+                border-left: 5px solid #EA5B6F; /* garis kiri */
+                padding: 14px 18px;
+                margin-bottom: 16px;
+                border-radius: 6px;
+                font-size: 13px;
+            ">
+                <div class="text-muted text-xs">Jumlah Siswa</div>
+                <div class="fs-4 fw-bold text-dark">
+                    {{ $totalSiswa }}
                 </div>
             </div>
         </div>
             {{-- JUMLAH GURU --}}
             <div class="col-md-3">
-            <div class="card shadow-sm h-100 position-relative overflow-hidden">
-
-                <div style="
-                    position:absolute;
-                    left:0;
-                    top:0;
-                    width:4px;
-                    height:100%;
-                    background-color: #FFCB61;
-                "></div>
-
-                <div class="card-body ps-3">
-                    <div class="text-muted text-xs">Jumlah Guru</div>
-                    <div class="fs-4 fw-bold text-dark">
-                        {{ $totalGuru }}
-                    </div>
+            <div style="
+                background-color: #FFFFE0;
+                border-left: 4px solid #FFCB61;
+                padding: 14px 18px;
+                margin-bottom: 16px;
+                border-radius: 6px;
+                font-size: 13px;
+            ">
+                <div class="text-muted text-xs">Jumlah Guru</div>
+                <div class="fs-4 fw-bold text-dark">
+                    {{ $totalGuru }}
                 </div>
             </div>
         </div>
             {{-- JUMLAH KELAS --}}
             <div class="col-md-3">
-            <div class="card shadow-sm h-100 position-relative overflow-hidden">
-
-                <div style="
-                    position:absolute;
-                    left:0;
-                    top:0;
-                    width:4px;
-                    height:100%;
-                    background-color: #93DA97;
-                "></div>
-
-                <div class="card-body ps-3">
-                    <div class="text-muted text-xs">Jumlah Kelas</div>
-                    <div class="fs-4 fw-bold text-dark">
-                        {{ $totalKelas }}
-                    </div>
+            <div style="
+                background-color: #E8F5E9;
+                border-left: 4px solid #93DA97;
+                padding: 14px 18px;
+                margin-bottom: 16px;
+                border-radius: 6px;
+                font-size: 13px;
+            ">
+                <div class="text-muted text-xs">Jumlah Kelas</div>
+                <div class="fs-4 fw-bold text-dark">
+                    {{ $totalKelas }}
                 </div>
             </div>
         </div>
             {{-- JUMLAH MAPEL --}}
             <div class="col-md-3">
-            <div class="card shadow-sm h-100 position-relative overflow-hidden">
-
-                <div style="
-                    position:absolute;
-                    left:0;
-                    top:0;
-                    width:4px;
-                    height:100%;
-                    background-color: #77BEF0;
-                "></div>
-
-                <div class="card-body ps-3">
-                    <div class="text-muted text-xs">Jumlah Mapel</div>
-                    <div class="fs-4 fw-bold text-dark">
-                        {{ $totalMapel }}
-                    </div>
+            <div style="
+                background-color: #E8F9FF; 
+                border-left: 4px solid #77BEF0;
+                padding: 14px 18px;
+                margin-bottom: 16px;
+                border-radius: 6px;
+                font-size: 13px;
+            ">
+                <div class="text-muted text-xs">Jumlah Mapel</div>
+                <div class="fs-4 fw-bold text-dark">
+                    {{ $totalMapel }}
                 </div>
             </div>
         </div>
@@ -415,23 +453,23 @@
 <div class="mb-3">
     <strong>Kelas {{ $tingkat }} ({{ $detail['progress'] }}%)</strong>
 
-    @if($detail['belum']->count() > 0)
-    <div class="text-warning text-sm mt-1">
-        Mapel belum lengkap:
-    </div>
-    <ul class="mb-0">
-        @foreach($detail['belum'] as $mapel)
-            <li>{{ $mapel }}</li>
-        @endforeach
-    </ul>
-@else
-    <div class="text-success mt-1">
-        Semua mapel sudah menginput nilai ✓
-    </div>
-@endif
-
+    @if(collect($detail['belum'])->isNotEmpty())
+        <div class="text-warning text-sm mt-1">
+            Mapel belum lengkap:
+        </div>
+        <ul class="mb-0">
+            @foreach($detail['belum'] as $mapel)
+                <li>{{ $mapel }}</li>
+            @endforeach
+        </ul>
+    @else
+        <div class="text-success mt-1">
+            Semua mapel sudah menginput nilai ✓
+        </div>
+    @endif
 </div>
 @endforeach
+
 
     @if(collect($progressDetail)->every(fn($d) => $d['progress'] == 100))
     <p class="text-success text-sm mb-0">

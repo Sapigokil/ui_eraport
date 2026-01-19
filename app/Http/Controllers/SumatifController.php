@@ -10,6 +10,7 @@ use App\Models\Siswa;
 use App\Models\Sumatif;
 use App\Models\MataPelajaran;
 use App\Models\Pembelajaran;
+use App\Models\Season;
 use App\Exports\SumatifTemplateExport;
 use App\Imports\SumatifImport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -46,6 +47,9 @@ class SumatifController extends Controller
     {
         $kelas = Kelas::orderBy('nama_kelas')->get();
         $mapel = collect();
+
+        // 🔽 TAMBAHKAN INI (DIPA)
+        $seasonOpen = Season::currentOpen();
 
         // 1. Ambil Mata Pelajaran berdasarkan Kelas
         if ($request->id_kelas) {
@@ -107,6 +111,7 @@ class SumatifController extends Controller
         // Parameter Sumatif ID = 1
         $data = $this->loadSumatifData($request, 1);
         $data['sumatifId'] = 1; 
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI DIPAA
         
         // Memuat view sum1_index.blade.php
         return view('nilai.sum1_index', $data); 
@@ -117,6 +122,7 @@ class SumatifController extends Controller
         // Parameter Sumatif ID = 2
         $data = $this->loadSumatifData($request, 2);
         $data['sumatifId'] = 2;
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI
         return view('nilai.sum2_index', $data); 
     }
 
@@ -125,6 +131,7 @@ class SumatifController extends Controller
         // Parameter Sumatif ID = 3
         $data = $this->loadSumatifData($request, 3);
         $data['sumatifId'] = 3;
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI
         return view('nilai.sum3_index', $data); 
     }
 
@@ -155,6 +162,10 @@ class SumatifController extends Controller
     // === METHOD SIMPAN (STORE) ===
     public function simpan(Request $request)
     {
+        // DIPAA
+        if (!Season::currentOpen()) {
+        return back()->withErrors('Input nilai sedang dikunci oleh season.');
+        }
         $request->validate([
             'id_kelas'              => 'required',
             'id_mapel'              => 'required',

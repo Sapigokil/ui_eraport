@@ -43,7 +43,7 @@
                         @endif
 
                         {{-- FORM INPUT --}}
-                        <form action="{{ route('settings.erapor.input.store') }}" method="POST">
+                        <form action="{{ route('input.store') }}" method="POST">
                         @csrf
 
                             <div class="row mb-4">
@@ -104,8 +104,7 @@
                                     <div class="input-group input-group-outline">
                                         <select name="jadwalkan"
                                                 id="jadwalkan"
-                                                class="form-select"
-                                                disabled>
+                                                class="form-select">
                                             <option value="" selected> Pilih Jadwal </option>
                                             <option value="1_hari">1 Hari</option>
                                             <option value="3_hari">3 Hari</option>
@@ -126,7 +125,7 @@
                             </div>
                         </form>
 
-                     </form>
+                    
 
 {{-- HISTORY EVENT & NOTIFIKASI --}}
 @include('data.partials.history_input')
@@ -148,13 +147,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const jadwalkan  = document.getElementById('jadwalkan');
 
     function toggleJadwal() {
-        if (kategori.value === 'event') {
-            jadwalkan.disabled = false;
-        } else {
-            jadwalkan.disabled = true;
-            jadwalkan.value = '';
-        }
+    if (kategori.value === 'event') {
+        jadwalkan.disabled = false;
+        jadwalkan.required = true;
+    } else {
+        jadwalkan.disabled = true;
+        jadwalkan.required = false;
+        jadwalkan.value = '';
     }
+}
 
     // saat kategori berubah
     kategori.addEventListener('change', toggleJadwal);

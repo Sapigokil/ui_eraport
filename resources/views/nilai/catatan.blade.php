@@ -34,6 +34,8 @@
     $semesterList = ['Ganjil', 'Genap']; 
     
     $dataEkskul = $dataEkskulTersimpan ?? [];
+    // 🔽 TAMBAHKAN INI DI SINI
+    $seasonOpen = $seasonOpen ?? \App\Models\Season::currentOpen();
 @endphp
 
 @section('content')
@@ -133,7 +135,15 @@
                                     <p class="text-secondary mb-0">Silakan pilih filter untuk mulai mengisi catatan rapor siswa.</p>
                                 </div>
                             @else
+                            {{-- 🔒 PERINGATAN DI ATAS TOMBOL --}}
+                                            @if(!$seasonOpen)
+                                                <div class="alert alert-warning text-sm text-center py-2 mb-3">
+                                                    🔒 Input catatan dikunci karena season tidak aktif.
+                                                </div>
+                                            @endif
                                 <form action="{{ route('master.catatan.simpan') }}" method="POST">
+                                @csrf
+                                <fieldset {{ !$seasonOpen ? 'disabled' : '' }}>
                                     @csrf
                                     <input type="hidden" name="id_kelas" value="{{ $request->id_kelas }}">
                                     <input type="hidden" name="id_siswa" value="{{ $request->id_siswa }}">
@@ -240,11 +250,18 @@
                                                 </div>
                                             </div>
 
-                                            <button type="submit" class="btn bg-gradient-success w-100 py-2">
-                                                <i class="fas fa-save me-2 text-xs"></i> Simpan Seluruh Data
-                                            </button>
+                                            @if($seasonOpen)
+                                                <button type="submit" class="btn bg-gradient-success w-100 py-2">
+                                                    <i class="fas fa-save me-2 text-xs"></i> Simpan Seluruh Data
+                                                </button>
+                                            @else
+                                                <button type="button" class="btn bg-gradient-secondary w-100 py-2" disabled>
+                                                    Simpan Seluruh Data
+                                                </button>
+                                            @endif
                                         </div>
                                     </div>
+                                    </fieldset>
                                 </form>
                             @endif
                         </div>

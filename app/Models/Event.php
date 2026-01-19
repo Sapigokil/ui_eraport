@@ -14,7 +14,9 @@ class Event extends Model
         'deskripsi',
         'tanggal',
         'kategori',
-        'jadwalkan'
+        'jadwalkan',
+        'created_at',
+        'updated_at'
     ];
 
 }
