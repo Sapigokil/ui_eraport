@@ -53,12 +53,23 @@ class SumatifController extends Controller
 
         // 1. Ambil Mata Pelajaran berdasarkan Kelas
         if ($request->id_kelas) {
-            $mapel = Pembelajaran::with('mapel')
-                ->where('id_kelas', $request->id_kelas)
-                ->get()
-                ->map(fn($p) => $p->mapel)
-                ->filter()
-                ->values();
+            // $mapel = Pembelajaran::with('mapel')
+            //     ->where('id_kelas', $request->id_kelas)
+            //     ->get()
+            //     ->map(fn($p) => $p->mapel)
+            //     ->filter()
+            //     ->values();
+            $mapel = Pembelajaran::where('id_kelas', $request->id_kelas) //menonaktifkan mapel master agama
+            ->whereHas('mapel', function ($q) {
+                $q->where('is_active', 1);
+            })
+            ->with(['mapel' => function ($q) {
+                $q->where('is_active', 1);
+            }])
+            ->get()
+            ->map(fn($p) => $p->mapel)
+            ->filter()
+            ->values();
         }
 
         $siswa = collect();
@@ -286,7 +297,15 @@ class SumatifController extends Controller
 
         // 2. Ambil data Kelas, Mapel, Siswa untuk template
         $kelas = Kelas::find($request->id_kelas);
-        $mapel = MataPelajaran::find($request->id_mapel);
+        $mapel = MataPelajaran::where('id_mapel', $request->id_mapel) //agar mapel agama master dinonaktifkan
+            ->where('is_active', 1)
+            ->first();
+
+        if (!$mapel) {
+            return back()->with('error', 'Mapel sudah tidak aktif atau tidak tersedia.');
+        }
+
+        // $mapel = MataPelajaran::find($request->id_mapel);
         // $siswa = Siswa::where('id_kelas', $request->id_kelas)
         //     ->orderBy('nama_siswa')
         //     ->get();
@@ -374,6 +393,7 @@ class SumatifController extends Controller
         $mapel = DB::table('pembelajaran')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
             ->where('pembelajaran.id_kelas', $id_kelas)
+            ->where('mata_pelajaran.is_active', 1)
             ->select('mata_pelajaran.id_mapel', 'mata_pelajaran.nama_mapel')
             ->get();
 

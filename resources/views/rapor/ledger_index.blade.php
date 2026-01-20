@@ -232,6 +232,7 @@
     }
 
     $semesterList = ['Ganjil', 'Genap'];
+    $tingkatList = ['10', '11', '12'];
 @endphp
 
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -291,6 +292,21 @@
             </select>
         </div>
 
+        {{-- TINGKAT --}}
+        <div class="col-md-2">
+            <label class="form-label fw-bold">Tingkat</label>
+            <select name="tingkat" class="form-select"
+                {{ request('mode','kelas') == 'kelas' ? 'disabled' : '' }}
+                onchange="this.form.submit()">
+                <option value="">-- Semua Tingkat --</option>
+                @foreach($tingkatList as $t)
+                    <option value="{{ $t }}" {{ request('tingkat') == $t ? 'selected' : '' }}>
+                        {{ $t }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
         {{-- SEMESTER --}}
         <div class="col-md-2">
             <label class="form-label fw-bold">Semester</label>
@@ -317,15 +333,15 @@
             </select>
         </div>
 
-        {{-- BUTTON --}}
+        {{-- BUTTON
         <div class="col-md-2 text-end">
             <button type="submit" class="btn btn-dark mb-0">
                 Tampilkan Ledger
             </button>
-        </div>
+        </div> --}}
     </div>
 
-    {{-- ================= ROW 2 (KHUSUS URUT) ================= --}}
+    {{-- ================= ROW 2 (KHUSUS URUT) =================
     <div class="col-md-2 mt-2">
     <label class="form-label fw-bold">Urutkan Berdasarkan</label>
     <select name="urut" class="form-select" onchange="this.form.submit()">
@@ -336,7 +352,36 @@
             Nomor Absen
         </option>
     </select>
+</div> --}}
+
+{{-- ================= ROW 2 : URUT & ACTION ================= --}}
+<div class="row align-items-end mt-3">
+
+    {{-- URUTKAN --}}
+    <div class="col-md-3">
+        <label class="form-label fw-bold">Urutkan Berdasarkan</label>
+        <select name="urut" class="form-select" onchange="this.form.submit()">
+            <option value="ranking" {{ request('urut','ranking') == 'ranking' ? 'selected' : '' }}>
+                Ranking Nilai
+            </option>
+            <option value="absen" {{ request('urut') == 'absen' ? 'selected' : '' }}>
+                Nomor Absen
+            </option>
+        </select>
+    </div>
+
+    {{-- SPACER --}}
+    <div class="col-md-6"></div>
+
+    {{-- BUTTON --}}
+    <div class="col-md-3 text-end">
+        <button type="submit" class="btn btn-dark px-4">
+            <i class="fas fa-search me-1"></i> Tampilkan Ledger
+        </button>
+    </div>
+
 </div>
+
 
 </form>
 
@@ -469,5 +514,21 @@
 </main>
 
 {{-- SCRIPT SORTING --}}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modeSelect = document.querySelector('select[name="mode"]');
+    const tingkatSelect = document.querySelector('select[name="tingkat"]');
 
+    function toggleTingkat() {
+        if (modeSelect.value === 'jurusan') {
+            tingkatSelect.removeAttribute('disabled');
+        } else {
+            tingkatSelect.setAttribute('disabled', 'disabled');
+        }
+    }
+
+    toggleTingkat();
+    modeSelect.addEventListener('change', toggleTingkat);
+});
+</script>
 @endsection

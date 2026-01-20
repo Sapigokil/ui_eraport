@@ -139,12 +139,20 @@ class NilaiAkhirController extends Controller
         $error = null;
         
         if ($request->id_kelas) {
-            $mapel = Pembelajaran::with('mapel')
-                ->where('id_kelas', $request->id_kelas)
-                ->get()
-                ->map(fn($p) => $p->mapel)
-                ->filter()
-                ->values();
+            // $mapel = Pembelajaran::with('mapel')
+            //     ->where('id_kelas', $request->id_kelas)
+            //     ->get()
+            //     ->map(fn($p) => $p->mapel)
+            //     ->filter()
+            //     ->values();
+            $mapel = Pembelajaran::with(['mapel' => function ($q) {
+                $q->where('is_active', 1);
+            }])
+            ->where('id_kelas', $request->id_kelas)
+            ->get()
+            ->pluck('mapel')
+            ->filter()
+            ->values();
         }
 
         if (
@@ -162,7 +170,16 @@ class NilaiAkhirController extends Controller
             }
 
             // ... (Pengambilan Siswa) ...
-            $selectedMapel = MataPelajaran::find($idMapel);
+            // $selectedMapel = MataPelajaran::find($idMapel);
+            $selectedMapel = MataPelajaran::where('id_mapel', $idMapel)
+                ->where('is_active', 1)
+                ->first();
+
+            if (!$selectedMapel) {
+                $error = 'Mata pelajaran sudah tidak aktif.';
+                goto render_view;
+            }
+
             $querySiswa = Siswa::with('detail')->where('id_kelas', $idKelas);
             if ($selectedMapel && $selectedMapel->agama_khusus) {
                 $querySiswa->whereHas('detail', fn ($q) => $q->where('agama', $selectedMapel->agama_khusus));

@@ -40,6 +40,7 @@ class RaporController extends Controller
         $pembelajaran = DB::table('pembelajaran')
         ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
         ->where('pembelajaran.id_kelas', $id_kelas)
+        ->where('mata_pelajaran.is_active', 1) //menampilkan mapel active
         ->where(function ($q) use ($agamaSiswa) {
             $q->whereNull('mata_pelajaran.agama_khusus')
             ->orWhereRaw(
@@ -225,6 +226,7 @@ class RaporController extends Controller
                 ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
                 ->where('pembelajaran.id_kelas', $siswa->id_kelas)
                 ->where('mata_pelajaran.kategori', $key)
+                ->where('mata_pelajaran.is_active', 1) //menampilkan mapel active
                 ->where(function ($q) use ($agamaSiswa) {
                     $q->whereNull('mata_pelajaran.agama_khusus')
                     ->orWhereRaw('LOWER(TRIM(mata_pelajaran.agama_khusus)) = ?', [$agamaSiswa]);
@@ -351,6 +353,7 @@ class RaporController extends Controller
                 ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
                 ->where('pembelajaran.id_kelas', $siswa->id_kelas)
                 ->where('mata_pelajaran.kategori', $key)
+                ->where('mata_pelajaran.is_active', 1) //menampilkan mapel active
                 ->where(function ($q) use ($agamaSiswa) {
                     $q->whereNull('mata_pelajaran.agama_khusus')
                     ->orWhereRaw('LOWER(TRIM(mata_pelajaran.agama_khusus)) = ?', [$agamaSiswa]);
@@ -443,6 +446,7 @@ class RaporController extends Controller
         $daftarMapel = DB::table('pembelajaran')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
             ->where('pembelajaran.id_kelas', $siswa->id_kelas)
+            ->where('mata_pelajaran.is_active', 1) //menampilkan mapel active
             ->where(function ($q) use ($agamaSiswa) {
                 $q->whereNull('mata_pelajaran.agama_khusus')
                 ->orWhereRaw(
@@ -522,7 +526,13 @@ class RaporController extends Controller
         }
 
         $siswaList = Siswa::where('id_kelas', $id_kelas)->get();
-        $daftarMapel = DB::table('pembelajaran')->where('id_kelas', $id_kelas)->get();
+        $daftarMapel = DB::table('pembelajaran')            
+        // ->where('id_kelas', $id_kelas)->get();
+        ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
+        ->where('mata_pelajaran.is_active', 1)
+        ->where('pembelajaran.id_kelas', $id_kelas)
+        ->get();
+
 
         foreach ($siswaList as $siswa) {
             // A. Update Nilai Akhir dari Rata-rata Sumatif

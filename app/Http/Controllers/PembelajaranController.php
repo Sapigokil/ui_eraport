@@ -11,6 +11,8 @@ use App\Models\Kelas;
 use App\Models\Guru;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Validation\Rule;
+
 
 class PembelajaranController extends Controller
 {
@@ -21,8 +23,12 @@ class PembelajaranController extends Controller
     public function dataPembelajaran(Request $request) // 🛑 Menerima Request $request
     {
         // 1. Inisialisasi Query (Base Query dengan Join untuk Pengurutan Mapel)
+        // $query = Pembelajaran::select('pembelajaran.*')
+        //     ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel');
         $query = Pembelajaran::select('pembelajaran.*')
-            ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel');
+            ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
+            ->where('mata_pelajaran.is_active', 1);
+
             
         // 2. Terapkan Filter
         if ($request->id_mapel) {
@@ -46,7 +52,12 @@ class PembelajaranController extends Controller
             ->get(); // Eksekusi query dengan filter
 
         // 4. Ambil data untuk dropdown filter
-        $mapel_list = MataPelajaran::orderBy('urutan')->orderBy('nama_mapel')->get();
+        // $mapel_list = MataPelajaran::orderBy('urutan')->orderBy('nama_mapel')->get();
+        $mapel_list = MataPelajaran::where('is_active', 1)
+            ->orderBy('urutan')
+            ->orderBy('nama_mapel')
+            ->get();
+
         $kelas_list = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get();
         $guru_list = Guru::orderBy('nama_guru')->get(); 
 
@@ -57,7 +68,12 @@ class PembelajaranController extends Controller
     // 🟫 Tampilkan form create
     public function create()
     {
-        $mapel = MataPelajaran::orderBy('urutan', 'asc')->orderBy('nama_mapel', 'asc')->get();
+        // $mapel = MataPelajaran::orderBy('urutan', 'asc')->orderBy('nama_mapel', 'asc')->get();
+        $mapel = MataPelajaran::where('is_active', 1)
+            ->orderBy('urutan', 'asc')
+            ->orderBy('nama_mapel', 'asc')
+            ->get();
+
         $kelas = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get();
         $guru = Guru::orderBy('nama_guru')->get();
         
@@ -69,7 +85,11 @@ class PembelajaranController extends Controller
     {
         // 1. Validasi Input Dasar (ID Mapel)
         $request->validate([
-            'id_mapel' => 'required|exists:mata_pelajaran,id_mapel',
+            // 'id_mapel' => 'required|exists:mata_pelajaran,id_mapel',
+            'id_mapel' => [
+                'required',
+                Rule::exists('mata_pelajaran', 'id_mapel')->where('is_active', 1),
+            ],
             'kelas_guru' => 'required|array', 
         ]);
         

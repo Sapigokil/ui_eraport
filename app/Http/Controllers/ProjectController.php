@@ -51,12 +51,14 @@ class ProjectController extends Controller
         $mapel = collect();
 
         if ($request->id_kelas) {
-            $mapel = Pembelajaran::with('mapel')
-                ->where('id_kelas', $request->id_kelas)
-                ->get()
-                ->map(fn($p) => $p->mapel)
-                ->filter()
-                ->values();
+           $mapel = Pembelajaran::with(['mapel' => function ($q) { //hanya mengambil mapel yang aktif
+                $q->where('is_active', 1);
+            }])
+            ->where('id_kelas', $request->id_kelas)
+            ->get()
+            ->map(fn($p) => $p->mapel)
+            ->filter()
+            ->values();
         }
 
         $siswa = collect();
@@ -161,7 +163,16 @@ class ProjectController extends Controller
         ]);
 
         $kelas = Kelas::find($request->id_kelas);
-        $mapel = MataPelajaran::find($request->id_mapel);
+        // $mapel = MataPelajaran::find($request->id_mapel);
+        //menonaktifkan mapel agama master diambil data mapel yang aktif:
+        $mapel = MataPelajaran::where('id_mapel', $request->id_mapel)
+            ->where('is_active', 1)
+            ->first();
+
+        if (!$mapel) {
+            return back()->with('error', 'Mapel sudah tidak aktif atau tidak tersedia.');
+        }
+
         
         $siswa = Siswa::where('id_kelas', $request->id_kelas)->orderBy('nama_siswa')->get();
         
@@ -232,6 +243,7 @@ class ProjectController extends Controller
         $mapel = DB::table('pembelajaran')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
             ->where('pembelajaran.id_kelas', $id_kelas)
+            ->where('mata_pelajaran.is_active', 1) //hanya tampilkan mapel aktif
             ->select('mata_pelajaran.id_mapel', 'mata_pelajaran.nama_mapel')
             ->get();
 
