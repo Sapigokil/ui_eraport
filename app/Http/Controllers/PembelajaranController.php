@@ -90,7 +90,6 @@ class PembelajaranController extends Controller
     {
         // 1. Validasi Input Dasar (ID Mapel)
         $request->validate([
-            // 'id_mapel' => 'required|exists:mata_pelajaran,id_mapel',
             'id_mapel' => [
                 'required',
                 Rule::exists('mata_pelajaran', 'id_mapel')->where('is_active', 1),
@@ -106,15 +105,21 @@ class PembelajaranController extends Controller
         foreach ($data_pembelajaran as $data) {
             
             $id_kelas = $data['id_kelas'];
-            $id_guru = $data['id_guru'] ?? self::DEFAULT_GURU_ID; 
+            
+            // Ambil input guru, default null jika tidak ada key-nya
+            $raw_guru = $data['id_guru'] ?? null;
+            
+            // LOGIKA BARU: Jika 0 atau string kosong, ubah jadi NULL (Jangan pakai DEFAULT_GURU_ID)
+            if (empty($raw_guru) || $raw_guru === "0" || $raw_guru === 0) {
+                $id_guru = null;
+            } else {
+                $id_guru = $raw_guru;
+            }
+
             $is_active = isset($data['active']); 
 
             if ($is_active) {
-                // Jika aktif, pastikan ID Guru valid (bukan 0 atau kosong)
-                if (empty($id_guru) || $id_guru === "" || $id_guru == 0) {
-                    $id_guru = self::DEFAULT_GURU_ID;
-                }
-                
+                // Cek apakah data sudah ada
                 $existing = Pembelajaran::where('id_mapel', $id_mapel)
                                         ->where('id_kelas', $id_kelas)
                                         ->first();
@@ -124,11 +129,11 @@ class PembelajaranController extends Controller
                     Pembelajaran::create([
                         'id_mapel' => $id_mapel,
                         'id_kelas' => $id_kelas,
-                        'id_guru'  => $id_guru, // Menggunakan ID valid atau Placeholder ID 1
+                        'id_guru'  => $id_guru, // Simpan NULL jika belum ditentukan
                     ]);
                     $counter++;
                 } else {
-                    // Update guru yang ada
+                    // Update guru yang ada (bisa jadi mengubah dari Ada Guru -> NULL)
                     $existing->update(['id_guru' => $id_guru]);
                 }
             } else {
@@ -176,6 +181,7 @@ class PembelajaranController extends Controller
     // 🟨 Proses Update data pembelajaran (Mass Update)
     public function update(Request $request, $id_pembelajaran) 
     {
+        // Ambil data awal untuk mengetahui konteks Mapel apa yang sedang diedit
         $pembelajaran_awal = Pembelajaran::findOrFail($id_pembelajaran);
         $id_mapel_edit = $pembelajaran_awal->id_mapel;
 
@@ -191,39 +197,46 @@ class PembelajaranController extends Controller
         foreach ($data_pembelajaran as $data) {
             
             $id_kelas = $data['id_kelas'];
-            $id_guru = $data['id_guru'] ?? self::DEFAULT_GURU_ID; 
+            
+            // Ambil input guru
+            $raw_guru = $data['id_guru'] ?? null;
+
+            // LOGIKA BARU: Jika 0 atau kosong, set NULL.
+            if (empty($raw_guru) || $raw_guru === "0" || $raw_guru === 0) {
+                $id_guru = null;
+            } else {
+                $id_guru = $raw_guru;
+            }
+
             $is_active = isset($data['active']); 
 
             if ($is_active) {
-                // Jika aktif, pastikan ID Guru valid (bukan 0 atau kosong)
-                if (empty($id_guru) || $id_guru === "" || $id_guru == 0) {
-                    $id_guru = self::DEFAULT_GURU_ID;
-                }
                 
+                // Cek data existing
                 $existing = Pembelajaran::where('id_mapel', $id_mapel_edit)
                                         ->where('id_kelas', $id_kelas)
                                         ->first();
                 
                 if (!$existing) {
-                    // Create baru
+                    // Create baru jika belum ada
                     Pembelajaran::create([
                         'id_mapel' => $id_mapel_edit, 
                         'id_kelas' => $id_kelas,
-                        'id_guru'  => $id_guru, // Menggunakan ID valid (misal 1)
+                        'id_guru'  => $id_guru, 
                     ]);
                     $counter_created++;
                 } else {
-                    // Update guru yang ada jika berbeda
+                    // Update jika id_guru berbeda (termasuk jika berubah jadi NULL)
                     if ($existing->id_guru != $id_guru) {
                         $existing->update(['id_guru' => $id_guru]);
                         $counter_updated++;
                     }
                 }
             } else {
-                // Skema Delete: Jika Tidak Aktif, Hapus Record Pembelajaran
+                // Skema Delete: Jika Tidak Aktif (Uncheck), Hapus Data
                 $deleted = Pembelajaran::where('id_mapel', $id_mapel_edit) 
-                                        ->where('id_kelas', $id_kelas)
-                                        ->delete();
+                                       ->where('id_kelas', $id_kelas)
+                                       ->delete();
                 if($deleted) $counter_deleted++;
             }
         }
