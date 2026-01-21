@@ -59,7 +59,7 @@ class RoleController extends Controller
         $role = Role::create(['name' => $request->input('name')]);
         $role->syncPermissions($request->input('permission'));
 
-        return redirect()->route('user.roles.index')
+        return redirect()->route('settings.system.roles.index')
                         ->with('success', 'Role berhasil dibuat');
     }
 
@@ -104,7 +104,7 @@ class RoleController extends Controller
         $newPermissions = $request->input('permissions', []);
         $role->syncPermissions($newPermissions); 
         
-        return redirect()->route('user.roles.index')
+        return redirect()->route('settings.system.roles.index')
                          ->with('success', 'Role "' . $role->name . '" dan Izin berhasil diperbarui.');
     }
 
