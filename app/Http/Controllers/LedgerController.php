@@ -50,6 +50,33 @@ class LedgerController extends Controller
     }
 
     /**
+     * Helper: Mendapatkan List ID Kelas berdasarkan Request (Mode Kelas / Jurusan)
+     */
+    private function getKelasIdsFromRequest(Request $request)
+    {
+        $mode = $request->mode ?? 'kelas';
+
+        if ($mode === 'kelas') {
+            return $request->id_kelas ? [$request->id_kelas] : [];
+        }
+
+        // Mode Jurusan
+        $jurusan = $request->jurusan;
+        $tingkat = $request->tingkat;
+        
+        $kelasQuery = Kelas::where('jurusan', $jurusan);
+
+        if (!empty($tingkat)) {
+            $kelasQuery->where(function ($q) use ($tingkat) {
+                $q->where('nama_kelas', 'LIKE', $tingkat . '%')
+                    ->orWhere('nama_kelas', 'LIKE', 'X' . $tingkat . '%');
+            });
+        }
+        
+        return $kelasQuery->pluck('id_kelas')->toArray();
+    }
+
+    /**
      * Halaman Utama Ledger (Web View)
      */
     public function index(Request $request)
@@ -75,24 +102,8 @@ class LedgerController extends Controller
         $daftarMapel = collect();
         $dataLedger = [];
 
-        // ============================================================
-        // TAHAP 1: TENTUKAN LINGKUP KELAS (SCOPE)
-        // ============================================================
-        $kelasIds = [];
-
-        if ($mode === 'kelas' && $id_kelas) {
-            $kelasIds = [$id_kelas];
-        } elseif ($mode === 'jurusan' && $jurusan) {
-            $kelasQuery = Kelas::where('jurusan', $jurusan);
-
-            if (!empty($tingkat)) {
-                $kelasQuery->where(function ($q) use ($tingkat) {
-                    $q->where('nama_kelas', 'LIKE', $tingkat . '%')
-                        ->orWhere('nama_kelas', 'LIKE', 'X' . $tingkat . '%');
-                });
-            }
-            $kelasIds = $kelasQuery->pluck('id_kelas')->toArray();
-        }
+        // 3. Ambil Kelas IDs
+        $kelasIds = $this->getKelasIdsFromRequest($request);
 
         // Jika tidak ada kelas terpilih/valid, return view kosong
         if (empty($kelasIds)) {
@@ -109,17 +120,13 @@ class LedgerController extends Controller
             ));
         }
 
-        // ============================================================
-        // TAHAP 2: AMBIL DATA (Logic Terpusat)
-        // ============================================================
+        // 4. Ambil Data Core
         $coreData = $this->buildDataCore($kelasIds, $semesterInt, $tahun_ajaran);
         
-        $daftarMapel = $coreData['daftarMapel']; 
-        $dataLedger  = $coreData['dataLedger'];  
+        $daftarMapel = $coreData['daftarMapel'];
+        $dataLedger  = $coreData['dataLedger'];
 
-        // ============================================================
-        // TAHAP 3: SORTING TAMPILAN
-        // ============================================================
+        // 5. Sorting Tampilan
         $urut = $request->urut ?? 'ranking';
 
         if ($urut === 'ranking') {
@@ -146,7 +153,57 @@ class LedgerController extends Controller
     }
 
     /**
-     * CORE LOGIC: Membangun Data Ledger (FINAL FIX - ZOMBIE DATA HANDLER)
+     * 🟢 PUBLIC API: Digunakan oleh LedgerTemplateExport (EXCEL)
+     * Method ini menjembatani antara Request Excel dengan Core Logic
+     */
+    public function buildLedgerData(Request $request)
+    {
+        $semesterRaw = $request->semester ?? 'Ganjil';
+        $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
+        $semesterInt = (strtoupper($semesterRaw) == 'GANJIL') ? 1 : 2;
+
+        // Ambil ID Kelas dari logic terpusat
+        $kelasIds = $this->getKelasIdsFromRequest($request);
+
+        // Panggil Logic Utama (Ambil Nilai, Mapel, Siswa)
+        $data = $this->buildDataCore($kelasIds, $semesterInt, $tahun_ajaran);
+
+        // ---------------------------------------------------------
+        // PERBAIKAN: Tambahkan Data Info Sekolah di sini
+        // ---------------------------------------------------------
+        $infoSekolah = InfoSekolah::first();
+        
+        $data['namaSekolah'] = $infoSekolah->nama_sekolah ?? 'NAMA SEKOLAH BELUM DISET';
+        
+        $data['alamatSekolah'] = implode(', ', array_filter([
+            $infoSekolah->jalan ?? null,
+            $infoSekolah->kelurahan ?? null,
+            $infoSekolah->kecamatan ?? null,
+            $infoSekolah->kota_kab ?? null
+        ]));
+
+        // Tambahkan Metadata Lainnya
+        $data['semester'] = $semesterRaw;
+        $data['tahun_ajaran'] = $tahun_ajaran;
+        
+        // Ambil Nama Kelas (jika mode kelas)
+        if (!empty($kelasIds)) {
+            $kelasObj = Kelas::find($kelasIds[0]);
+            $data['namaKelas'] = $kelasObj ? $kelasObj->nama_kelas : 'Semua Kelas';
+            $data['waliKelas'] = $kelasObj ? ($kelasObj->wali_kelas ?? '-') : '-';
+        } else {
+            $data['namaKelas'] = 'Semua Kelas';
+            $data['waliKelas'] = '-';
+        }
+        
+        // Sorting default ranking untuk Excel
+        $data['dataLedger'] = $this->sortLedger($data['dataLedger']);
+
+        return $data;
+    }
+
+    /**
+     * CORE LOGIC: Membangun Data Ledger (FIX ZOMBIE DATA & GLOBAL AGAMA)
      */
     private function buildDataCore($kelasIds, $semesterInt, $tahun_ajaran)
     {
@@ -175,20 +232,18 @@ class LedgerController extends Controller
             ->orderBy('mata_pelajaran.urutan')
             ->get();
 
-        // 🟢 FIX: Ambil ID Agama Global + PAKSA Masukkan ID 1 (ID Legacy/Zombie PAI)
+        // 🟢 GLOBAL AGAMA LOOKUP + ZOMBIE ID FIX
         $globalAgamaIds = DB::table('mata_pelajaran')
-            // Hapus where is_active agar mapel non-aktif tetap terdeteksi
-            ->where('nama_mapel', 'LIKE', '%Agama%') 
+            ->where('nama_mapel', 'LIKE', '%Agama%')
             ->pluck('id_mapel')
             ->toArray();
         
-        // Tambahkan ID 1 secara manual ke daftar pencarian Agama
-        // (Karena di dump Anda, ID 1 itu nilainya ada tapi namanya NULL/Terhapus)
+        // ⚠️ PAKSA MASUKKAN ID 1 (Mapel Zombie/Terhapus)
         if (!in_array(1, $globalAgamaIds)) {
             $globalAgamaIds[] = 1; 
         }
 
-        // Grouping Header
+        // Grouping Header Mapel
         $daftarMapel = $rawMapelData
             ->groupBy('mapel_key')
             ->map(function ($items) {
@@ -221,7 +276,7 @@ class LedgerController extends Controller
             ->get();
 
         // -----------------------------------------------------------
-        // C. Ambil Nilai (TANPA FILTER MAPEL ID - AMBIL SEMUA)
+        // C. Ambil Nilai
         // -----------------------------------------------------------
         $nilaiList = DB::table('nilai_akhir')
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
@@ -255,15 +310,11 @@ class LedgerController extends Controller
 
                 // LOGIKA KHUSUS AGAMA
                 if ($mapel->id_mapel === 'AGAMA') {
-                    // Loop pencarian ID Agama (Sekarang sudah termasuk ID 1)
                     foreach ($globalAgamaIds as $idAgamaAsli) {
                         $key = $siswa->id_siswa . '-' . $idAgamaAsli;
-                        
                         if (isset($nilaiList[$key])) {
                             $val = $nilaiList[$key][0]->nilai_akhir ?? 0;
                             $score = (int) round($val);
-                            
-                            // Jika ketemu nilai > 0, hentikan pencarian
                             if ($score > 0) break; 
                         }
                     }
@@ -300,8 +351,6 @@ class LedgerController extends Controller
                     'alpha' => $absensi->alpha ?? 0,
                 ]
             ];
-
-            
         }
 
         return [
@@ -328,40 +377,31 @@ class LedgerController extends Controller
      */
     public function exportPdf(Request $request)
     {
-        $mode = $request->mode ?? 'kelas';
         $semesterRaw = $request->semester ?? 'Ganjil';
         $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
         $semesterInt = strtoupper($semesterRaw) === 'GANJIL' ? 1 : 2;
 
-        $kelasIds = [];
-        $namaKelasLabel = '';
+        // Ambil ID Kelas
+        $kelasIds = $this->getKelasIdsFromRequest($request);
+        
+        // Label Nama Kelas untuk PDF
+        $mode = $request->mode ?? 'kelas';
+        $namaKelasLabel = '-';
         $kelasObj = null;
 
-        if ($mode === 'kelas') {
-            $id_kelas = $request->id_kelas;
-            $kelasIds = [$id_kelas];
-            $kelasObj = Kelas::find($id_kelas);
-            $namaKelasLabel = $kelasObj ? $kelasObj->nama_kelas : '-';
-        } else {
-            $jurusan = $request->jurusan;
-            $tingkat = $request->tingkat;
-            $kelasQuery = Kelas::where('jurusan', $jurusan);
-            if (!empty($tingkat)) {
-                $kelasQuery->where(function ($q) use ($tingkat) {
-                    $q->where('nama_kelas', 'LIKE', $tingkat . '%')
-                        ->orWhere('nama_kelas', 'LIKE', 'X' . $tingkat . '%');
-                });
+        if (!empty($kelasIds)) {
+            $kelasObj = Kelas::find($kelasIds[0]);
+            if ($mode === 'kelas') {
+                $namaKelasLabel = $kelasObj->nama_kelas;
+            } else {
+                $namaKelasLabel = 'Jurusan ' . $request->jurusan;
             }
-            $kelasIds = $kelasQuery->pluck('id_kelas')->toArray();
-            $namaKelasLabel = 'Jurusan ' . $jurusan;
-            $kelasObj = Kelas::find($kelasIds[0] ?? 0);
         }
 
         // Panggil Core Logic
         $core = $this->buildDataCore($kelasIds, $semesterInt, $tahun_ajaran);
         $dataLedger = $this->sortLedger($core['dataLedger']);
 
-        // Info Sekolah
         $infoSekolah = InfoSekolah::first();
         $namaSekolah = $infoSekolah->nama_sekolah ?? 'NAMA SEKOLAH';
         $alamatSekolah = implode(', ', array_filter([
