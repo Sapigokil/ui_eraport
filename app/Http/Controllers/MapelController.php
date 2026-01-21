@@ -34,12 +34,13 @@ class MapelController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_mapel' => 'required',
-            'nama_singkat' => 'required',
-            // 'kelompok' => 'nullable',
-            'kategori' => 'required',
-            'urutan' => 'required|numeric',
-            'id_guru' => 'nullable|exists:guru,id_guru',
+            'nama_mapel'    => 'required|string|max:255',
+            'nama_singkat'  => 'required|string|max:50',
+            'kategori'      => 'required|integer',
+            'urutan'        => 'required|numeric|min:1',
+            'id_guru'       => 'nullable|exists:guru,id_guru',
+            // Validasi Agama Khusus (Nullable, opsional)
+            'agama_khusus'  => 'nullable|string|in:Islam,Kristen,Katolik,Hindu,Buddha,Khonghucu', 
         ]);
 
         MataPelajaran::create($request->all());
@@ -66,15 +67,15 @@ class MapelController extends Controller
     public function update(Request $request, $id_mapel)
     {
         $request->validate([
-            'nama_mapel' => 'required',
-            'nama_singkat' => 'required',
-            // 'kelompok' => 'required',
-            'kategori' => 'required',
-            'urutan' => 'required|numeric',
-            'id_guru' => 'nullable|exists:guru,id_guru',
+            'nama_mapel'    => 'required|string|max:255',
+            'nama_singkat'  => 'required|string|max:50',
+            'kategori'      => 'required|integer',
+            'urutan'        => 'required|numeric|min:1',
+            'id_guru'       => 'nullable|exists:guru,id_guru',
+            'agama_khusus'  => 'nullable|string|in:Islam,Kristen,Katolik,Hindu,Buddha,Khonghucu',
         ]);
 
-        MataPelajaran::where('id_mapel',$id_mapel)->update($request->except('_token','_method'));
+        MataPelajaran::where('id_mapel', $id_mapel)->update($request->except('_token', '_method'));
 
         return redirect()->route('master.mapel.index')->with('success','Data berhasil diperbarui');
     }

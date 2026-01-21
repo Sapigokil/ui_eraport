@@ -1,4 +1,3 @@
-{{-- File: resources/views/pembelajaran/edit.blade.php --}}
 @extends('layouts.app') 
 
 @section('page-title', 'Edit Tautan Pembelajaran Mapel: ' . $mapel_edit->nama_mapel)
@@ -62,7 +61,15 @@
                                         <thead>
                                             <tr>
                                                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Nama Kelas</th>
-                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Aktif?</th>
+                                                
+                                                {{-- REVISI: Checkbox Master --}}
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">
+                                                    Aktif? <br>
+                                                    <div class="form-check d-flex justify-content-center">
+                                                        <input class="form-check-input" type="checkbox" id="checkAll" title="Centang Semua">
+                                                    </div>
+                                                </th>
+                                                
                                                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Guru Pengampu</th>
                                             </tr>
                                         </thead>
@@ -90,7 +97,7 @@
                                                 
                                                 {{-- Checkbox Active --}}
                                                 <td class="align-middle text-center">
-                                                    <div class="form-check">
+                                                    <div class="form-check d-flex justify-content-center">
                                                         <input class="form-check-input check-active" type="checkbox" 
                                                                value="1" 
                                                                id="active_{{ $k->id_kelas }}"
@@ -143,4 +150,40 @@
         </div>
         
     </main>
+
+    {{-- SCRIPT CENTANG SEMUA --}}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const checkAll = document.getElementById('checkAll');
+            const checkItems = document.querySelectorAll('.check-active');
+
+            // 1. Cek status awal saat halaman dimuat (Penting untuk Edit Page)
+            // Jika semua data dari database sudah aktif, maka master checkbox harus tercentang.
+            if (checkItems.length > 0) {
+                const allChecked = Array.from(checkItems).every(c => c.checked);
+                checkAll.checked = allChecked;
+            }
+
+            // 2. Event Listener: Klik Master Checkbox
+            checkAll.addEventListener('change', function() {
+                const isChecked = this.checked;
+                checkItems.forEach(function(checkbox) {
+                    checkbox.checked = isChecked;
+                });
+            });
+
+            // 3. Event Listener: Klik Child Checkbox
+            checkItems.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    if (!this.checked) {
+                        checkAll.checked = false;
+                    } else {
+                        // Cek apakah semua anak sudah tercentang
+                        const allChecked = Array.from(checkItems).every(c => c.checked);
+                        checkAll.checked = allChecked;
+                    }
+                });
+            });
+        });
+    </script>
 @endsection

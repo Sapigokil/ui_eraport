@@ -20,16 +20,13 @@ class PembelajaranController extends Controller
     public const DEFAULT_GURU_ID = 1; 
 
     // 🟩 Halaman utama (Menambahkan Filter)
-    public function dataPembelajaran(Request $request) // 🛑 Menerima Request $request
+    public function dataPembelajaran(Request $request) 
     {
-        // 1. Inisialisasi Query (Base Query dengan Join untuk Pengurutan Mapel)
-        // $query = Pembelajaran::select('pembelajaran.*')
-        //     ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel');
+        // 1. Inisialisasi Query
         $query = Pembelajaran::select('pembelajaran.*')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
             ->where('mata_pelajaran.is_active', 1);
 
-            
         // 2. Terapkan Filter
         if ($request->id_mapel) {
             $query->where('pembelajaran.id_mapel', $request->id_mapel);
@@ -39,29 +36,27 @@ class PembelajaranController extends Controller
         }
         
         $idGuruFilter = $request->id_guru;
-        // Logic filter Guru: Hanya terapkan WHERE jika id_guru TIDAK kosong dan TIDAK nol (yang berarti 'Semua Guru' dipilih)
         if (!empty($idGuruFilter) && $idGuruFilter != 0) {
             $query->where('pembelajaran.id_guru', $idGuruFilter);
         }
 
-        // 3. Pengurutan & Eksekusi
+        // 3. Pengurutan & Eksekusi (REVISI DISINI)
+        // Logika: Kategori (asc) -> Urutan (asc) -> Nama (asc)
         $pembelajaran = $query
-            ->orderBy('mata_pelajaran.urutan', 'asc')
-            ->orderBy('mata_pelajaran.nama_mapel', 'asc') 
+            ->orderBy('mata_pelajaran.kategori', 'asc') // 1. Prioritas Utama: Kategori
+            ->orderBy('mata_pelajaran.urutan', 'asc')   // 2. Prioritas Kedua: Urutan
             ->with(['mapel', 'kelas', 'guru'])
-            ->get(); // Eksekusi query dengan filter
+            ->get();
 
-        // 4. Ambil data untuk dropdown filter
-        // $mapel_list = MataPelajaran::orderBy('urutan')->orderBy('nama_mapel')->get();
+        // 4. Ambil data untuk dropdown filter (Disamakan urutannya agar konsisten)
         $mapel_list = MataPelajaran::where('is_active', 1)
-            ->orderBy('urutan')
-            ->orderBy('nama_mapel')
+            ->orderBy('kategori', 'asc') // Tambahkan ini
+            ->orderBy('urutan', 'asc')
             ->get();
 
         $kelas_list = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get();
         $guru_list = Guru::orderBy('nama_guru')->get(); 
 
-        // 5. Kirim data ke view
         return view('pembelajaran.index', compact('pembelajaran', 'mapel_list', 'kelas_list', 'guru_list'));
     }
 
@@ -70,7 +65,7 @@ class PembelajaranController extends Controller
     {
         // $mapel = MataPelajaran::orderBy('urutan', 'asc')->orderBy('nama_mapel', 'asc')->get();
         $mapel = MataPelajaran::where('is_active', 1)
-            ->orderBy('urutan', 'asc')
+            ->orderBy('kategori', 'asc') // Tambahkan ini
             ->orderBy('nama_mapel', 'asc')
             ->get();
 

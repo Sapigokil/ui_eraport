@@ -1,4 +1,3 @@
-{{-- File: resources/views/mapel/create.blade.php --}}
 @extends('layouts.app') 
 
 @section('page-title', 'Tambah Data Mata Pelajaran Baru')
@@ -41,13 +40,13 @@
                                     {{-- Nama Mapel Lengkap --}}
                                     <div class="col-md-6 mb-3">
                                         <label for="nama_mapel" class="form-label">Nama Mata Pelajaran <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="nama_mapel" name="nama_mapel" value="{{ old('nama_mapel') }}" required>
+                                        <input type="text" class="form-control" id="nama_mapel" name="nama_mapel" value="{{ old('nama_mapel') }}" required placeholder="Contoh: Matematika Wajib">
                                     </div>
                                     
                                     {{-- Nama Singkat --}}
                                     <div class="col-md-6 mb-3">
                                         <label for="nama_singkat" class="form-label">Nama Singkat (Maks 10 Karakter) <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="nama_singkat" name="nama_singkat" value="{{ old('nama_singkat') }}" required maxlength="10">
+                                        <input type="text" class="form-control" id="nama_singkat" name="nama_singkat" value="{{ old('nama_singkat') }}" required maxlength="10" placeholder="Contoh: MTK">
                                     </div>
                                     
                                     {{-- Kategori --}}
@@ -67,15 +66,15 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="urutan" class="form-label">Urutan Tampilan Rapor <span class="text-danger">*</span></label>
                                         <input type="number" class="form-control" id="urutan" name="urutan" value="{{ old('urutan') }}" required min="1">
-                                        <small class="text-muted">Masukkan angka urutan untuk tampilan di rapor.</small>
+                                        <small class="text-muted text-xs">Angka urutan mapel saat dicetak di rapor.</small>
                                     </div>
 
                                 </div>
                                 
                                 <hr class="my-4">
 
-                                {{-- II. Konfigurasi Pengampu --}}
-                                <h6 class="text-sm font-weight-bolder my-4 text-info"><i class="fas fa-user-tie me-1"></i> Guru Pengampu</h6>
+                                {{-- II. Konfigurasi Pengampu & Filter Agama --}}
+                                <h6 class="text-sm font-weight-bolder my-4 text-info"><i class="fas fa-cogs me-1"></i> Konfigurasi Lanjutan</h6>
                                 
                                 <div class="row">
                                     {{-- Guru Pengampu --}}
@@ -89,7 +88,24 @@
                                                 </option>
                                             @endforeach
                                         </select>
-                                        <small class="text-muted">Opsional, bisa ditambahkan nanti.</small>
+                                        <small class="text-muted text-xs">Opsional, penanggung jawab utama mapel ini.</small>
+                                    </div>
+
+                                    {{-- Agama Khusus (Fitur Baru) --}}
+                                    <div class="col-md-6 mb-3">
+                                        <label for="agama_khusus" class="form-label">Agama Khusus (Auto Filter)</label>
+                                        <select class="form-select" id="agama_khusus" name="agama_khusus">
+                                            <option value="">-- Umum / Semua Agama --</option>
+                                            <option value="Islam" {{ old('agama_khusus') == 'Islam' ? 'selected' : '' }}>Islam</option>
+                                            <option value="Kristen" {{ old('agama_khusus') == 'Kristen' ? 'selected' : '' }}>Kristen</option>
+                                            <option value="Katolik" {{ old('agama_khusus') == 'Katolik' ? 'selected' : '' }}>Katolik</option>
+                                            <option value="Hindu" {{ old('agama_khusus') == 'Hindu' ? 'selected' : '' }}>Hindu</option>
+                                            <option value="Buddha" {{ old('agama_khusus') == 'Buddha' ? 'selected' : '' }}>Buddha</option>
+                                            <option value="Khonghucu" {{ old('agama_khusus') == 'Khonghucu' ? 'selected' : '' }}>Khonghucu</option>
+                                        </select>
+                                        <small class="text-muted text-xs">
+                                            <i class="fas fa-info-circle text-info"></i> Jika dipilih, mapel ini hanya muncul untuk siswa agama tersebut.
+                                        </small>
                                     </div>
                                 </div>
                                 

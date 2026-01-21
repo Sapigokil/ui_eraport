@@ -1,4 +1,3 @@
-{{-- File: resources/views/pembelajaran/create.blade.php (Pilihan Guru Selalu Aktif) --}}
 @extends('layouts.app') 
 
 @section('page-title', 'Tautkan Mata Pelajaran ke Kelas dan Guru')
@@ -32,13 +31,11 @@
                                 </div>
                             @endif
                             
-                            {{-- Notifikasi Info --}}
                             <div class="alert bg-gradient-info alert-dismissible text-white fade show text-sm">
-                                <i class="fas fa-info-circle me-1"></i> Centang Checkbox *Aktif* untuk mengaktifkan Mata Pelajaran di kelas tersebut. Menandakan Mata Pelajaran itu tersedia bagi kelas.
+                                <i class="fas fa-info-circle me-1"></i> Centang Checkbox *Aktif* untuk mengaktifkan Mata Pelajaran di kelas tersebut.
                                 <button type="button" class="btn-close text-white" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
 
-                            {{-- Form Store --}}
                             <form action="{{ route('master.pembelajaran.store') }}" method="POST">
                                 @csrf
 
@@ -66,7 +63,15 @@
                                         <thead>
                                             <tr>
                                                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Nama Kelas</th>
-                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Aktif?</th>
+                                                
+                                                {{-- REVISI: Menambahkan Checkbox Centang Semua di Header --}}
+                                                <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">
+                                                    Aktif? <br>
+                                                    <div class="form-check d-flex justify-content-center">
+                                                        <input class="form-check-input" type="checkbox" id="checkAll" title="Centang Semua">
+                                                    </div>
+                                                </th>
+                                                
                                                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Guru Pengampu</th>
                                             </tr>
                                         </thead>
@@ -75,13 +80,11 @@
                                             <tr>
                                                 <td class="align-middle">
                                                     <p class="text-sm font-weight-bold mb-0">{{ $k->nama_kelas }}</p>
-                                                    {{-- Hidden Input untuk ID Kelas --}}
                                                     <input type="hidden" name="kelas_guru[{{ $loop->index }}][id_kelas]" value="{{ $k->id_kelas }}">
                                                 </td>
                                                 
-                                                {{-- Checkbox Active --}}
                                                 <td class="align-middle text-center">
-                                                    <div class="form-check">
+                                                    <div class="form-check d-flex justify-content-center">
                                                         <input class="form-check-input check-active" type="checkbox" 
                                                                value="1" 
                                                                data-row-index="{{ $loop->index }}" 
@@ -92,12 +95,9 @@
                                                 </td>
 
                                                 <td class="align-middle">
-                                                    {{-- PILIHAN GURU SELALU AKTIF --}}
                                                     <select class="form-select form-select-sm select-guru" 
                                                             id="guru_select_{{ $loop->index }}"
                                                             name="kelas_guru[{{ $loop->index }}][id_guru]"> 
-                                                        
-                                                        {{-- PENTING: Value 0 adalah placeholder ID Guru Belum Ditentukan --}}
                                                         <option value="0">-- Pilih Guru / Belum Ditentukan --</option> 
                                                         @foreach ($guru as $g)
                                                             <option value="{{ $g->id_guru }}" 
@@ -137,5 +137,32 @@
         
     </main>
 
-    {{-- Script Dihilangkan --}}
+    {{-- SCRIPT CENTANG SEMUA --}}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const checkAll = document.getElementById('checkAll');
+            const checkItems = document.querySelectorAll('.check-active');
+
+            // 1. Logika: Klik "Check All" mempengaruhi semua checkbox anak
+            checkAll.addEventListener('change', function() {
+                const isChecked = this.checked;
+                checkItems.forEach(function(checkbox) {
+                    checkbox.checked = isChecked;
+                });
+            });
+
+            // 2. Logika: Jika salah satu anak di-uncheck, "Check All" juga uncheck
+            checkItems.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    if (!this.checked) {
+                        checkAll.checked = false;
+                    } else {
+                        // Cek apakah semua anak sudah tercentang semua
+                        const allChecked = Array.from(checkItems).every(c => c.checked);
+                        checkAll.checked = allChecked;
+                    }
+                });
+            });
+        });
+    </script>
 @endsection
