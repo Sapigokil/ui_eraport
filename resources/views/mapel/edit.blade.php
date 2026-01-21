@@ -99,7 +99,7 @@
                                         <select class="form-select" id="agama_khusus" name="agama_khusus">
                                             <option value="">-- Umum / Semua Agama --</option>
                                             @php
-                                                $agamaList = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Khonghucu'];
+                                                $agamaList = ['Islam', 'Kristen', 'Katholik', 'Hindu', 'Budha', 'Khonghucu'];
                                             @endphp
                                             @foreach ($agamaList as $agama)
                                                 <option value="{{ $agama }}" {{ old('agama_khusus', $mapel->agama_khusus) == $agama ? 'selected' : '' }}>
