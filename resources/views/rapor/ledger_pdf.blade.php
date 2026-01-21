@@ -143,6 +143,7 @@
 
 <table>
     <colgroup>
+    <col style="width: 4%;">
     <col style="width: 4%;">   {{-- No --}}
     <col style="width: 20%;">  {{-- Nama --}}
 
@@ -158,6 +159,7 @@
 </colgroup>
     <thead>
         <tr>
+            <th>Rank</th>
             <th>No</th>
             <th>Nama Siswa</th>
 
@@ -176,6 +178,13 @@
     <tbody>
         @foreach($dataLedger as $i => $row)
         <tr>
+            <td>
+                @if(request('urut','ranking') === 'ranking')
+                    {{ $loop->iteration }}
+                @else
+                    -
+                @endif
+            </td>
             <td>{{ $i + 1 }}</td>
             <td class="text-left">{{ $row->nama_siswa }}</td>
 

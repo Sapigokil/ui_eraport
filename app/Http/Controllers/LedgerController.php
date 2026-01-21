@@ -136,7 +136,9 @@ private function sortLedger($dataLedger)
 
     foreach ($daftarMapel as $mapel) {
         $key = $siswa->id_siswa.'-'.$mapel->id_mapel;
-        $score = $nilaiList[$key][0]->nilai_akhir ?? 0;
+        // $score = $nilaiList[$key][0]->nilai_akhir ?? 0;
+        $score = (int) round($nilaiList[$key][0]->nilai_akhir ?? 0);
+
 
         $nilaiPerMapel[$mapel->id_mapel] = $score;
 
@@ -152,8 +154,8 @@ private function sortLedger($dataLedger)
         'nama_siswa' => $siswa->nama_siswa,
         'nipd'       => $siswa->nipd,
         'scores'     => $nilaiPerMapel,
-        'total'      => $totalNilai,
-        'rata_rata'  => $jumlahMapelTerisi ? round($totalNilai / $jumlahMapelTerisi, 2) : 0,
+        'total'      => (int) $totalNilai,
+        'rata_rata'  => $jumlahMapelTerisi ? (int) round($totalNilai / $jumlahMapelTerisi) : 0,
         'absensi'    => (object)[
             'sakit' => $absensi->sakit ?? 0,
             'izin'  => $absensi->ijin ?? 0,
@@ -237,7 +239,9 @@ private function sortLedger($dataLedger)
                 foreach ($daftarMapel as $mapel) {
 
                     $key = $siswa->id_siswa . '-' . $mapel->id_mapel;
-                    $score = $nilaiList[$key][0]->nilai_akhir ?? 0;
+                    // $score = $nilaiList[$key][0]->nilai_akhir ?? 0;
+                    $score = (int) round($nilaiList[$key][0]->nilai_akhir ?? 0);
+
 
                     $nilaiPerMapel[$mapel->id_mapel] = $score;
 
@@ -253,9 +257,9 @@ private function sortLedger($dataLedger)
                     'nama_siswa' => $siswa->nama_siswa,
                     'nipd'       => $siswa->nipd,
                     'scores'     => $nilaiPerMapel,
-                    'total'      => $totalNilai,
+                    'total'      => (int) $totalNilai,
                     'rata_rata'  => $jumlahMapelTerisi
-                        ? round($totalNilai / $jumlahMapelTerisi, 2)
+                        ? (int) round($totalNilai / $jumlahMapelTerisi)
                         : 0,
                     'absensi'    => (object)[
                         'sakit' => $absensi->sakit ?? 0,
@@ -332,102 +336,157 @@ private function sortLedger($dataLedger)
 
     public function buildLedgerData(Request $request): array
     {
-        $id_kelas = $request->id_kelas;
+        $mode = $request->mode ?? 'kelas';
         $semesterRaw = $request->semester ?? 'Ganjil';
         $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
         $semesterInt = strtoupper($semesterRaw) === 'GANJIL' ? 1 : 2;
 
-        $kelas = Kelas::find($id_kelas);
+        /*
+        |--------------------------------------------------------------------------
+        | TENTUKAN KELAS IDS (INI KUNCINYA 🔑)
+        |--------------------------------------------------------------------------
+        */
+        if ($mode === 'kelas') {
+            $id_kelas = $request->id_kelas;
+            $kelasIds = collect([$id_kelas]);
+            $kelas = Kelas::find($id_kelas);
+        } else {
+            // MODE JURUSAN
+            $jurusan = $request->jurusan;
+            $tingkat = $request->tingkat;
 
-        // 🔥 AMBIL WALI KELAS
-       $kelas = Kelas::find($id_kelas);
+            $kelasQuery = Kelas::where('jurusan', $jurusan);
 
-$nama_wali = $kelas->wali_kelas ?? 'NAMA WALI KELAS';
-$nip_wali  = '-'; // karena di tabel kelas memang tidak ada nip
-        
-        $infoSekolah = InfoSekolah::first(); // pakai model
+            if (!empty($tingkat)) {
+                $kelasQuery->where(function ($q) use ($tingkat) {
+                    $q->where('nama_kelas', 'LIKE', $tingkat.'%')
+                    ->orWhere('nama_kelas', 'LIKE', 'X'.$tingkat.'%');
+                });
+            }
+
+            $kelasIds = $kelasQuery->pluck('id_kelas');
+
+            // dummy object biar PDF tidak error
+            $kelas = (object)[
+                'nama_kelas' => 'Jurusan ' . $jurusan
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | INFO SEKOLAH
+        |--------------------------------------------------------------------------
+        */
+        $infoSekolah = InfoSekolah::first();
 
         $namaSekolah   = $infoSekolah->nama_sekolah ?? 'NAMA SEKOLAH';
         $alamatSekolah = implode(', ', array_filter([
-        $infoSekolah->jalan ?? null,
-        $infoSekolah->kelurahan ?? null,
-        $infoSekolah->kecamatan ?? null,
-        $infoSekolah->kota_kab ?? null,
-        $infoSekolah->provinsi ?? null,
-        $infoSekolah->kode_pos ?? null
-    ]));
+            $infoSekolah->jalan ?? null,
+            $infoSekolah->kelurahan ?? null,
+            $infoSekolah->kecamatan ?? null,
+            $infoSekolah->kota_kab ?? null,
+            $infoSekolah->provinsi ?? null,
+            $infoSekolah->kode_pos ?? null,
+        ]));
 
+        $nama_wali = $kelas->wali_kelas ?? '-';
+        $nip_wali  = '-';
+
+        /*
+        |--------------------------------------------------------------------------
+        | MAPEL & SISWA (PAKAI whereIn)
+        |--------------------------------------------------------------------------
+        */
         $daftarMapel = DB::table('pembelajaran')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
-            ->where('pembelajaran.id_kelas', $id_kelas)
-            ->where('mata_pelajaran.is_active', 1) //hanya tampilkan mapel active=1 di db
+            ->whereIn('pembelajaran.id_kelas', $kelasIds)
+            ->where('mata_pelajaran.is_active', 1)
             ->orderBy('mata_pelajaran.kategori')
             ->orderBy('mata_pelajaran.nama_mapel')
             ->select('mata_pelajaran.*')
+            ->distinct()
             ->get();
 
-        $siswaList = Siswa::where('id_kelas', $id_kelas)
+        $siswaList = Siswa::whereIn('id_kelas', $kelasIds)
             ->orderBy('nama_siswa')
             ->get();
 
-        // 🔥 WAJIB ADA — AMBIL NILAI
-    $nilaiList = DB::table('nilai_akhir')
-        ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
-        ->whereIn('id_mapel', $daftarMapel->pluck('id_mapel'))
-        ->where('semester', $semesterInt)
-        ->where('tahun_ajaran', trim($tahun_ajaran))
-        ->get()
-        ->groupBy(fn ($n) => $n->id_siswa . '-' . $n->id_mapel);
+        /*
+        |--------------------------------------------------------------------------
+        | NILAI & ABSENSI
+        |--------------------------------------------------------------------------
+        */
+        $nilaiList = DB::table('nilai_akhir')
+            ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
+            ->whereIn('id_mapel', $daftarMapel->pluck('id_mapel'))
+            ->where('semester', $semesterInt)
+            ->where('tahun_ajaran', trim($tahun_ajaran))
+            ->get()
+            ->groupBy(fn ($n) => $n->id_siswa.'-'.$n->id_mapel);
 
-    // 🔥 WAJIB ADA — AMBIL ABSENSI
-    $absensiList = DB::table('catatan')
-        ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
-        ->where('semester', $semesterInt)
-        ->where('tahun_ajaran', trim($tahun_ajaran))
-        ->get()
-        ->keyBy('id_siswa');
+        $absensiList = DB::table('catatan')
+            ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
+            ->where('semester', $semesterInt)
+            ->where('tahun_ajaran', trim($tahun_ajaran))
+            ->get()
+            ->keyBy('id_siswa');
 
-
+        /*
+        |--------------------------------------------------------------------------
+        | BUILD LEDGER
+        |--------------------------------------------------------------------------
+        */
         $dataLedger = [];
 
         foreach ($siswaList as $siswa) {
+            $total = 0;
+            $count = 0;
+            $scores = [];
 
-    $nilaiPerMapel = [];
-    $totalNilai = 0;
-    $jumlahMapelTerisi = 0;
+            foreach ($daftarMapel as $mapel) {
+                $key = $siswa->id_siswa.'-'.$mapel->id_mapel;
+                $score = (int) round($nilaiList[$key][0]->nilai_akhir ?? 0);
 
-    foreach ($daftarMapel as $mapel) {
+                $scores[$mapel->id_mapel] = $score;
 
-        $key = $siswa->id_siswa . '-' . $mapel->id_mapel;
-        $score = $nilaiList[$key][0]->nilai_akhir ?? 0;
+                if ($score > 0) {
+                    $total += $score;
+                    $count++;
+                }
+            }
 
-        $nilaiPerMapel[$mapel->id_mapel] = $score;
+            $absen = $absensiList[$siswa->id_siswa] ?? null;
 
-        if ($score > 0) {
-            $totalNilai += $score;
-            $jumlahMapelTerisi++;
+            $dataLedger[] = (object)[
+                'nama_siswa' => $siswa->nama_siswa,
+                'nipd' => $siswa->nipd,
+                'scores' => $scores,
+                'total' => $total,
+                'rata_rata' => $count ? (int) round($total / $count) : 0,
+                'absensi' => (object)[
+                    'sakit' => $absen->sakit ?? 0,
+                    'izin'  => $absen->ijin ?? 0,
+                    'alpha' => $absen->alpha ?? 0,
+                ],
+            ];
         }
 
-    }
-    
-    $absensi = $absensiList[$siswa->id_siswa] ?? null;
+        /*
+        |--------------------------------------------------------------------------
+        | SORTING (RANKING / ABSEN)
+        |--------------------------------------------------------------------------
+        */
+        $urut = $request->urut ?? 'ranking';
 
-    $dataLedger[] = (object)[
-        'nama_siswa' => $siswa->nama_siswa,
-        'nipd'       => $siswa->nipd,
-        'scores'     => $nilaiPerMapel,
-        'total'      => $totalNilai,
-        'rata_rata'  => $jumlahMapelTerisi
-            ? round($totalNilai / $jumlahMapelTerisi, 2)
-            : 0,
-        'absensi'    => (object)[
-            'sakit' => $absensi->sakit ?? 0,
-            'izin'  => $absensi->ijin ?? 0,
-            'alpha' => $absensi->alpha ?? 0,
-        ]
-    ];
-}
-$dataLedger = $this->sortLedger($dataLedger);
+        if ($urut === 'ranking') {
+            $dataLedger = $this->sortLedger($dataLedger);
+        } else {
+            $dataLedger = collect($dataLedger)
+                ->sortBy(fn ($r) => strtolower($r->nama_siswa))
+                ->values()
+                ->all();
+        }
+
         return compact(
             'namaSekolah',
             'alamatSekolah',
@@ -440,6 +499,7 @@ $dataLedger = $this->sortLedger($dataLedger);
             'nip_wali'
         );
     }
+
 
 
 }
