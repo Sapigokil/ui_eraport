@@ -146,12 +146,12 @@ class LedgerController extends Controller
     }
 
     /**
-     * CORE LOGIC: Membangun Data Ledger (VERSI DEBUGGING)
+     * CORE LOGIC: Membangun Data Ledger (FINAL FIX - ZOMBIE DATA HANDLER)
      */
     private function buildDataCore($kelasIds, $semesterInt, $tahun_ajaran)
     {
         // -----------------------------------------------------------
-        // A. Ambil Data Mapel (Untuk Header Tabel)
+        // A. Ambil Data Mapel (Header Tabel)
         // -----------------------------------------------------------
         $rawMapelData = DB::table('pembelajaran')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
@@ -175,12 +175,43 @@ class LedgerController extends Controller
             ->orderBy('mata_pelajaran.urutan')
             ->get();
 
-        // 1. AMBIL GLOBAL AGAMA IDS
+        // 🟢 FIX: Ambil ID Agama Global + PAKSA Masukkan ID 1 (ID Legacy/Zombie PAI)
         $globalAgamaIds = DB::table('mata_pelajaran')
-            ->where('is_active', 1)
-            ->where('nama_mapel', 'LIKE', '%Agama%')
+            // Hapus where is_active agar mapel non-aktif tetap terdeteksi
+            ->where('nama_mapel', 'LIKE', '%Agama%') 
             ->pluck('id_mapel')
             ->toArray();
+        
+        // Tambahkan ID 1 secara manual ke daftar pencarian Agama
+        // (Karena di dump Anda, ID 1 itu nilainya ada tapi namanya NULL/Terhapus)
+        if (!in_array(1, $globalAgamaIds)) {
+            $globalAgamaIds[] = 1; 
+        }
+
+        // Grouping Header
+        $daftarMapel = $rawMapelData
+            ->groupBy('mapel_key')
+            ->map(function ($items) {
+                $first = $items->first();
+                if ($first->mapel_key === 'AGAMA') {
+                    return (object)[
+                        'id_mapel'     => 'AGAMA',
+                        'nama_mapel'   => 'Pendidikan Agama',
+                        'nama_singkat' => 'Agama',
+                        'kategori'     => $first->kategori,
+                        'urutan'       => $first->urutan
+                    ];
+                }
+                return (object)[
+                    'id_mapel'     => $first->id_mapel,
+                    'nama_mapel'   => $first->nama_mapel,
+                    'nama_singkat' => $first->nama_singkat,
+                    'kategori'     => $first->kategori,
+                    'urutan'       => $first->urutan
+                ];
+            })
+            ->sortBy(fn($m) => $m->kategori . '-' . $m->urutan)
+            ->values();
 
         // -----------------------------------------------------------
         // B. Ambil Siswa
@@ -190,52 +221,18 @@ class LedgerController extends Controller
             ->get();
 
         // -----------------------------------------------------------
-        // C. Ambil Nilai
+        // C. Ambil Nilai (TANPA FILTER MAPEL ID - AMBIL SEMUA)
         // -----------------------------------------------------------
-        $nilaiQuery = DB::table('nilai_akhir')
+        $nilaiList = DB::table('nilai_akhir')
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
             ->where('semester', $semesterInt)
-            ->where('tahun_ajaran', trim($tahun_ajaran));
-            
-        // Simpan data mentah nilai untuk pengecekan
-        $nilaiRaw = $nilaiQuery->get(); 
-        
-        $nilaiList = $nilaiRaw->groupBy(fn ($n) => $n->id_siswa . '-' . $n->id_mapel);
+            ->where('tahun_ajaran', trim($tahun_ajaran))
+            ->get()
+            ->groupBy(fn ($n) => $n->id_siswa . '-' . $n->id_mapel);
 
-        // =========================================================================
-        // 🛑 AREA DEBUGGING (AKAN MENGHENTIKAN PROSES DI SINI)
-        // =========================================================================
-        
-        // Ambil 1 siswa sampel (misal siswa pertama di list)
-        $siswaSampel = $siswaList->first();
-        $idSiswaSampel = $siswaSampel->id_siswa ?? 0;
-        $namaSiswaSampel = $siswaSampel->nama_siswa ?? 'Tidak ada siswa';
-
-        // Cari nilai apa saja yang dimiliki siswa sampel ini di DB
-        $nilaiSiswaSampel = $nilaiRaw->where('id_siswa', $idSiswaSampel);
-
-        dd([
-            'INFO_DEBUG' => 'Pengecekan Data Ledger',
-            '1_KELAS_TERPILIH' => $kelasIds,
-            '2_GLOBAL_AGAMA_IDS' => $globalAgamaIds, // Cek: Apakah ID Mapel Agama Anda ada di sini?
-            '3_MAPEL_DI_PEMBELAJARAN' => $rawMapelData->pluck('nama_mapel', 'id_mapel'), // Cek: Apakah Mapel Agama muncul di sini?
-            '4_SISWA_SAMPEL' => $namaSiswaSampel . ' (ID: ' . $idSiswaSampel . ')',
-            '5_NILAI_SISWA_SAMPEL' => $nilaiSiswaSampel->map(function($n) {
-                return [
-                    'id_mapel' => $n->id_mapel,
-                    'nilai' => $n->nilai_akhir,
-                    'mapel_name' => DB::table('mata_pelajaran')->where('id_mapel', $n->id_mapel)->value('nama_mapel') // Cek nama mapel aslinya
-                ];
-            }),
-            '6_ANALISIS_AGAMA' => 'Silakan cek poin 5. Apakah siswa punya nilai di salah satu ID yang ada di poin 2?'
-        ]);
-        
-        // =========================================================================
-        // BATAS DEBUGGING
-        // =========================================================================
-
-        // ... (Sisa kode di bawah ini tidak akan dieksekusi karena ada dd di atas) ...
-
+        // -----------------------------------------------------------
+        // D. Ambil Absensi
+        // -----------------------------------------------------------
         $absensiList = DB::table('catatan')
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
             ->where('semester', $semesterInt)
@@ -243,7 +240,75 @@ class LedgerController extends Controller
             ->get()
             ->keyBy('id_siswa');
 
-        // ... dst (Build Data Ledger) ...
+        // -----------------------------------------------------------
+        // E. Build Data Ledger
+        // -----------------------------------------------------------
+        $dataLedger = [];
+
+        foreach ($siswaList as $siswa) {
+            $nilaiPerMapel = [];
+            $totalNilai = 0;
+            $jumlahMapelTerisi = 0;
+
+            foreach ($daftarMapel as $mapel) {
+                $score = 0;
+
+                // LOGIKA KHUSUS AGAMA
+                if ($mapel->id_mapel === 'AGAMA') {
+                    // Loop pencarian ID Agama (Sekarang sudah termasuk ID 1)
+                    foreach ($globalAgamaIds as $idAgamaAsli) {
+                        $key = $siswa->id_siswa . '-' . $idAgamaAsli;
+                        
+                        if (isset($nilaiList[$key])) {
+                            $val = $nilaiList[$key][0]->nilai_akhir ?? 0;
+                            $score = (int) round($val);
+                            
+                            // Jika ketemu nilai > 0, hentikan pencarian
+                            if ($score > 0) break; 
+                        }
+                    }
+                } 
+                // LOGIKA MAPEL BIASA
+                else {
+                    $key = $siswa->id_siswa . '-' . $mapel->id_mapel;
+                    if (isset($nilaiList[$key])) {
+                        $val = $nilaiList[$key][0]->nilai_akhir ?? 0;
+                        $score = (int) round($val);
+                    }
+                }
+
+                $nilaiPerMapel[$mapel->id_mapel] = $score;
+
+                if ($score > 0) {
+                    $totalNilai += $score;
+                    $jumlahMapelTerisi++;
+                }
+            }
+
+            // Absen
+            $absensi = $absensiList[$siswa->id_siswa] ?? null;
+
+            $dataLedger[] = (object)[
+                'nama_siswa' => $siswa->nama_siswa,
+                'nipd'       => $siswa->nipd,
+                'scores'     => $nilaiPerMapel,
+                'total'      => (int) $totalNilai,
+                'rata_rata'  => $jumlahMapelTerisi ? (int) round($totalNilai / $jumlahMapelTerisi) : 0,
+                'absensi'    => (object)[
+                    'sakit' => $absensi->sakit ?? 0,
+                    'izin'  => $absensi->ijin ?? 0,
+                    'alpha' => $absensi->alpha ?? 0,
+                ]
+            ];
+
+            
+        }
+
+        return [
+            'daftarMapel' => $daftarMapel,
+            'dataLedger'  => $dataLedger,
+            'kelasObj'    => Kelas::find($kelasIds[0] ?? null)
+        ];
     }
 
     /**
