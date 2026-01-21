@@ -60,6 +60,16 @@ class PembelajaranController extends Controller
         return view('pembelajaran.index', compact('pembelajaran', 'mapel_list', 'kelas_list', 'guru_list'));
     }
 
+    // 🟩 API: Ambil data pembelajaran berdasarkan Mapel (untuk AJAX)
+    public function getByMapel($id_mapel)
+    {
+        $data = Pembelajaran::where('id_mapel', $id_mapel)
+            ->select('id_kelas', 'id_guru')
+            ->get();
+
+        return response()->json($data);
+    }
+
     // 🟫 Tampilkan form create
     public function create()
     {

@@ -109,90 +109,71 @@
                                         <tr>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">No</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Mata Pelajaran</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Kelas Terdampak</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Kelas Terdampak</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Guru Pengampu</th>
-                                            <th class="text-secondary opacity-7" style="min-width: 150px;">Aksi</th>
+                                            {{-- <th class="text-secondary opacity-7" style="min-width: 150px;">Aksi</th> --}}
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        @php
-                                            $groupedPembelajaran = $pembelajaran->groupBy('id_mapel');
-                                            $no = 1;
-                                        @endphp
-                                        
-                                        @forelse ($groupedPembelajaran as $id_mapel => $items)
-                                            @php
-                                                $rowspan = $items->count();
-                                                $mapel_name = $items->first()->mapel->nama_mapel ?? 'Mapel Tidak Ditemukan';
-                                                
-                                                // Jika Mapel sudah difilter di controller, kita tidak perlu grup di sini,
-                                                // tetapi untuk memastikan tampilan tetap dikelompokkan:
-                                                if(request('id_mapel') && request('id_mapel') != $id_mapel) continue;
-                                                
-                                                // Ambil ID Pembelajaran pertama untuk link Edit Massal
-                                                $first_pembelajaran_id = $items->first()->id_pembelajaran;
-                                            @endphp
-                                            
-                                            @foreach ($items as $p)
-                                                <tr>
-                                                    {{-- Kolom Mata Pelajaran (Hanya muncul sekali per kelompok) --}}
-                                                    @if ($loop->first)
-                                                        <td class="align-middle text-center" rowspan="{{ $rowspan }}">
-                                                            <p class="text-xs font-weight-bold mb-0">{{ $no++ }}</p>
-                                                        </td>
-                                                        <td rowspan="{{ $rowspan }}" class="align-middle">
-                                                            <p class="text-sm font-weight-bold mb-0 text-primary">{{ $mapel_name }}</p>
-                                                        </td>
-                                                    @endif
-                                                    
-                                                    {{-- Kolom Detail Kelas --}}
-                                                    <td class="align-middle">
-                                                        <p class="text-xs font-weight-bold mb-0">{{ $p->kelas->nama_kelas ?? 'Kelas Tidak Ditemukan' }}</p>
-                                                    </td>
-                                                    
-                                                    {{-- Kolom Detail Guru --}}
-                                                    <td class="align-middle">
-                                                        <p class="text-xs font-weight-bold mb-0">
-                                                            {{ ($p->id_guru == 0 || $p->id_guru == \App\Http\Controllers\PembelajaranController::DEFAULT_GURU_ID) ? 'Belum Ditentukan' : ($p->guru->nama_guru ?? '-') }}
-                                                        </p>
-                                                    </td>
-                                                    
-                                                    {{-- Kolom Aksi (PENTING: Mengatur posisi tombol) --}}
-                                                    <td class="align-middle">
-                                                        
-                                                        <div class="d-flex align-items-center">
-                                                            {{-- Tombol Edit Massal (Hanya muncul sekali) --}}
-                                                            <div style="min-width: 50px;">
-                                                                @if ($loop->first)
-                                                                    <a href="{{ route('master.pembelajaran.edit', $first_pembelajaran_id) }}" 
-                                                                        class="btn btn-link text-warning p-0 m-0 text-xs" 
-                                                                        title="Edit Tautan Massal Mapel Ini">
-                                                                        <i class="fas fa-pencil-alt me-1"></i> Edit
-                                                                    </a>
-                                                                @else
-                                                                    &nbsp;
-                                                                @endif
-                                                            </div>
-                                                            
-                                                            {{-- Aksi Hapus (Delete) --}}
-                                                            <form action="{{ route('master.pembelajaran.destroy', $p->id_pembelajaran) }}" method="POST" class="d-inline ms-2" onsubmit="return confirm('Yakin hapus tautan ini ({{ $mapel_name }} di {{ $p->kelas->nama_kelas ?? 'Kelas ini' }})?')">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <button type="submit" class="btn btn-link text-danger p-0 m-0 text-xs" title="Hapus Tautan Tunggal">
-                                                                    <i class="fas fa-trash-alt me-1"></i> Hapus
-                                                                </button>
-                                                            </form>
-                                                        </div>
+                                    @php
+                                        // Grouping data pembelajaran berdasarkan ID Mapel
+                                        $groupedPembelajaran = $pembelajaran->groupBy('id_mapel');
+                                    @endphp
 
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                            
-                                        @empty
-                                        <tr>
-                                            <td colspan="5" class="text-center">Tidak ada data pembelajaran yang ditemukan.</td>
-                                        </tr>
-                                        @endforelse
+                                    <tbody>
+                                        @foreach ($groupedPembelajaran as $id_mapel => $items)
+                                            @php
+                                                $firstItem = $items->first();
+                                                // Grouping lagi berdasarkan Guru di dalam mapel tersebut
+                                                $byGuru = $items->groupBy('id_guru');
+                                            @endphp
+                                            <tr>
+                                                <td class="text-center">{{ $loop->iteration }}</td>
+                                                <td>
+                                                    <div class="d-flex flex-column justify-content-center">
+                                                        <h6 class="mb-0 text-sm">{{ $firstItem->mapel->nama_mapel }}</h6>
+                                                        <p class="text-xs text-secondary mb-0">{{ $items->count() }} Kelas Terdaftar</p>
+                                                    </div>
+                                                </td>
+                                                
+                                                {{-- Kolom Distribusi Kelas --}}
+                                                <td class="align-middle">
+                                                    <div class="d-flex flex-column gap-2">
+                                                        @foreach ($byGuru as $guruId => $kelasItems)
+                                                            @php
+                                                                $guruName = ($guruId == 1 || $guruId == 0) ? 'Belum Ditentukan' : $kelasItems->first()->guru->nama_guru;
+                                                                $badgeColor = ($guruId == 1 || $guruId == 0) ? 'bg-gradient-danger' : 'bg-gradient-success';
+                                                                $textColor = ($guruId == 1 || $guruId == 0) ? 'text-danger' : 'text-dark';
+                                                            @endphp
+                                                            
+                                                            <div class="d-flex align-items-start mb-2">
+                                                                {{-- Nama Guru --}}
+                                                                <span class="text-xs font-weight-bold {{ $textColor }} me-2" style="min-width: 150px;">
+                                                                    <i class="fas fa-user-tie me-1"></i> {{ $guruName }}
+                                                                </span>
+
+                                                                {{-- List Kelas (Badges) --}}
+                                                                <div class="d-flex flex-wrap gap-1">
+                                                                    @foreach ($kelasItems as $item)
+                                                                        <span class="badge badge-sm {{ $badgeColor }}" style="margin-right: 2px; margin-bottom: 2px;">
+                                                                            {{ $item->kelas->nama_kelas }}
+                                                                        </span>
+                                                                    @endforeach
+                                                                </div>
+                                                            </div>
+                                                            {{-- Garis pemisah tipis antar guru --}}
+                                                            @if(!$loop->last) <hr class="horizontal dark my-1"> @endif
+                                                        @endforeach
+                                                    </div>
+                                                </td>
+
+                                                <td class="align-middle text-center">
+                                                    {{-- Tombol Edit Massal (Link ke fungsi Edit yang sudah kita buat sebelumnya) --}}
+                                                    <a href="{{ route('master.pembelajaran.edit', $firstItem->id_pembelajaran) }}" class="btn btn-sm btn-outline-info">
+                                                        Atur Guru
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        @endforeach
                                     </tbody>
                                 </table>
                             </div>

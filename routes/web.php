@@ -130,6 +130,7 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/{id}', [PembelajaranController::class, 'destroy'])->name('destroy');
             Route::get('/export/pdf', [PembelajaranController::class, 'exportPdf'])->name('export.pdf');
             Route::get('/export/csv', [PembelajaranController::class, 'exportCsv'])->name('export.csv');
+            Route::get('/check/{id_mapel}', [PembelajaranController::class, 'getByMapel'])->name('get_by_mapel');
         });
 
         // Ekstrakurikuler

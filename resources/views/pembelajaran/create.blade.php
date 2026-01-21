@@ -1,3 +1,4 @@
+{{-- File: resources/views/pembelajaran/create.blade.php --}}
 @extends('layouts.app') 
 
 @section('page-title', 'Tautkan Mata Pelajaran ke Kelas dan Guru')
@@ -31,6 +32,7 @@
                                 </div>
                             @endif
                             
+                            {{-- Notifikasi Info --}}
                             <div class="alert bg-gradient-info alert-dismissible text-white fade show text-sm">
                                 <i class="fas fa-info-circle me-1"></i> Centang Checkbox *Aktif* untuk mengaktifkan Mata Pelajaran di kelas tersebut.
                                 <button type="button" class="btn-close text-white" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -64,7 +66,7 @@
                                             <tr>
                                                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Nama Kelas</th>
                                                 
-                                                {{-- REVISI: Menambahkan Checkbox Centang Semua di Header --}}
+                                                {{-- Checkbox Centang Semua --}}
                                                 <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">
                                                     Aktif? <br>
                                                     <div class="form-check d-flex justify-content-center">
@@ -80,6 +82,7 @@
                                             <tr>
                                                 <td class="align-middle">
                                                     <p class="text-sm font-weight-bold mb-0">{{ $k->nama_kelas }}</p>
+                                                    {{-- Hidden Input ID Kelas (untuk array processing) --}}
                                                     <input type="hidden" name="kelas_guru[{{ $loop->index }}][id_kelas]" value="{{ $k->id_kelas }}">
                                                 </td>
                                                 
@@ -87,7 +90,7 @@
                                                     <div class="form-check d-flex justify-content-center">
                                                         <input class="form-check-input check-active" type="checkbox" 
                                                                value="1" 
-                                                               data-row-index="{{ $loop->index }}" 
+                                                               {{-- ID Unik menggunakan ID Kelas untuk JS --}}
                                                                id="active_{{ $k->id_kelas }}"
                                                                name="kelas_guru[{{ $loop->index }}][active]" 
                                                                {{ old("kelas_guru.{$loop->index}.active") == 1 ? 'checked' : '' }}>
@@ -96,7 +99,8 @@
 
                                                 <td class="align-middle">
                                                     <select class="form-select form-select-sm select-guru" 
-                                                            id="guru_select_{{ $loop->index }}"
+                                                            {{-- ID Unik menggunakan ID Kelas untuk JS (PENTING!) --}}
+                                                            id="guru_select_{{ $k->id_kelas }}"
                                                             name="kelas_guru[{{ $loop->index }}][id_guru]"> 
                                                         <option value="0">-- Pilih Guru / Belum Ditentukan --</option> 
                                                         @foreach ($guru as $g)
@@ -137,32 +141,101 @@
         
     </main>
 
-    {{-- SCRIPT CENTANG SEMUA --}}
+    {{-- SCRIPT: Centang Semua & AJAX Load Data --}}
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            
+            // --- BAGIAN 1: LOGIKA CHECK ALL ---
             const checkAll = document.getElementById('checkAll');
             const checkItems = document.querySelectorAll('.check-active');
 
-            // 1. Logika: Klik "Check All" mempengaruhi semua checkbox anak
-            checkAll.addEventListener('change', function() {
-                const isChecked = this.checked;
-                checkItems.forEach(function(checkbox) {
-                    checkbox.checked = isChecked;
+            if(checkAll) {
+                // Event: Klik "Check All"
+                checkAll.addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    checkItems.forEach(function(checkbox) {
+                        checkbox.checked = isChecked;
+                    });
                 });
-            });
 
-            // 2. Logika: Jika salah satu anak di-uncheck, "Check All" juga uncheck
-            checkItems.forEach(function(checkbox) {
-                checkbox.addEventListener('change', function() {
-                    if (!this.checked) {
-                        checkAll.checked = false;
-                    } else {
-                        // Cek apakah semua anak sudah tercentang semua
-                        const allChecked = Array.from(checkItems).every(c => c.checked);
-                        checkAll.checked = allChecked;
-                    }
+                // Event: Klik Salah Satu Checkbox Anak
+                checkItems.forEach(function(checkbox) {
+                    checkbox.addEventListener('change', function() {
+                        if (!this.checked) {
+                            checkAll.checked = false;
+                        } else {
+                            // Cek apakah semua anak sudah tercentang semua
+                            const allChecked = Array.from(checkItems).every(c => c.checked);
+                            checkAll.checked = allChecked;
+                        }
+                    });
                 });
-            });
+            }
+
+            // --- BAGIAN 2: LOGIKA AJAX LOAD DATA ---
+            const mapelSelect = document.getElementById('id_mapel');
+            
+            // Fungsi Reset Form
+            function resetForm() {
+                // Uncheck semua aktif
+                document.querySelectorAll('.check-active').forEach(chk => {
+                    chk.checked = false;
+                });
+                // Reset dropdown guru ke 0
+                document.querySelectorAll('.select-guru').forEach(sel => {
+                    sel.value = "0";
+                });
+                // Uncheck master checkbox
+                if(checkAll) checkAll.checked = false;
+            }
+
+            if(mapelSelect) {
+                mapelSelect.addEventListener('change', function() {
+                    const idMapel = this.value;
+
+                    // 1. Reset Form
+                    resetForm();
+
+                    if (!idMapel) return; // Jika pilih default "-- Pilih Mapel --", berhenti.
+
+                    // 2. Loading Indicator
+                    document.body.style.cursor = 'wait';
+
+                    // 3. Fetch Data ke Server
+                    // Pastikan route ini ada: Route::get('/master/pembelajaran/check/{id}', ...)
+                    fetch(`/master/data/pembelajaran/check/${idMapel}`)
+                        .then(response => {
+                            if (!response.ok) throw new Error("Gagal mengambil data");
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.length > 0) {
+                                console.log(`Data ditemukan: ${data.length} kelas terisi.`);
+                                
+                                data.forEach(item => {
+                                    // A. Centang Checkbox Kelas (Cari ID berdasarkan ID Kelas)
+                                    const checkBox = document.getElementById(`active_${item.id_kelas}`);
+                                    if (checkBox) checkBox.checked = true;
+
+                                    // B. Pilih Guru (Cari ID berdasarkan ID Kelas)
+                                    const guruSelect = document.getElementById(`guru_select_${item.id_kelas}`);
+                                    if (guruSelect) guruSelect.value = item.id_guru;
+                                });
+
+                                // C. Update status "Check All" jika semua data terisi
+                                if(checkItems.length > 0 && checkAll) {
+                                    checkAll.checked = Array.from(checkItems).every(c => c.checked);
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                        })
+                        .finally(() => {
+                            document.body.style.cursor = 'default';
+                        });
+                });
+            }
         });
     </script>
 @endsection
