@@ -65,7 +65,7 @@
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
 
-                <form action="{{ route('pengaturan.bobot.update', $item->id) }}" method="POST">
+                <form action="{{ route('settings.erapor.bobot.update', $item->id) }}" method="POST">
                     @csrf
                     @method('PUT')
 
@@ -226,7 +226,7 @@
                         Batal
                     </button>
 
-                    <form action="{{ route('pengaturan.bobot.destroy', $item->id) }}"
+                    <form action="{{ route('settings.erapor.bobot.destroy', $item->id) }}"
                         method="POST" class="d-inline">
                         @csrf
                         @method('DELETE')

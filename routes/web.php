@@ -296,8 +296,11 @@ Route::middleware(['auth'])->group(function () {
             Route::prefix('season')->middleware(['auth'])->group(function () {
                 Route::get('/', [SeasonController::class, 'index'])->name('season.index');
                 Route::post('/store', [SeasonController::class, 'store'])->name('season.store');
-                Route::put('/{id}', [SeasonController::class, 'update'])->name('season.update');
-                Route::put('/settings/erapor/season/{id}', [SeasonController::class, 'update'])->name('settings.erapor.season.update');
+                
+                // Update (Cukup ini saja, otomatis jadi settings.erapor.season.update)
+                Route::put('/{id}', [SeasonController::class, 'update'])->name('season.update'); 
+                
+                // Destroy (Otomatis jadi settings.erapor.season.destroy)
                 Route::delete('/{id}', [SeasonController::class, 'destroy'])->name('season.destroy');
             });
 

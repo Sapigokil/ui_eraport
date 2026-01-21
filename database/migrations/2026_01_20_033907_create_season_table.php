@@ -8,22 +8,26 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('season', function (Blueprint $table) {
-            $table->bigIncrements('id');
+        // 🟢 FIX: Cek dulu apakah tabel 'season' sudah ada
+        // Jika belum ada (!), baru buat. Jika sudah ada, lewati.
+        if (!Schema::hasTable('season')) {
+            Schema::create('season', function (Blueprint $table) {
+                $table->bigIncrements('id');
 
-            $table->string('tahun_ajaran', 20);
-            $table->unsignedTinyInteger('semester');
+                $table->string('tahun_ajaran', 20);
+                $table->unsignedTinyInteger('semester');
 
-            $table->unsignedTinyInteger('is_open')->default(0);
-            $table->unsignedTinyInteger('is_active')->default(1);
+                $table->unsignedTinyInteger('is_open')->default(0);
+                $table->unsignedTinyInteger('is_active')->default(1);
 
-            $table->date('start_date')->nullable();
-            $table->date('end_date')->nullable();
+                $table->date('start_date')->nullable();
+                $table->date('end_date')->nullable();
 
-            $table->timestamps();
+                $table->timestamps();
 
-            $table->index(['tahun_ajaran', 'semester']);
-        });
+                $table->index(['tahun_ajaran', 'semester']);
+            });
+        }
     }
 
     public function down(): void

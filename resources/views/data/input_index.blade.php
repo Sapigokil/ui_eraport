@@ -43,7 +43,7 @@
                         @endif
 
                         {{-- FORM INPUT --}}
-                        <form action="{{ route('input.store') }}" method="POST">
+                        <form action="{{ route('settings.erapor.input.store') }}" method="POST">
                         @csrf
 
                             <div class="row mb-4">

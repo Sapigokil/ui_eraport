@@ -13,7 +13,7 @@ class Season extends Model
 
     // Nama tabel & primary key
     protected $table = 'season';
-    protected $primaryKey = 'id_season';
+    // protected $primaryKey = 'id_season';
 
     // Kolom yang bisa diisi massal
     protected $fillable = [
