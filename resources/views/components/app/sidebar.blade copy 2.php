@@ -123,7 +123,7 @@ linear-gradient(180deg, #212121, #212121);">
             @endphp
             
             {{-- 2. MASTER DATA --}}
-            @can('manage-master') 
+            @can('master.view') 
             <li class="nav-item">
                 <a data-bs-toggle="collapse" href="#masterDataMenu" class="nav-link {{ $isMasterActive ? 'active' : 'text-white' }}" aria-controls="masterDataMenu" role="button" aria-expanded="{{ $isMasterActive ? 'true' : 'false' }}">
             <div class="me-2 d-flex align-items-center justify-content-center">
@@ -206,7 +206,7 @@ linear-gradient(180deg, #212121, #212121);">
                 $isNilaiActive = request()->routeIs($nilaiRoutes); 
             @endphp
 
-            @can('manage-master') 
+            @can('master.view') 
             <li class="nav-item">
                 <a data-bs-toggle="collapse" href="#dataNilaiMenu" class="nav-link {{ $isNilaiActive ? 'active' : 'text-white' }}" aria-controls="dataNilaiMenu" role="button" aria-expanded="{{ $isNilaiActive ? 'true' : 'false' }}">
                     {{-- IKON DIKEMBALIKAN --}}
@@ -293,7 +293,7 @@ linear-gradient(180deg, #212121, #212121);">
                 $isRaporActive = request()->routeIs($raporRoutes); 
             @endphp
 
-            @can('manage-master') 
+            @can('master.view') 
             @php
                 // Logika untuk mengecek apakah sedang di halaman rapor agar menu otomatis terbuka
                 $isRaporActive = request()->routeIs('rapornilai.*', 'ledger.*');

@@ -39,66 +39,66 @@
                                 </div>
                             @endif
 
-                            {{-- 🛑 FORM FILTER BARU 🛑 --}}
-                            <div class="p-3 border rounded mb-3">
-                                <form action="{{ route('master.pembelajaran.index') }}" method="GET" class="row align-items-end">
-                                    
-                                    {{-- Filter Mapel --}}
-                                    <div class="col-md-4 mb-3">
-                                        <label for="id_mapel" class="form-label">Mata Pelajaran:</label>
-                                        <select name="id_mapel" id="id_mapel" class="form-select">
-                                            <option value="">Semua Mapel</option>
-                                            @foreach($mapel_list as $m)
-                                                <option value="{{ $m->id_mapel }}" 
-                                                    {{ request('id_mapel') == $m->id_mapel ? 'selected' : '' }}>
-                                                    {{ $m->nama_mapel }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    
-                                    {{-- Filter Kelas --}}
-                                    <div class="col-md-3 mb-3">
-                                        <label for="id_kelas" class="form-label">Kelas:</label>
-                                        <select name="id_kelas" id="id_kelas" class="form-select">
-                                            <option value="">Semua Kelas</option>
-                                            @foreach($kelas_list as $k)
-                                                <option value="{{ $k->id_kelas }}" 
-                                                    {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>
-                                                    {{ $k->nama_kelas }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    
-                                    {{-- Filter Guru --}}
-                                    <div class="col-md-3 mb-3">
-                                        <label for="id_guru" class="form-label">Guru Pengampu:</label>
-                                        <select name="id_guru" id="id_guru" class="form-select" onchange="this.form.submit()">
-                                            <option value="">Semua Guru</option>
-                                            @foreach($guru_list as $g)
-                                                <option value="{{ $g->id_guru }}" 
-                                                    {{ request('id_guru') == $g->id_guru ? 'selected' : '' }}>
-                                                    {{ $g->nama_guru }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="col-md-2 mb-3 text-end">
-                                        <button type="submit" class="btn bg-gradient-info btn-sm w-100 mb-0">Filter</button>
+                            {{-- 🛑 FORM FILTER RAPAT 🛑 --}}
+                            <div class="p-2 border rounded mb-2 bg-light">
+                                <form action="{{ route('master.pembelajaran.index') }}" method="GET" class="mb-0">
+                                    <div class="row g-2 align-items-center"> {{-- g-2 untuk jarak antar kolom lebih rapat --}}
+                                        
+                                        {{-- 1. Filter Mapel --}}
+                                        <div class="col-md-4">
+                                            <select name="id_mapel" class="form-select form-select-sm" onchange="this.form.submit()">
+                                                <option value="">-- Filter Mapel --</option>
+                                                @foreach($mapel_list as $m)
+                                                    <option value="{{ $m->id_mapel }}" {{ request('id_mapel') == $m->id_mapel ? 'selected' : '' }}>
+                                                        {{ $m->nama_mapel }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        {{-- 2. Filter Kelas --}}
+                                        <div class="col-md-4">
+                                            <select name="id_kelas" class="form-select form-select-sm" onchange="this.form.submit()">
+                                                <option value="">-- Filter Kelas --</option>
+                                                @foreach($kelas_list as $k)
+                                                    <option value="{{ $k->id_kelas }}" {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>
+                                                        {{ $k->nama_kelas }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        {{-- 3. Filter Guru & Reset --}}
+                                        <div class="col-md-4">
+                                            <div class="d-flex gap-2">
+                                                <select name="id_guru" class="form-select form-select-sm w-100" onchange="this.form.submit()">
+                                                    <option value="">-- Filter Guru --</option>
+                                                    <option value="0" {{ request('id_guru') === '0' ? 'selected' : '' }}>Belum Ada Guru</option>
+                                                    @foreach($guru_list as $g)
+                                                        <option value="{{ $g->id_guru }}" {{ request('id_guru') == $g->id_guru ? 'selected' : '' }}>
+                                                            {{ $g->nama_guru }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+
+                                                @if(request()->hasAny(['id_mapel', 'id_kelas', 'id_guru']))
+                                                    <a href="{{ route('master.pembelajaran.index') }}" class="btn btn-icon btn-sm btn-outline-secondary mb-0" title="Reset Filter">
+                                                        <i class="fas fa-undo"></i>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </div>
+
                                     </div>
                                 </form>
                             </div>
-                            {{-- 🛑 END FORM FILTER 🛑 --}}
-
-
-                            {{-- Tombol Export --}}
-                            <div class="d-flex justify-content-end mb-3">
-                                <a href="{{ route('master.pembelajaran.export.pdf', request()->query()) }}" class="btn btn-sm btn-info me-2 text-white" title="Export data yang difilter">
+                            
+                            {{-- Tombol Export (Rata Kanan, Rapat ke atas) --}}
+                            <div class="d-flex justify-content-end mb-3 mt-2">
+                                <a href="{{ route('master.pembelajaran.export.pdf', request()->query()) }}" class="btn btn-sm btn-info me-2 text-white mb-0">
                                     <i class="fas fa-file-pdf me-1"></i> Export PDF
                                 </a>
-                                <a href="{{ route('master.pembelajaran.export.csv', request()->query()) }}" class="btn btn-sm btn-secondary text-white" title="Export data yang difilter">
+                                <a href="{{ route('master.pembelajaran.export.csv', request()->query()) }}" class="btn btn-sm btn-secondary text-white mb-0">
                                     <i class="fas fa-file-csv me-1"></i> Export CSV
                                 </a>
                             </div>
@@ -140,28 +140,27 @@
                                                     <div class="d-flex flex-column gap-2">
                                                         @foreach ($byGuru as $guruId => $kelasItems)
                                                             @php
-                                                                $guruName = ($guruId == 1 || $guruId == 0) ? 'Belum Ditentukan' : $kelasItems->first()->guru->nama_guru;
-                                                                $badgeColor = ($guruId == 1 || $guruId == 0) ? 'bg-gradient-danger' : 'bg-gradient-success';
-                                                                $textColor = ($guruId == 1 || $guruId == 0) ? 'text-danger' : 'text-dark';
+                                                                // AMBIL DATA GURU DENGAN AMAN
+                                                                // Cek apakah relasi guru ada?
+                                                                $firstItem = $kelasItems->first();
+                                                                $namaGuru = $firstItem->guru ? $firstItem->guru->nama_guru : 'Belum Ada Guru';
+                                                                $statusColor = $firstItem->guru ? 'text-dark' : 'text-danger fst-italic';
                                                             @endphp
-                                                            
-                                                            <div class="d-flex align-items-start mb-2">
-                                                                {{-- Nama Guru --}}
-                                                                <span class="text-xs font-weight-bold {{ $textColor }} me-2" style="min-width: 150px;">
-                                                                    <i class="fas fa-user-tie me-1"></i> {{ $guruName }}
-                                                                </span>
 
-                                                                {{-- List Kelas (Badges) --}}
-                                                                <div class="d-flex flex-wrap gap-1">
+                                                            <div class="border rounded p-2 mb-1 bg-light">
+                                                                {{-- TAMPILKAN NAMA GURU (SAFE MODE) --}}
+                                                                <strong class="text-xs {{ $statusColor }}">
+                                                                    <i class="fas fa-user-tie me-1"></i> {{ $namaGuru }}
+                                                                </strong>
+                                                                
+                                                                <div class="d-flex flex-wrap gap-1 mt-1">
                                                                     @foreach ($kelasItems as $item)
-                                                                        <span class="badge badge-sm {{ $badgeColor }}" style="margin-right: 2px; margin-bottom: 2px;">
-                                                                            {{ $item->kelas->nama_kelas }}
+                                                                        <span class="badge bg-gradient-info">
+                                                                            {{ $item->kelas->nama_kelas ?? '-' }}
                                                                         </span>
                                                                     @endforeach
                                                                 </div>
                                                             </div>
-                                                            {{-- Garis pemisah tipis antar guru --}}
-                                                            @if(!$loop->last) <hr class="horizontal dark my-1"> @endif
                                                         @endforeach
                                                     </div>
                                                 </td>

@@ -165,15 +165,24 @@ Route::middleware(['auth'])->group(function () {
         
         // 1. Sumatif
         Route::group(['prefix' => 'sumatif', 'as' => 'sumatif.', 'controller' => SumatifController::class], function () {
+            
+            // Route Halaman S1 - S5
             Route::get('s1', 'sumatif1')->name('s1'); 
             Route::get('s2', 'sumatif2')->name('s2'); 
             Route::get('s3', 'sumatif3')->name('s3'); 
             Route::get('s4', 'sumatif4')->name('s4'); 
             Route::get('s5', 'sumatif5')->name('s5'); 
+
+            // Route Helper
             Route::get('get-mapel/{id_kelas}', 'getMapelByKelas')->name('get_mapel');
             Route::get('download-template', 'downloadTemplate')->name('download');
-            
-            // Aksi Simpan butuh permission 'nilai.input'
+
+            // ✅ PERBAIKAN DI SINI:
+            // 1. Cukup gunakan string 'checkPrerequisite' (karena controller sudah didefinisikan di group)
+            // 2. Name cukup 'check_prerequisite' (prefix 'master.sumatif.' otomatis ditambahkan oleh group)
+            Route::get('check-prerequisite', 'checkPrerequisite')->name('check_prerequisite');
+
+            // Aksi Simpan (Butuh Permission)
             Route::middleware('can:nilai.input')->group(function() {
                 Route::post('simpan', 'simpan')->name('store');
                 Route::post('import', 'import')->name('import'); 
@@ -185,7 +194,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', 'index')->name('index'); 
             Route::get('/download-template', 'downloadTemplate')->name('download'); 
             Route::get('get-mapel/{id_kelas}', 'getMapelByKelas')->name('get_mapel');
-
+            Route::get('check-prerequisite', 'checkPrerequisite')->name('check_prerequisite');
             Route::middleware('can:nilai.input')->group(function() {
                 Route::post('simpan', 'simpan')->name('store'); 
                 Route::post('/import', 'import')->name('import');

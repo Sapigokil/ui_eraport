@@ -1,5 +1,3 @@
-{{-- File: resources/views/nilai/sum2_index.blade.php --}}
-
 @extends('layouts.app') 
 
 @section('page-title', 'Input Nilai Sumatif ' . $sumatifId)
@@ -56,6 +54,7 @@
                         </div>
 
                         <div class="card-body px-0 pb-2">
+                            {{-- Notifikasi --}}
                             @if (session('success'))
                                 <div class="alert bg-gradient-success mx-4 alert-dismissible text-white fade show" role="alert">
                                     <span class="text-sm"><strong>Sukses!</strong> {!! session('success') !!}</span>
@@ -89,19 +88,15 @@
                                 </div>
                             @endif
                             
-                            {{-- FORM FILTER --}}
+                            {{-- FORM FILTER SUMATIF 3 --}}
                             <div class="p-4 border-bottom">
-                                <form action="{{ route('master.sumatif.s2') }}" method="GET" class="row align-items-end">
-                                    <div class="col-md-2 mb-3">
-                                        <label class="form-label">Sumatif:</label>
-                                        <select name="sumatif" required class="form-select" disabled>
-                                            <option value="{{ $sumatifId }}" selected>Sumatif {{ $sumatifId }}</option>
-                                        </select>
-                                        <input type="hidden" name="sumatif" value="{{ $sumatifId }}">
-                                    </div>
+                                <form action="{{ route('master.sumatif.s3') }}" method="GET" class="row align-items-end">
+                                    
+                                    {{-- INPUT HIDDEN: SUMATIF --}}
+                                    <input type="hidden" name="sumatif" value="{{ $sumatifId }}">
 
                                     <div class="col-md-3 mb-3">
-                                        <label class="form-label">Kelas:</label>
+                                        <label for="id_kelas" class="form-label">Kelas:</label>
                                         <select name="id_kelas" id="id_kelas" required class="form-select" onchange="this.form.submit()">
                                             <option value="">Pilih Kelas</option>
                                             @foreach(\App\Models\Kelas::orderBy('nama_kelas')->get() as $k)
@@ -110,8 +105,8 @@
                                         </select>
                                     </div>
                                     
-                                    <div class="col-md-3 mb-3">
-                                        <label class="form-label">Mata Pelajaran:</label>
+                                    <div class="col-md-5 mb-3">
+                                        <label for="id_mapel" class="form-label">Mata Pelajaran:</label>
                                         <select name="id_mapel" id="id_mapel" required class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }} onchange="this.form.submit()">
                                             <option value="">Pilih Mapel</option>
                                             @foreach ($mapel as $m)
@@ -122,7 +117,7 @@
 
                                     <div class="col-md-2 mb-3">
                                         <label class="form-label">Semester:</label>
-                                        <select name="semester" required class="form-select">
+                                        <select name="semester" required class="form-select" onchange="this.form.submit()">
                                             @foreach($semesterList as $sem)
                                                 <option value="{{ $sem }}" {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>{{ $sem }}</option>
                                             @endforeach
@@ -131,24 +126,23 @@
 
                                     <div class="col-md-2 mb-3">
                                         <label class="form-label">Tahun Ajaran:</label>
-                                        <select name="tahun_ajaran" required class="form-select">
+                                        <select name="tahun_ajaran" required class="form-select" onchange="this.form.submit()">
                                             @foreach ($tahunAjaranList as $ta)
                                                 <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>{{ $ta }}</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     
-                                    <div class="col-12 text-end">
-                                        <button type="submit" class="btn bg-gradient-info w-25 mb-0">Tampilkan Siswa</button>
-                                    </div>
+                                    {{-- Hidden Submit Button --}}
+                                    <button type="submit" class="d-none"></button>
                                 </form>
                             </div>
 
                             <div class="p-4">
                                 @if(!request('id_kelas') || !request('id_mapel'))
-                                    <p class="text-secondary mt-3 p-3 text-center border rounded">Pilih filter untuk menginput nilai.</p>
+                                    <p class="text-secondary mt-3 p-3 text-center border rounded">Pilih filter untuk menginput nilai Sumatif {{ $sumatifId }}.</p>
                                 @elseif($siswa->isEmpty())
-                                    <p class="text-danger mt-3 p-3 text-center border rounded">Siswa tidak ditemukan.</p>
+                                    <p class="text-danger mt-3 p-3 text-center border rounded">Data siswa tidak ditemukan.</p>
                                 @else
                                 @if(!$seasonOpen)
                                     <div class="alert alert-warning text-sm mb-3">
@@ -176,22 +170,33 @@
                                                 <tbody>
                                                 @foreach ($siswa as $i => $s)
                                                     @php
+                                                        // Ambil data nilai siswa dari collection rapor
                                                         $raporItem = $rapor->get($s->id_siswa);
+                                                        // Gunakan optional agar tidak error jika data kosong
                                                         $nilaiLama = optional($raporItem);
                                                     @endphp
                                                     <tr>
                                                         <td class="text-center text-sm font-weight-bold">{{ $i+1 }}</td>
-                                                        <td class="text-sm font-weight-bold">{{ $s->nama_siswa }}
+                                                        <td class="text-sm font-weight-bold">
+                                                            {{ $s->nama_siswa }}
+                                                            {{-- ID Siswa Hidden --}}
                                                             <input type="hidden" name="id_siswa[]" value="{{ $s->id_siswa }}">
                                                         </td>
                                                         <td>
                                                             <div class="input-group input-group-outline">
-                                                                <input type="number" name="nilai[]" min="0" max="100" class="form-control text-center" {{ !$seasonOpen ? 'disabled' : '' }}>
+                                                                {{-- PERBAIKAN: value Ditambahkan --}}
+                                                                <input type="number" name="nilai[]" min="0" max="100" 
+                                                                       class="form-control text-center" 
+                                                                       value="{{ $nilaiLama->nilai }}" 
+                                                                       {{ !$seasonOpen ? 'disabled' : '' }}>
                                                             </div>
                                                         </td>
                                                         <td>
                                                             <div class="input-group input-group-outline">
-                                                                <textarea name="tujuan_pembelajaran[]" rows="2" class="form-control text-sm"  {{ !$seasonOpen ? 'disabled' : '' }}>...</textarea>
+                                                                {{-- PERBAIKAN: Isi Textarea Ditambahkan --}}
+                                                                <textarea name="tujuan_pembelajaran[]" rows="2" 
+                                                                          class="form-control text-sm" 
+                                                                          {{ !$seasonOpen ? 'disabled' : '' }}>{{ $nilaiLama->tujuan_pembelajaran }}</textarea>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -228,7 +233,7 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Kelas:</label>
-                            <select name="id_kelas" required class="form-select ajax-select-kelas" data-target="#mapel_download_sum2">
+                            <select name="id_kelas" required class="form-select ajax-select-kelas" data-target="#mapel_download_sum3">
                                 <option value="">Pilih Kelas</option>
                                 @foreach(\App\Models\Kelas::orderBy('nama_kelas')->get() as $k)
                                     <option value="{{ $k->id_kelas }}">{{ $k->nama_kelas }}</option>
@@ -237,11 +242,10 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Mata Pelajaran:</label>
-                            <select name="id_mapel" id="mapel_download_sum2" required class="form-select">
+                            <select name="id_mapel" id="mapel_download_sum3" required class="form-select">
                                 <option value="">Pilih Kelas Terlebih Dahulu</option>
                             </select>
                         </div>
-                        {{-- Semester & TA tetap --}}
                         <div class="mb-3">
                             <label class="form-label">Semester:</label>
                             <select name="semester" required class="form-select">
@@ -279,9 +283,12 @@
                     @csrf
                     <input type="hidden" name="sumatif" value="{{ $sumatifId }}">
                     <div class="modal-body">
+                        <div class="mb-3 text-center">
+                            <p class="text-secondary font-weight-bold">Pastikan data Excel sesuai dengan template.</p>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label">Kelas:</label>
-                            <select name="id_kelas" required class="form-select ajax-select-kelas" data-target="#mapel_import_sum2">
+                            <select name="id_kelas" required class="form-select ajax-select-kelas" data-target="#mapel_import_sum3">
                                 <option value="">Pilih Kelas</option>
                                 @foreach(\App\Models\Kelas::orderBy('nama_kelas')->get() as $k)
                                     <option value="{{ $k->id_kelas }}">{{ $k->nama_kelas }}</option>
@@ -290,11 +297,10 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Mata Pelajaran:</label>
-                            <select name="id_mapel" id="mapel_import_sum2" required class="form-select">
+                            <select name="id_mapel" id="mapel_import_sum3" required class="form-select">
                                 <option value="">Pilih Kelas Terlebih Dahulu</option>
                             </select>
                         </div>
-                        {{-- Semester, TA, File tetap --}}
                         <div class="mb-3">
                             <label class="form-label">Semester:</label>
                             <select name="semester" required class="form-select">
@@ -359,9 +365,9 @@
                 }
             });
 
-            // Loading Overlay
+            // Loading Overlay saat submit
             $('form').on('submit', function() {
-                if($(this).attr('method') === 'POST' && !$(this).hasClass('no-loading')){
+                if($(this).attr('method') === 'POST'){
                     $('#loadingOverlay').css('display', 'flex');
                 }
             });

@@ -84,46 +84,61 @@
                             </div>
                         @endif
 
-                        {{-- FILTER DATA --}}
+                        {{-- FORM FILTER CATATAN (STYLE CLEAN & AUTO-SUBMIT) --}}
                         <div class="p-4 border-bottom">
-                            <form method="GET" action="{{ route('master.catatan.input') }}" class="row align-items-end">
-                                <div class="col-md-3 mb-3 text-start">
-                                    <label class="form-label text-xs font-weight-bold text-uppercase">Pilih Kelas</label>
-                                    <select name="id_kelas" id="kelasSelect" required class="form-select border ps-2">
-                                        <option value="">-- Pilih Kelas --</option>
+                            <form method="GET" action="{{ route('master.catatan.input') }}" class="row align-items-end mb-0">
+                                {{-- Filter Kelas --}}
+                                <div class="col-md-3 mb-3">
+                                    <label for="kelasSelect" class="form-label">Kelas:</label>
+                                    <select name="id_kelas" id="kelasSelect" required class="form-select ajax-select-kelas" data-target="#siswaSelect" onchange="this.form.submit()">
+                                        <option value="">Pilih Kelas</option>
                                         @foreach ($kelas as $k)
-                                            <option value="{{ $k->id_kelas }}" {{ $request->id_kelas == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                                            <option value="{{ $k->id_kelas }}" {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>
+                                                {{ $k->nama_kelas }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-3 mb-3 text-start">
-                                    <label class="form-label text-xs font-weight-bold text-uppercase">Pilih Siswa</label>
-                                    <select name="id_siswa" id="siswaSelect" required class="form-select border ps-2" onchange="this.form.submit()">
-                                        <option value="">-- Pilih Siswa --</option>
+
+                                {{-- Filter Siswa (Dibuat lebih lebar agar nama tidak terpotong) --}}
+                                <div class="col-md-5 mb-3">
+                                    <label for="siswaSelect" class="form-label">Nama Siswa:</label>
+                                    <select name="id_siswa" id="siswaSelect" required class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }} onchange="this.form.submit()">
+                                        <option value="">Pilih Siswa</option>
                                         @foreach ($siswa as $s)
-                                            <option value="{{ $s->id_siswa }}" {{ $request->id_siswa == $s->id_siswa ? 'selected' : '' }}>{{ $s->nama_siswa }}</option>
+                                            <option value="{{ $s->id_siswa }}" {{ request('id_siswa') == $s->id_siswa ? 'selected' : '' }}>
+                                                {{ $s->nama_siswa }}
+                                            </option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-2 mb-3 text-start">
-                                    <label class="form-label text-xs font-weight-bold text-uppercase">Semester</label>
-                                    <select name="semester" class="form-select border ps-2">
-                                        @foreach ($semesterList as $sem)
-                                            <option value="{{ $sem }}" {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>{{ $sem }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-2 mb-3 text-start">
-                                    <label class="form-label text-xs font-weight-bold text-uppercase">Tahun Ajaran</label>
-                                    <select name="tahun_ajaran" class="form-select border ps-2">
-                                        @foreach ($tahunAjaranList as $ta)
-                                            <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>{{ $ta }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
+
+                                {{-- Filter Semester --}}
                                 <div class="col-md-2 mb-3">
-                                    <button type="submit" class="btn bg-gradient-dark w-100 mb-0 text-capitalize">Tampilkan</button>
+                                    <label class="form-label">Semester:</label>
+                                    <select name="semester" id="input_semester" required class="form-select" onchange="this.form.submit()">
+                                        @foreach ($semesterList as $sem)
+                                            <option value="{{ $sem }}" {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>
+                                                {{ $sem }}
+                                            </option>
+                                        @endforeach
+                                    </select>
                                 </div>
+
+                                {{-- Filter Tahun Ajaran --}}
+                                <div class="col-md-2 mb-3">
+                                    <label class="form-label">Tahun Ajaran:</label>
+                                    <select name="tahun_ajaran" id="input_tahun_ajaran" required class="form-select" onchange="this.form.submit()">
+                                        @foreach ($tahunAjaranList as $ta)
+                                            <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
+                                                {{ $ta }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                {{-- Hidden Submit Button (Trigger otomatis) --}}
+                                <button type="submit" class="d-none"></button>
                             </form>
                         </div>
 

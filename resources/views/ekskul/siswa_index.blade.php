@@ -42,47 +42,62 @@
                                 </div>
                             @endif
                             
-                            {{-- FILTER FORM --}}
-                            <div class="p-4 border-bottom">
-                                <form action="{{ route('master.ekskul.siswa.index') }}" method="GET" class="row">
-                                    
-                                    <div class="col-md-4 mb-3">
-                                        <label for="id_ekskul" class="form-label">Ekstrakurikuler:</label>
-                                        <select class="form-select" id="id_ekskul" name="id_ekskul">
-                                            <option value="">-- Semua Ekstrakurikuler --</option>
-                                            @foreach ($ekskuls as $ekskul)
-                                                <option value="{{ $ekskul->id_ekskul }}" 
-                                                    {{ $ekskul->id_ekskul == $filter_id_ekskul ? 'selected' : '' }}>
-                                                    {{ $ekskul->nama_ekskul }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    
-                                    <div class="col-md-4 mb-3">
-                                        <label for="id_kelas" class="form-label">Kelas:</label>
-                                        <select class="form-select" id="id_kelas" name="id_kelas" onchange="this.form.submit()">
-                                            <option value="">-- Semua Kelas --</option>
-                                            @foreach ($kelas as $k)
-                                                <option value="{{ $k->id_kelas }}" 
-                                                    {{ $k->id_kelas == $filter_id_kelas ? 'selected' : '' }}>
-                                                    {{ $k->nama_kelas }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
+                            {{-- FILTER SECTION --}}
+                            <div class="mx-3 mt-1 mb-2"> 
+                                <div class="p-3 border rounded-3 bg-light"> 
+                                    <form action="{{ route('master.ekskul.siswa.index') }}" method="GET" class="mb-0">
+                                        <div class="row g-3 align-items-center">
+                                            
+                                            {{-- 1. Filter Ekskul --}}
+                                            <div class="col-md-4">
+                                                <select name="id_ekskul" class="form-select form-select-sm bg-white" onchange="this.form.submit()">
+                                                    <option value="">-- Semua Ekstrakurikuler --</option>
+                                                    @foreach ($ekskuls as $ekskul)
+                                                        <option value="{{ $ekskul->id_ekskul }}" {{ $ekskul->id_ekskul == $filter_id_ekskul ? 'selected' : '' }}>
+                                                            {{ $ekskul->nama_ekskul }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
 
-                                    <div class="col-md-4 mb-3">
-                                        <label for="nama_siswa" class="form-label">Cari Nama Siswa:</label>
-                                        <input type="text" class="form-control" id="nama_siswa" name="nama_siswa" 
-                                               value="{{ $filter_nama_siswa ?? '' }}" placeholder="Masukkan nama siswa...">
-                                    </div>
+                                            {{-- 2. Filter Kelas --}}
+                                            <div class="col-md-4">
+                                                <select name="id_kelas" class="form-select form-select-sm bg-white" onchange="this.form.submit()">
+                                                    <option value="">-- Semua Kelas --</option>
+                                                    @foreach ($kelas as $k)
+                                                        <option value="{{ $k->id_kelas }}" {{ $k->id_kelas == $filter_id_kelas ? 'selected' : '' }}>
+                                                            {{ $k->nama_kelas }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
 
-                                    <div class="col-12 pt-2">
-                                        <button type="submit" class="btn btn-info mb-0 me-2">Tampilkan Data</button>
-                                        <a href="{{ route('master.ekskul.siswa.index') }}" class="btn btn-secondary mb-0">Reset Filter</a>
-                                    </div>
-                                </form>
+                                            {{-- 3. Search & Reset --}}
+                                            <div class="col-md-4">
+                                                <div class="d-flex gap-2">
+                                                    <div class="input-group input-group-sm w-100 bg-white rounded border shadow-sm">
+                                                        <span class="input-group-text bg-transparent border-0 ps-3">
+                                                            <i class="fas fa-search text-xs text-secondary"></i>
+                                                        </span>
+                                                        <input type="text" class="form-control border-0 ps-0" name="nama_siswa" 
+                                                            value="{{ $filter_nama_siswa ?? '' }}" 
+                                                            placeholder="Cari Siswa..." 
+                                                            onblur="this.form.submit()">
+                                                    </div>
+
+                                                    @if(request()->hasAny(['id_ekskul', 'id_kelas', 'nama_siswa']))
+                                                        <a href="{{ route('master.ekskul.siswa.index') }}" class="btn btn-icon btn-sm btn-white border mb-0 shadow-sm" title="Reset Filter">
+                                                            <i class="fas fa-undo text-secondary"></i>
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                        {{-- Hidden Submit Button agar tombol Enter bekerja --}}
+                                        <button type="submit" class="d-none"></button>
+                                    </form>
+                                </div>
                             </div>
 
                             {{-- TABEL DATA DATAR --}}

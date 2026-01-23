@@ -22,7 +22,7 @@
                                 
                                 {{-- KELOMPOK TOMBOL AKSI: TAMBAH, IMPORT, EXPORT --}}
                                 <div class="d-flex me-3">
-                                    @can('manage-master')
+                                    @can('master.view')
                                     
                                     {{-- Dropdown untuk Pilihan Import --}}
                                     <div class="dropdown me-2">
@@ -145,7 +145,7 @@
                                                     <i class="fas fa-eye me-1"></i> Lihat
                                                 </a>
                                                 
-                                                @can('manage-master')
+                                                @can('master.view')
                                                 <a href="{{ route('master.siswa.edit', $siswa->id_siswa) }}" class="text-primary font-weight-bold text-xs me-2" data-bs-toggle="tooltip" title="Edit Data">
                                                     <i class="fas fa-pencil-alt me-1"></i> Edit
                                                 </a>

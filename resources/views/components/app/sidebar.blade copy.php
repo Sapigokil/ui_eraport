@@ -30,7 +30,7 @@
             @php
                 $isMasterActive = is_current_route(['master.siswa', 'master.guru', 'master.mapel']);
             @endphp
-            @can('manage-master') 
+            @can('master.view') 
             <li class="nav-item">
                 <a data-bs-toggle="collapse" href="#masterDataMenu" class="nav-link {{ $isMasterActive ? 'active' : '' }}" aria-controls="masterDataMenu" role="button" aria-expanded="{{ $isMasterActive ? 'true' : 'false' }}">
                     <div class="icon icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
