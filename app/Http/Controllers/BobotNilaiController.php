@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\BobotNilai;
+use Illuminate\Support\Facades\DB;
 
 class BobotNilaiController extends Controller
 {
@@ -58,35 +59,35 @@ class BobotNilaiController extends Controller
     }
 
     public function update(Request $request, $id)
-{
-    $request->validate([
-        'jumlah_sumatif' => 'required|integer|min:1|max:5',
-        'semester'       => 'required',
-        'tahun_ajaran'   => 'required',
-        'bobot_sumatif'  => 'required|integer|min:0|max:100',
-        'bobot_project'  => 'required|integer|min:0|max:100',
-    ]);
-
-    if (($request->bobot_sumatif + $request->bobot_project) !== 100) {
-        return back()->withErrors([
-            'total' => 'Total bobot Sumatif + Project harus 100%'
+    {
+        $request->validate([
+            'jumlah_sumatif' => 'required|integer|min:1|max:5',
+            'semester'       => 'required',
+            'tahun_ajaran'   => 'required',
+            'bobot_sumatif'  => 'required|integer|min:0|max:100',
+            'bobot_project'  => 'required|integer|min:0|max:100',
         ]);
+
+        if (($request->bobot_sumatif + $request->bobot_project) !== 100) {
+            return back()->withErrors([
+                'total' => 'Total bobot Sumatif + Project harus 100%'
+            ]);
+        }
+
+        $bobot = BobotNilai::findOrFail($id);
+
+        $bobot->update([
+            'jumlah_sumatif' => $request->jumlah_sumatif,
+            'semester'       => $request->semester,
+            'tahun_ajaran'   => $request->tahun_ajaran,
+            'bobot_sumatif'  => $request->bobot_sumatif,
+            'bobot_project'  => $request->bobot_project,
+        ]);
+
+        return redirect()
+            ->route('settings.erapor.bobot.index')
+            ->with('success', 'Data bobot berhasil diperbarui');
     }
-
-    $bobot = BobotNilai::findOrFail($id);
-
-    $bobot->update([
-        'jumlah_sumatif' => $request->jumlah_sumatif,
-        'semester'       => $request->semester,
-        'tahun_ajaran'   => $request->tahun_ajaran,
-        'bobot_sumatif'  => $request->bobot_sumatif,
-        'bobot_project'  => $request->bobot_project,
-    ]);
-
-    return redirect()
-        ->route('settings.erapor.bobot.index')
-        ->with('success', 'Data bobot berhasil diperbarui');
-}
 
 
     public function destroy($id)

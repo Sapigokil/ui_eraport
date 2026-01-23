@@ -26,7 +26,7 @@
     <i class="fa-solid fa-pen fa-xs"></i>
 </button>
 
-        <form action="{{ route('pengaturan.input.event.delete', $event->id_event) }}"
+        <form action="{{ route('settings.erapor.input.event.delete', $event->id_event) }}"
             method="POST"
             onsubmit="return confirm('Yakin hapus event ini?')">
             @csrf
@@ -74,7 +74,7 @@
 
 
         {{-- DELETE --}}
-        <form action="{{ route('pengaturan.input.notifikasi.delete', $notif->id_notifikasi) }}"
+        <form action="{{ route('settings.erapor.input.notifikasi.delete', $notif->id_notifikasi) }}"
             method="POST"
             onsubmit="return confirm('Yakin hapus notifikasi ini?')">
             @csrf
