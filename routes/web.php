@@ -25,6 +25,7 @@ use App\Http\Controllers\PesertaEkskulController;
 // Nilai & Rapor
 use App\Http\Controllers\SumatifController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\RekapNilaiController;
 use App\Http\Controllers\NilaiAkhirController;
 use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\RaporController;
@@ -201,12 +202,6 @@ Route::middleware(['auth'])->group(function () {
             });
         });
 
-        // 3. Nilai Akhir
-        Route::group(['prefix' => 'akhir', 'as' => 'nilaiakhir.', 'controller' => NilaiAkhirController::class], function () {
-            Route::get('/', 'index')->name('index');
-            Route::post('hitung', 'hitung')->name('hitung')->middleware('can:nilai.input');
-        });
-
         // 4. Catatan Wali Kelas
         Route::group(['prefix' => 'catatan', 'as' => 'catatan.', 'controller' => CatatanController::class], function () {
             Route::get('/input', 'inputCatatan')->name('input');
@@ -219,6 +214,12 @@ Route::middleware(['auth'])->group(function () {
                 Route::post('/import', 'importExcel')->name('import');
             });
         });
+
+        // 5. Rekap Nilai (Finalisasi) - ✅ Route Name: master.rekap.index
+        Route::group(['prefix' => 'rekap-nilai', 'as' => 'rekap.', 'controller' => RekapNilaiController::class], function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/simpan', 'store')->name('store');
+        });
     });
 
 
@@ -228,6 +229,12 @@ Route::middleware(['auth'])->group(function () {
     // ==========================================================================
     Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.', 'middleware' => ['can:rapor.view']], function () {
         
+        // 3. Nilai Akhir pindah sini
+        Route::group(['prefix' => 'akhir', 'as' => 'nilaiakhir.', 'controller' => NilaiAkhirController::class], function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('hitung', 'hitung')->name('hitung')->middleware('can:nilai.input');
+        });
+    
         // Monitoring
         Route::post('/sinkronkan', [RaporController::class, 'sinkronkanKelas'])->name('sinkronkan');
         Route::post('/sinkronkan-kelas', [RaporController::class, 'sinkronkanKelas'])->name('sinkronkan_kelas');

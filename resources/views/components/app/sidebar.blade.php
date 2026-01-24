@@ -120,7 +120,8 @@
             {{-- ========================================================= --}}
             @can('nilai.view')
             @php
-                $nilaiRoutes = ['master.sumatif.*', 'master.project.*', 'master.catatan.*', 'master.nilaiakhir.*'];
+                // Tambahkan 'rekap.*' ke dalam daftar aktif
+                $nilaiRoutes = ['master.sumatif.*', 'master.project.*', 'master.catatan.*', 'rekap.*'];
                 $isNilaiActive = request()->routeIs($nilaiRoutes); 
             @endphp
 
@@ -140,8 +141,19 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s4') ? 'active' : 'text-white' }}" href="{{ route('master.sumatif.s4') }}"><span class="sidenav-mini-icon"> S4 </span><span class="sidenav-normal"> Nilai Sumatif 4 </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s5') ? 'active' : 'text-white' }}" href="{{ route('master.sumatif.s5') }}"><span class="sidenav-mini-icon"> S5 </span><span class="sidenav-normal"> Nilai Sumatif 5 </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.project.index') ? 'active' : 'text-white' }}" href="{{ route('master.project.index') }}"><span class="sidenav-mini-icon"> P5 </span><span class="sidenav-normal"> Nilai Project </span></a></li>
+                        
+                        {{-- Catatan Walikelas --}}
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.catatan.input') ? 'active' : 'text-white' }}" href="{{ route('master.catatan.input') }}"><span class="sidenav-normal"> Catatan Walikelas </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.nilaiakhir.index') ? 'active' : 'text-white' }}" href="{{ route('master.nilaiakhir.index') }}"><span class="sidenav-mini-icon"> NA </span><span class="sidenav-normal"> Nilai Akhir </span></a></li>
+                        
+                        {{-- MENU BARU: REKAP NILAI (FINALISASI) --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('master.rekap.*') ? 'active' : 'text-white' }}" href="{{ route('master.rekap.index') }}">
+                                <span class="sidenav-mini-icon"> RN </span>
+                                <span class="sidenav-normal"> Rekap Nilai </span>
+                            </a>
+                        </li>
+                        
+                        {{-- Nilai Akhir DIHAPUS dari sini, pindah ke Data Rapor --}}
                     </ul>
                 </div> 
             </li>
@@ -150,9 +162,11 @@
             {{-- ========================================================= --}}
             {{-- 4. LAPORAN & RAPOR (Guru & Admin) --}}
             {{-- ========================================================= --}}
-            @canany(['rapor.view', 'ledger.view'])
+            {{-- Tambahkan 'nilai.view' di permission check agar menu ini muncul untuk guru --}}
+            @canany(['rapor.view', 'ledger.view',])
             @php
-                $raporRoutes = ['rapornilai.*', 'ledger.*'];
+                // Tambahkan route nilaiakhir ke grup ini
+                $raporRoutes = ['rapornilai.*', 'ledger.*', 'master.nilaiakhir.*'];
                 $isRaporActive = request()->routeIs($raporRoutes);
             @endphp
 
@@ -167,6 +181,27 @@
                 <div class="collapse {{ $isRaporActive ? 'show' : '' }}" id="dataRaporMenu">
                     <ul class="nav ms-4 ps-3">
                         
+                        {{-- URUTAN 1: NILAI AKHIR (Arsip/Monitoring) --}}
+                        @can('rapor.view')
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('rapornilai.nilaiakhir.index') ? 'active' : 'text-white' }}" href="{{ route('rapornilai.nilaiakhir.index') }}">
+                                <span class="sidenav-mini-icon"><i class="fas fa-archive text-xs"></i></span>
+                                <span class="nav-link-text ms-1">Nilai Akhir</span>
+                            </a>
+                        </li>
+                        @endcan
+
+                        {{-- URUTAN 2: CETAK RAPOR --}}
+                        @can('rapor.view')
+                        <li class="nav-item">
+                            <a class="nav-link {{ Route::is('rapornilai.cetak') ? 'active' : 'text-white' }}" href="{{ route('rapornilai.cetak') }}">
+                                <span class="sidenav-mini-icon"><i class="fas fa-print text-xs"></i></span>
+                                <span class="nav-link-text ms-1">Cetak Rapor</span>
+                            </a>
+                        </li>
+                        @endcan
+
+                        {{-- URUTAN 3: LEDGER NILAI --}}
                         @can('ledger.view')
                         <li class="nav-item">
                             <a class="nav-link {{ Route::is('ledger.ledger_index') ? 'active' : 'text-white' }}" href="{{ route('ledger.ledger_index') }}">
@@ -176,14 +211,6 @@
                         </li>
                         @endcan
 
-                        @can('rapor.view')
-                        <li class="nav-item">
-                            <a class="nav-link {{ Route::is('rapornilai.cetak') ? 'active' : 'text-white' }}" href="{{ route('rapornilai.cetak') }}">
-                                <span class="sidenav-mini-icon"><i class="fas fa-print text-xs"></i></span>
-                                <span class="nav-link-text ms-1">Cetak Rapor</span>
-                            </a>
-                        </li>
-                        @endcan
                     </ul>
                 </div>
             </li>

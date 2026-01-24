@@ -76,7 +76,7 @@
                             
                             {{-- FORM FILTER NILAI AKHIR (STYLE CLEAN & AUTO-SUBMIT) --}}
                             <div class="p-4 border-bottom">
-                                <form action="{{ route('master.nilaiakhir.index') }}" method="GET" class="row align-items-end mb-0">
+                                <form action="{{ route('rapornilai.nilaiakhir.index') }}" method="GET" class="row align-items-end mb-0">
                                     
                                     {{-- Filter Kelas --}}
                                     <div class="col-md-3 mb-3">
