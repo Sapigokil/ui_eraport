@@ -147,10 +147,10 @@
     
     $wRank = 3;   // Kecil
     $wNo   = 3;   // Kecil
-    $wNama = 18;  // Lebar (Nama Siswa)
+    $wNama = 11;  // Lebar (Nama Siswa)
     
-    $wTotal = 4;
-    $wRata  = 4;
+    $wTotal = 3.5;
+    $wRata  = 3.5;
     
     $wAbsen = 2;  // S, I, A (Masing-masing 2%)
 

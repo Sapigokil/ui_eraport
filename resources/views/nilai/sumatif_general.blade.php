@@ -28,6 +28,18 @@
 @endphp
 
 @section('content')
+    {{-- CSS TAMBAHAN: Hilangkan Spinner --}}
+    <style>
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
         <x-app.navbar />
 
@@ -52,7 +64,7 @@
                         </div>
 
                         <div class="card-body px-0 pb-2">
-                            {{-- FORM FILTER UTAMA (STYLE BERSIH / CLEAN) --}}
+                            {{-- FORM FILTER UTAMA --}}
                             <div class="p-4 border-bottom">
                                 <form action="{{ route('master.sumatif.s' . $sumatifId) }}" method="GET" class="row align-items-end">
                                     <input type="hidden" name="sumatif" id="input_sumatif" value="{{ $sumatifId }}">
@@ -107,7 +119,7 @@
                                 </form>
                             </div>
 
-                            {{-- ALERT SYSTEM (Success/Error PHP) --}}
+                            {{-- ALERT SYSTEM --}}
                             <div class="px-4 mt-3">
                                 @if (session('success'))
                                     <div class="alert bg-gradient-success alert-dismissible text-white fade show" role="alert">
@@ -140,7 +152,7 @@
                                 @endif
                             </div>
 
-                            {{-- BOX INFO SEASON (Penataan Rapi & Berjarak) --}}
+                            {{-- BOX INFO SEASON --}}
                             <div id="season-info-box" class="mx-4 mt-3" style="display: none;">
                                 <div class="d-flex align-items-center bg-light border-radius-lg p-3 border shadow-xs">
                                     <div class="d-flex align-items-center flex-wrap">
@@ -172,7 +184,7 @@
                                 </div>
                             </div>
 
-                            {{-- 🛑 CONTAINER UTAMA (FORM & TABEL) 🛑 --}}
+                            {{-- CONTAINER UTAMA --}}
                             <div id="input-form-container" class="p-4 pt-0">
                                 @if(!request('id_kelas') || !request('id_mapel'))
                                     <p class="text-secondary mt-3 p-3 text-center border rounded">Pilih filter untuk menginput nilai Sumatif {{ $sumatifId }}.</p>
@@ -262,7 +274,6 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Kelas:</label>
-                            {{-- Class ajax-select-kelas digunakan untuk trigger JS ambil mapel --}}
                             <select name="id_kelas" required class="form-select ajax-select-kelas" data-target="#mapel_download">
                                 <option value="">Pilih Kelas</option>
                                 @foreach(\App\Models\Kelas::orderBy('nama_kelas')->get() as $k)
@@ -317,7 +328,6 @@
                             <p class="text-secondary font-weight-bold">Pastikan data Excel sesuai dengan template.</p>
                         </div>
 
-                        {{-- Kolom Kelas (Read-Only) --}}
                         <div class="mb-3">
                             <label class="form-label">Kelas:</label>
                             <select name="id_kelas" required class="form-select bg-light" style="pointer-events: none;" tabindex="-1">
@@ -329,7 +339,6 @@
                             </select>
                         </div>
 
-                        {{-- Kolom Mata Pelajaran (Read-Only) --}}
                         <div class="mb-3">
                             <label class="form-label">Mata Pelajaran:</label>
                             <select name="id_mapel" id="mapel_import" required class="form-select bg-light" style="pointer-events: none;" tabindex="-1">
@@ -342,13 +351,11 @@
                             </select>
                         </div>
 
-                        {{-- Kolom Semester (Read-Only) --}}
                         <div class="mb-3">
                             <label class="form-label">Semester:</label>
                             <input type="text" name="semester" value="{{ request('semester', $defaultSemester) }}" class="form-control bg-light" readonly>
                         </div>
 
-                        {{-- Kolom Tahun Ajaran (Read-Only) --}}
                         <div class="mb-3">
                             <label class="form-label">Tahun Ajaran:</label>
                             <input type="text" name="tahun_ajaran" value="{{ request('tahun_ajaran', $defaultTahunAjaran) }}" class="form-control bg-light" readonly>
@@ -411,7 +418,6 @@
                                     statusBadge.attr('class', 'badge badge-sm bg-gradient-danger');
                                 }
                                 
-                                // Rentang Tanggal (Gunakan format dari controller)
                                 if(response.season.start && response.season.end) {
                                     $('#info-date-range').text(response.season.start + ' s/d ' + response.season.end);
                                 } else {
@@ -427,16 +433,13 @@
                             if(response.status === 'locked_season' || response.status === 'warning') {
                                 $('#prerequisite-message').html(response.message);
                                 
-                                // Reset class warna agar tidak bentrok
                                 alertContainer.removeClass('alert-danger alert-warning text-dark text-white');
 
                                 if(response.status === 'locked_season') {
-                                    // GAYA MERAH (Akses Ditolak) - Teks Gelap sesuai preferensi gambar sebelumnya
                                     alertContainer.addClass('alert-danger text-dark');
                                     $('#alert-icon').attr('class', 'fas fa-ban me-3 mt-1 text-danger');
                                     $('#alert-title').text('AKSES DITOLAK').addClass('text-danger');
                                 } else {
-                                    // GAYA KUNING (Prasyarat)
                                     alertContainer.addClass('alert-warning text-dark');
                                     $('#alert-icon').attr('class', 'fas fa-exclamation-triangle me-3 mt-1 text-warning');
                                     $('#alert-title').text('PERHATIAN').removeClass('text-danger');
@@ -446,7 +449,6 @@
                                 $('#input-form-container').slideUp();
                                 btnImportTrigger.prop('disabled', true).addClass('opacity-5');
                             } else {
-                                // Status Safe
                                 $('#prerequisite-alert').slideUp();
                                 $('#input-form-container').slideDown();
                                 btnImportTrigger.prop('disabled', false).removeClass('opacity-5');
@@ -456,7 +458,6 @@
                 }
             }
 
-            // Jalankan check saat page load
             checkPrerequisite();
 
             // --- 2. DROPDOWN MAPEL DINAMIS ---
@@ -477,7 +478,6 @@
                                 html += `<option value="${item.id_mapel}">${item.nama_mapel}</option>`;
                             });
                             dropdownMapel.html(html);
-                            // Re-check prerequisite setelah mapel berubah
                             checkPrerequisite();
                         }
                     });
@@ -492,6 +492,16 @@
                 if($(this).attr('method') === 'POST' && !$(this).hasClass('no-loading')){
                     $('#loadingOverlay').css('display', 'flex');
                 }
+            });
+
+            // --- 3. DISABLE MOUSE WHEEL SCROLL ON INPUT NUMBER ---
+            $('form').on('focus', 'input[type=number]', function (e) {
+                $(this).on('wheel.disableScroll', function (e) {
+                    e.preventDefault();
+                })
+            });
+            $('form').on('blur', 'input[type=number]', function (e) {
+                $(this).off('wheel.disableScroll');
             });
         });
     </script>

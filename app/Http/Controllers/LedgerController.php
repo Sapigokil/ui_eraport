@@ -82,7 +82,7 @@ class LedgerController extends Controller
 
     /**
      * =========================================================================
-     * 2. CORE LOGIC (FIXED: ARRAY MAPPING)
+     * 2. CORE LOGIC (FIXED: SORTING MAPEL AGAMA FIRST)
      * =========================================================================
      */
     private function buildDataCore($kelasIds, $semesterInt, $tahun_ajaran)
@@ -145,7 +145,25 @@ class LedgerController extends Controller
                     'urutan'       => $first->urutan
                 ];
             })
-            ->sortBy(fn($m) => $m->kategori . '-' . $m->urutan)
+            // 🛑 FIX: LOGIKA SORTING (Agama Paling Atas)
+            ->sort(function ($a, $b) {
+                // 1. Cek apakah salah satunya adalah AGAMA
+                $aIsAgama = ($a->id_mapel === 'AGAMA');
+                $bIsAgama = ($b->id_mapel === 'AGAMA');
+
+                // Jika A adalah Agama, dia harus di atas (return -1)
+                if ($aIsAgama && !$bIsAgama) return -1;
+                // Jika B adalah Agama, dia harus di atas (return 1)
+                if (!$aIsAgama && $bIsAgama) return 1;
+
+                // 2. Jika sama-sama bukan agama (atau sama-sama agama), urutkan by Kategori
+                if ($a->kategori != $b->kategori) {
+                    return $a->kategori <=> $b->kategori;
+                }
+
+                // 3. Terakhir urutkan by Urutan
+                return $a->urutan <=> $b->urutan;
+            })
             ->values();
 
         // -----------------------------------------------------------
@@ -156,9 +174,8 @@ class LedgerController extends Controller
             ->get();
 
         // -----------------------------------------------------------
-        // C. Ambil Nilai Akhir (FIX ARRAY MAPPING)
+        // C. Ambil Nilai Akhir
         // -----------------------------------------------------------
-        // Ambil Data Mentah
         $rawNilai = DB::table('nilai_akhir')
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
             ->where('semester', $semesterInt)
@@ -166,17 +183,15 @@ class LedgerController extends Controller
             ->select('id_siswa', 'id_mapel', 'nilai_akhir') 
             ->get();
 
-        // 🔥 FIX PENTING: Mapping ke Array PHP Multidimensi [id_siswa][id_mapel]
-        // Ini lebih cepat dan mencegah bug "hanya siswa pertama yang muncul"
         $mapNilai = [];
         foreach ($rawNilai as $rn) {
             $sId = $rn->id_siswa;
-            $mId = (string)$rn->id_mapel; // Pastikan string agar cocok dengan ID Pancasila (2)
+            $mId = (string)$rn->id_mapel; 
             $mapNilai[$sId][$mId] = $rn->nilai_akhir;
         }
 
         // -----------------------------------------------------------
-        // D. Ambil Absensi (FIX ARRAY MAPPING)
+        // D. Ambil Absensi
         // -----------------------------------------------------------
         $rawAbsen = DB::table('catatan')
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
@@ -205,14 +220,12 @@ class LedgerController extends Controller
 
                 // LOGIKA KHUSUS AGAMA
                 if ($mapel->id_mapel === 'AGAMA') {
-                    // Cek apakah siswa punya nilai di SALAH SATU mapel agama
                     foreach ($globalAgamaIds as $idAgamaAsli) {
-                        // Cek di array mapping
                         if (isset($mapNilai[$siswa->id_siswa][$idAgamaAsli])) {
                             $val = $mapNilai[$siswa->id_siswa][$idAgamaAsli];
                             if ($val > 0) {
                                 $score = $val;
-                                break; // Ketemu, keluar loop agama
+                                break; 
                             }
                         }
                     }
@@ -225,7 +238,6 @@ class LedgerController extends Controller
                     }
                 }
 
-                // Simpan Angka (Int/Float)
                 $nilaiPerMapel[$mapel->id_mapel] = $score;
 
                 if ($score > 0) {
@@ -234,7 +246,6 @@ class LedgerController extends Controller
                 }
             }
 
-            // Ambil Absen dari Array Mapping
             $absensi = $mapAbsen[$siswa->id_siswa] ?? null;
 
             $dataLedger[] = (object)[

@@ -28,6 +28,20 @@
 @endphp
 
 @section('content')
+{{-- CSS TAMBAHAN: Hilangkan Spinner pada Input Number --}}
+<style>
+    /* Chrome, Safari, Edge, Opera */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    /* Firefox */
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+</style>
+
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
     <x-app.navbar />
     <div class="container-fluid py-4 px-5">
@@ -290,6 +304,10 @@
     </div>
 </div>
 
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 9999;">
+    <div class="spinner-border text-light me-3" role="status"></div> Sedang memproses...
+</div>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
@@ -383,6 +401,16 @@
             if($(this).attr('method') === 'POST' && !$(this).hasClass('no-loading')){
                 $('#loadingOverlay').css('display', 'flex');
             }
+        });
+
+        // --- 3. DISABLE SCROLL MOUSE ON INPUT NUMBER ---
+        $('form').on('focus', 'input[type=number]', function (e) {
+            $(this).on('wheel.disableScroll', function (e) {
+                e.preventDefault();
+            })
+        });
+        $('form').on('blur', 'input[type=number]', function (e) {
+            $(this).off('wheel.disableScroll');
         });
     });
 </script>
