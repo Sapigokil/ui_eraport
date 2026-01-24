@@ -20,17 +20,11 @@ class LedgerController extends Controller
      * =========================================================================
      */
 
-    /**
-     * Helper: Mapping Semester String ke Integer
-     */
     private function mapSemesterToInt(?string $semester): int
     {
         return (strtoupper($semester) == 'GENAP') ? 2 : 1;
     }
 
-    /**
-     * Helper: Sorting Data Ledger (Ranking)
-     */
     private function sortLedger($dataLedger)
     {
         return collect($dataLedger)
@@ -47,9 +41,6 @@ class LedgerController extends Controller
             ->all();
     }
 
-    /**
-     * Helper: Generate Nama File Export
-     */
     private function buildFilename(Request $request, string $ext): string
     {
         $kelas = Kelas::find($request->id_kelas);
@@ -64,9 +55,6 @@ class LedgerController extends Controller
         return "Ledger_{$namaKelas}_{$semester}_{$tahun}.{$ext}";
     }
 
-    /**
-     * Helper: Mendapatkan List ID Kelas berdasarkan Filter
-     */
     private function getKelasIdsFromRequest(Request $request)
     {
         $mode = $request->mode ?? 'kelas';
@@ -94,13 +82,13 @@ class LedgerController extends Controller
 
     /**
      * =========================================================================
-     * 2. CORE LOGIC (STRUKTUR LAMA + DATA NILAI TEPAT)
+     * 2. CORE LOGIC (FIXED: ARRAY MAPPING)
      * =========================================================================
      */
     private function buildDataCore($kelasIds, $semesterInt, $tahun_ajaran)
     {
         // -----------------------------------------------------------
-        // A. Ambil Data Mapel (Header Tabel - Logic Lama)
+        // A. Ambil Data Mapel (Header Tabel)
         // -----------------------------------------------------------
         $rawMapelData = DB::table('pembelajaran')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
@@ -128,14 +116,14 @@ class LedgerController extends Controller
         $globalAgamaIds = DB::table('mata_pelajaran')
             ->where('nama_mapel', 'LIKE', '%Agama%')
             ->pluck('id_mapel')
+            ->map(fn($id) => (string)$id) // Force String
             ->toArray();
         
-        // Fix jika ada mapel agama zombie (ID 1)
-        if (!in_array(1, $globalAgamaIds)) {
-            $globalAgamaIds[] = 1; 
+        if (!in_array("1", $globalAgamaIds)) {
+            $globalAgamaIds[] = "1"; 
         }
 
-        // Grouping Header Mapel (Agar kolom Agama jadi satu)
+        // Grouping Header Mapel
         $daftarMapel = $rawMapelData
             ->groupBy('mapel_key')
             ->map(function ($items) {
@@ -150,7 +138,7 @@ class LedgerController extends Controller
                     ];
                 }
                 return (object)[
-                    'id_mapel'     => $first->id_mapel,
+                    'id_mapel'     => (string)$first->id_mapel,
                     'nama_mapel'   => $first->nama_mapel,
                     'nama_singkat' => $first->nama_singkat,
                     'kategori'     => $first->kategori,
@@ -168,26 +156,39 @@ class LedgerController extends Controller
             ->get();
 
         // -----------------------------------------------------------
-        // C. Ambil Nilai Akhir (KONSISTENSI RAPOR)
+        // C. Ambil Nilai Akhir (FIX ARRAY MAPPING)
         // -----------------------------------------------------------
-        $nilaiList = DB::table('nilai_akhir')
+        // Ambil Data Mentah
+        $rawNilai = DB::table('nilai_akhir')
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
             ->where('semester', $semesterInt)
             ->where('tahun_ajaran', trim($tahun_ajaran))
             ->select('id_siswa', 'id_mapel', 'nilai_akhir') 
-            ->get()
-            ->groupBy(fn ($n) => $n->id_siswa . '-' . $n->id_mapel);
+            ->get();
+
+        // 🔥 FIX PENTING: Mapping ke Array PHP Multidimensi [id_siswa][id_mapel]
+        // Ini lebih cepat dan mencegah bug "hanya siswa pertama yang muncul"
+        $mapNilai = [];
+        foreach ($rawNilai as $rn) {
+            $sId = $rn->id_siswa;
+            $mId = (string)$rn->id_mapel; // Pastikan string agar cocok dengan ID Pancasila (2)
+            $mapNilai[$sId][$mId] = $rn->nilai_akhir;
+        }
 
         // -----------------------------------------------------------
-        // D. Ambil Absensi
+        // D. Ambil Absensi (FIX ARRAY MAPPING)
         // -----------------------------------------------------------
-        $absensiList = DB::table('catatan')
+        $rawAbsen = DB::table('catatan')
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
             ->where('semester', $semesterInt)
             ->where('tahun_ajaran', trim($tahun_ajaran))
             ->select('id_siswa', 'sakit', 'ijin', 'alpha')
-            ->get()
-            ->keyBy('id_siswa');
+            ->get();
+        
+        $mapAbsen = [];
+        foreach ($rawAbsen as $ra) {
+            $mapAbsen[$ra->id_siswa] = $ra;
+        }
 
         // -----------------------------------------------------------
         // E. Build Data Ledger
@@ -204,27 +205,27 @@ class LedgerController extends Controller
 
                 // LOGIKA KHUSUS AGAMA
                 if ($mapel->id_mapel === 'AGAMA') {
+                    // Cek apakah siswa punya nilai di SALAH SATU mapel agama
                     foreach ($globalAgamaIds as $idAgamaAsli) {
-                        $key = $siswa->id_siswa . '-' . $idAgamaAsli;
-                        if (isset($nilaiList[$key])) {
-                            $val = $nilaiList[$key][0]->nilai_akhir ?? 0;
-                            $score = $val; 
-                            if ($score > 0) break; 
+                        // Cek di array mapping
+                        if (isset($mapNilai[$siswa->id_siswa][$idAgamaAsli])) {
+                            $val = $mapNilai[$siswa->id_siswa][$idAgamaAsli];
+                            if ($val > 0) {
+                                $score = $val;
+                                break; // Ketemu, keluar loop agama
+                            }
                         }
                     }
                 } 
                 // LOGIKA MAPEL BIASA
                 else {
-                    $key = $siswa->id_siswa . '-' . $mapel->id_mapel;
-                    if (isset($nilaiList[$key])) {
-                        $val = $nilaiList[$key][0]->nilai_akhir ?? 0;
-                        $score = $val;
+                    $mId = (string)$mapel->id_mapel;
+                    if (isset($mapNilai[$siswa->id_siswa][$mId])) {
+                        $score = $mapNilai[$siswa->id_siswa][$mId];
                     }
                 }
 
-                // 🛑 FIX UTAMA: Simpan nilai LANGSUNG sebagai angka (Bukan Object)
-                // Ini memperbaiki error "Object could not be converted to int"
-                // Dan menghapus predikat sesuai permintaan.
+                // Simpan Angka (Int/Float)
                 $nilaiPerMapel[$mapel->id_mapel] = $score;
 
                 if ($score > 0) {
@@ -233,14 +234,14 @@ class LedgerController extends Controller
                 }
             }
 
-            // Absen
-            $absensi = $absensiList[$siswa->id_siswa] ?? null;
+            // Ambil Absen dari Array Mapping
+            $absensi = $mapAbsen[$siswa->id_siswa] ?? null;
 
             $dataLedger[] = (object)[
                 'nama_siswa' => $siswa->nama_siswa,
                 'nipd'       => $siswa->nipd,
                 'nisn'       => $siswa->nisn,
-                'scores'     => $nilaiPerMapel, // Array Angka: ['101' => 85, '102' => 90]
+                'scores'     => $nilaiPerMapel, 
                 'total'      => $totalNilai,
                 'rata_rata'  => $jumlahMapelTerisi ? round($totalNilai / $jumlahMapelTerisi, 2) : 0,
                 'absensi'    => (object)[
