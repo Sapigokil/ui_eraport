@@ -4,7 +4,7 @@
 
 {{-- CSS KHUSUS: CLEAN & READABLE --}}
 <style>
-    /* Table Header: Gradient & White Text (Jelas & Tegas) */
+    /* Table Header */
     .th-header { 
         color: #fff !important; 
         text-transform: uppercase; 
@@ -15,28 +15,40 @@
         font-weight: 700 !important;
     }
     
-    /* Input Styling */
-    .input-nilai {
-        border: 1px solid #d2d6da !important;
-        border-radius: 4px !important;
-        font-weight: 600 !important;
-        color: #344767 !important;
-        text-align: center;
-    }
-    .input-nilai:focus {
-        border-color: #e91e63 !important; 
-        box-shadow: 0 0 0 2px rgba(233, 30, 99, 0.1) !important;
-        outline: none;
-    }
-    .input-nilai:disabled {
-        background-color: #e9ecef !important;
-        color: #6c757d !important;
-    }
-    textarea.form-control:disabled {
-        background-color: #e9ecef !important;
-        color: #6c757d !important;
-    }
+    /* Background Readonly Columns */
     .bg-read-only { background-color: #f8f9fa !important; }
+    
+    /* Capaian Text Styling */
+    .text-capaian {
+        font-size: 0.75rem !important;
+        line-height: 1.5 !important;
+        color: #344767 !important;
+        white-space: normal !important; /* Pastikan text wrapping */
+        text-align: justify;
+    }
+    /* Membuat Link memenuhi sel tabel */
+    .td-clickable {
+        padding: 0 !important; /* Hapus padding default TD */
+        vertical-align: middle !important;
+    }
+    
+    .cell-link {
+        display: block;
+        width: 100%;
+        height: 100%;
+        padding: 10px 5px; /* Padding dipindah ke sini */
+        text-decoration: none;
+        color: inherit;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+
+    /* Efek Hover: Biru Muda Transparan */
+    .cell-link:hover {
+        background-color: #e3f2fd; 
+        color: #1976d2 !important;
+        cursor: pointer;
+    }
 </style>
 
 @section('content')
@@ -72,10 +84,10 @@
                         
                         {{-- ALERT --}}
                         @if (session('success'))
-                            <div class="alert alert-success text-white mx-4 font-weight-bold shadow-sm"><i class="fas fa-check-circle me-2"></i> {!! session('success') !!}</div>
+                            <div class="alert alert-success text-dark mx-4 font-weight-bold shadow-sm"><i class="fas fa-check-circle me-2"></i> {!! session('success') !!}</div>
                         @endif
                         @if (session('error'))
-                            <div class="alert alert-danger text-white mx-4 font-weight-bold shadow-sm"><i class="fas fa-times-circle me-2"></i> {{ session('error') }}</div>
+                            <div class="alert alert-danger text-dark mx-4 font-weight-bold shadow-sm"><i class="fas fa-times-circle me-2"></i> {{ session('error') }}</div>
                         @endif
 
                         {{-- BOX INFO SEASON --}}
@@ -90,10 +102,14 @@
                                         <div class="d-flex align-items-center me-4">
                                             <span class="badge badge-sm bg-gradient-dark me-2">{{ $seasonDetail->semester == 1 ? 'GANJIL' : 'GENAP' }}</span>
                                             <span class="badge badge-sm bg-gradient-dark me-2">{{ $seasonDetail->tahun_ajaran }}</span>
-                                            @if($seasonDetail->is_open)
+                                            
+                                            {{-- LOGIKA STATUS --}}
+                                            @if($seasonOpen)
                                                 <span class="badge badge-sm bg-gradient-success">OPEN</span>
-                                            @else
+                                            @elseif(!$seasonDetail->is_open)
                                                 <span class="badge badge-sm bg-gradient-secondary">CLOSED</span>
+                                            @else
+                                                <span class="badge badge-sm bg-gradient-danger">EXPIRED</span>
                                             @endif
                                         </div>
                                         <div class="d-flex align-items-center border-start ps-4">
@@ -176,7 +192,7 @@
                             </div>
                         </div>
 
-                        {{-- TABEL UTAMA (SELALU MUNCUL JIKA KELAS DIPILIH) --}}
+                        {{-- TABEL UTAMA --}}
                         <div class="p-4 pt-3">
                             @if(!empty($dataSiswa))
                                 <form action="{{ route('master.rekap.store') }}" method="POST">
@@ -190,38 +206,33 @@
                                         <table class="table align-items-center mb-0">
                                             <thead>
                                                 <tr>
-                                                    {{-- IDENTITAS --}}
                                                     <th rowspan="2" class="th-header bg-gradient-secondary text-center" style="width: 5%">No</th>
                                                     <th rowspan="2" class="th-header bg-gradient-secondary ps-3" style="width: 20%">Siswa</th>
                                                     
-                                                    {{-- SUMATIF --}}
-                                                    <th colspan="7" class="th-header bg-gradient-info text-center">SUMATIF (PENGETAHUAN)</th>
+                                                    <th colspan="7" class="th-header bg-gradient-info text-center">NILAI SUMATIF</th>
+                                                    <th colspan="2" class="th-header bg-gradient-success text-center">NILAI PROJECT</th>
                                                     
-                                                    {{-- PROJECT --}}
-                                                    <th colspan="2" class="th-header bg-gradient-success text-center">PROJECT (P5)</th>
-                                                    
-                                                    {{-- AKHIR --}}
-                                                    <th rowspan="2" class="th-header bg-gradient-primary text-center">AKHIR</th>
-                                                    <th rowspan="2" class="th-header bg-gradient-primary text-center">CAPAIAN KOMPETENSI</th>
+                                                    <th rowspan="2" class="th-header bg-gradient-primary text-center">NILAI AKHIR</th>
+                                                    <th rowspan="2" class="th-header bg-gradient-primary text-center" style="min-width: 250px;">CAPAIAN KOMPETENSI</th>
                                                     <th rowspan="2" class="th-header bg-gradient-secondary text-center">STATUS</th>
                                                 </tr>
                                                 <tr>
-                                                    {{-- Sub Header --}}
                                                     <th class="th-header bg-gradient-info text-center opacity-8">S1</th>
                                                     <th class="th-header bg-gradient-info text-center opacity-8">S2</th>
                                                     <th class="th-header bg-gradient-info text-center opacity-8">S3</th>
                                                     <th class="th-header bg-gradient-info text-center opacity-8">S4</th>
                                                     <th class="th-header bg-gradient-info text-center opacity-8">S5</th>
-                                                    <th class="th-header bg-gradient-info text-center font-weight-bolder">RATA</th>
+                                                    <th class="th-header bg-gradient-info text-center font-weight-bolder">RATA - RATA</th>
                                                     <th class="th-header bg-gradient-info text-center font-weight-bolder">BOBOT</th>
 
-                                                    <th class="th-header bg-gradient-success text-center opacity-8">NILAI</th>
+                                                    <th class="th-header bg-gradient-success text-center opacity-8">PROJECT</th>
                                                     <th class="th-header bg-gradient-success text-center font-weight-bolder">BOBOT</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach($dataSiswa as $i => $s)
                                                 <tr class="border-bottom hover:bg-gray-100">
+                                                    {{-- NO & IDENTITAS --}}
                                                     <td class="text-center text-sm text-secondary font-weight-bold">{{ $i + 1 }}</td>
                                                     <td class="px-3">
                                                         <div class="d-flex flex-column justify-content-center">
@@ -230,30 +241,78 @@
                                                         </div>
                                                     </td>
                                                     
-                                                    <td class="text-center text-xs text-secondary font-weight-bold">{{ $s->s1 }}</td>
-                                                    <td class="text-center text-xs text-secondary font-weight-bold">{{ $s->s2 }}</td>
-                                                    <td class="text-center text-xs text-secondary font-weight-bold">{{ $s->s3 }}</td>
-                                                    <td class="text-center text-xs text-secondary font-weight-bold">{{ $s->s4 }}</td>
-                                                    <td class="text-center text-xs text-secondary font-weight-bold">{{ $s->s5 }}</td>
+                                                    {{-- SUMATIF 1 (Route: master.sumatif.s1) --}}
+                                                    <td class="text-center text-xs td-clickable">
+                                                        <a href="{{ route('master.sumatif.s1', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" 
+                                                        class="cell-link text-secondary" target="_blank" title="Edit S1">
+                                                            {{ $s->s1 }}
+                                                        </a>
+                                                    </td>
+
+                                                    {{-- SUMATIF 2 (Route: master.sumatif.s2) --}}
+                                                    <td class="text-center text-xs td-clickable">
+                                                        <a href="{{ route('master.sumatif.s2', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" 
+                                                        class="cell-link text-secondary" target="_blank" title="Edit S2">
+                                                            {{ $s->s2 }}
+                                                        </a>
+                                                    </td>
+
+                                                    {{-- SUMATIF 3 (Route: master.sumatif.s3) --}}
+                                                    <td class="text-center text-xs td-clickable">
+                                                        <a href="{{ route('master.sumatif.s3', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" 
+                                                        class="cell-link text-secondary" target="_blank" title="Edit S3">
+                                                            {{ $s->s3 }}
+                                                        </a>
+                                                    </td>
+
+                                                    {{-- SUMATIF 4 (Route: master.sumatif.s4) --}}
+                                                    <td class="text-center text-xs td-clickable">
+                                                        <a href="{{ route('master.sumatif.s4', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" 
+                                                        class="cell-link text-secondary" target="_blank" title="Edit S4">
+                                                            {{ $s->s4 }}
+                                                        </a>
+                                                    </td>
+
+                                                    {{-- SUMATIF 5 (Route: master.sumatif.s5) --}}
+                                                    <td class="text-center text-xs td-clickable">
+                                                        <a href="{{ route('master.sumatif.s5', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" 
+                                                        class="cell-link text-secondary" target="_blank" title="Edit S5">
+                                                            {{ $s->s5 }}
+                                                        </a>
+                                                    </td>
                                                     
+                                                    {{-- RATA & BOBOT SUMATIF (READ ONLY) --}}
                                                     <td class="text-center text-sm font-weight-bolder text-info bg-read-only border-start">{{ $s->rata_s }}</td>
                                                     <td class="text-center text-sm font-weight-bolder text-dark bg-read-only">{{ $s->bobot_s_v }}</td>
                                                     
-                                                    <td class="text-center text-sm font-weight-bold text-success bg-read-only border-start">{{ $s->nilai_p }}</td>
+                                                    {{-- NILAI PROJECT (Route: master.project.index) --}}
+                                                    <td class="text-center text-sm font-weight-bold td-clickable border-start">
+                                                        <a href="{{ route('master.project.index', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" 
+                                                        class="cell-link text-success" target="_blank" title="Edit Nilai Project">
+                                                            {{ $s->nilai_p }}
+                                                        </a>
+                                                    </td>
+
+                                                    {{-- BOBOT PROJECT (READ ONLY) --}}
                                                     <td class="text-center text-sm font-weight-bolder text-dark bg-read-only">{{ $s->bobot_p_v }}</td>
                                                     
-                                                    <td class="align-middle text-center p-2 border-start">
-                                                        <div class="input-group input-group-outline input-group-sm justify-content-center">
-                                                            <input type="number" name="data[{{ $s->id_siswa }}][nilai_akhir]" class="form-control input-nilai" value="{{ $s->nilai_akhir }}" data-rumus="{{ $s->na_rumus }}" min="0" max="100" style="max-width: 70px;" {{ !$seasonOpen ? 'disabled' : '' }}>
-                                                        </div>
+                                                    {{-- NILAI AKHIR (READ ONLY - TEXT) --}}
+                                                    <td class="align-middle text-center p-2 border-start bg-read-only">
+                                                        <h6 class="mb-0 text-sm font-weight-bolder text-primary">
+                                                            {{ $s->nilai_akhir }}
+                                                        </h6>
+                                                        <input type="hidden" name="data[{{ $s->id_siswa }}][nilai_akhir]" value="{{ $s->nilai_akhir }}">
                                                     </td>
 
-                                                    <td class="align-middle p-2">
-                                                        <div class="input-group input-group-outline">
-                                                            <textarea name="data[{{ $s->id_siswa }}][deskripsi]" class="form-control text-secondary" rows="2" style="min-width: 220px;" {{ !$seasonOpen ? 'disabled' : '' }}>{{ $s->deskripsi }}</textarea>
+                                                    {{-- CAPAIAN (READ ONLY - TEXT FULL) --}}
+                                                    <td class="align-middle p-3">
+                                                        <div class="text-capaian">
+                                                            {{ $s->deskripsi }}
                                                         </div>
+                                                        <input type="hidden" name="data[{{ $s->id_siswa }}][deskripsi]" value="{{ $s->deskripsi }}">
                                                     </td>
 
+                                                    {{-- STATUS --}}
                                                     <td class="text-center align-middle">
                                                         @if($s->is_saved)
                                                             <span class="badge badge-sm bg-gradient-success">TERSIMPAN</span>
@@ -269,24 +328,13 @@
 
                                     <div class="d-flex justify-content-between mt-4 align-items-center">
                                         <div class="text-xs text-secondary">
-                                            @if(!$seasonOpen)
-                                                <i class="fas fa-lock me-1 text-danger"></i> <span class="text-danger font-weight-bold">Mode Baca Saja (Read Only)</span> - Season Terkunci.
-                                            @else
-                                                <i class="fas fa-info-circle me-1"></i> Nilai Akhir otomatis dihitung.
-                                            @endif
+                                            <i class="fas fa-info-circle me-1"></i> Data Nilai Akhir & Capaian dihitung otomatis oleh sistem. Klik Simpan untuk melakukan finalisasi ke Rapor.
                                         </div>
                                         <div class="d-flex gap-2">
-                                            {{-- TOMBOL RESET (Hanya jika aktif) --}}
-                                            @if($seasonOpen)
-                                            <button type="button" class="btn btn-outline-dark btn-sm mb-0" onclick="resetKeRumus()">
-                                                <i class="fas fa-undo me-1"></i> Reset Original
-                                            </button>
-                                            @endif
-
                                             {{-- TOMBOL SIMPAN (Disable jika terkunci) --}}
                                             @if($seasonOpen)
                                                 <button type="submit" class="btn bg-gradient-primary btn-lg mb-0 shadow-lg">
-                                                    <i class="fas fa-save me-2"></i> SIMPAN PERUBAHAN
+                                                    <i class="fas fa-save me-2"></i> SIMPAN FINALISASI
                                                 </button>
                                             @else
                                                 <button type="button" class="btn btn-secondary btn-lg mb-0" disabled>
@@ -319,14 +367,4 @@
     </div>
     <x-app.footer />
 </main>
-
-<script>
-    function resetKeRumus() {
-        if(confirm('Yakin ingin mereset semua nilai editan kembali ke perhitungan rumus otomatis?')) {
-            document.querySelectorAll('.input-nilai').forEach(input => {
-                input.value = input.getAttribute('data-rumus');
-            });
-        }
-    }
-</script>
 @endsection

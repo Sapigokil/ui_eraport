@@ -20,11 +20,10 @@ class RekapNilaiController extends Controller
      */
     public function index(Request $request)
     {
-        // 1. SETTING DEFAULT (OTOMATIS BERDASARKAN BULAN)
-        $bulanSekarang = date('n'); // 1-12
+        // 1. SETTING DEFAULT
+        $bulanSekarang = date('n'); 
         $tahunSekarang = date('Y');
 
-        // Logika: Juli - Desember = Ganjil, Januari - Juni = Genap
         if ($bulanSekarang >= 7) {
             $semDefault = 'Ganjil';
             $taDefault  = $tahunSekarang . '/' . ($tahunSekarang + 1);
@@ -33,34 +32,36 @@ class RekapNilaiController extends Controller
             $taDefault  = ($tahunSekarang - 1) . '/' . $tahunSekarang;
         }
 
-        // Ambil dari Request jika ada, jika tidak gunakan Default di atas
         $id_kelas     = $request->id_kelas;
         $id_mapel     = $request->id_mapel;
         $semesterRaw  = $request->semester ?? $semDefault;
         $tahun_ajaran = $request->tahun_ajaran ?? $taDefault;
-        
-        // Konversi Semester ke Int (1/2)
         $semesterInt  = (strtoupper($semesterRaw) == 'GENAP' || $semesterRaw == '2') ? 2 : 1;
 
-        // 2. DATA MASTER & FILTER
-        $kelas = Kelas::orderBy('nama_kelas', 'asc')->get();
+        // 2. DATA MASTER
+        $kelas = \App\Models\Kelas::orderBy('nama_kelas', 'asc')->get();
         $mapelList = [];
         $dataSiswa = [];
         $bobotInfo = null;
         $seasonDetail = null;
 
-        // 3. CEK SEASON (JADWAL INPUT)
-        // Helper checkSeason tetap dipanggil untuk status
-        $seasonStatus = $this->checkSeason($tahun_ajaran, $semesterInt);
-        $seasonOpen   = $seasonStatus['is_open'];
-        $seasonMessage = $seasonStatus['message'];
+        // 3. CEK SEASON
+        // Pastikan method checkSeason ada di Controller ini atau Traits
+        if (method_exists($this, 'checkSeason')) {
+            $seasonStatus = $this->checkSeason($tahun_ajaran, $semesterInt);
+            $seasonOpen   = $seasonStatus['is_open'];
+            $seasonMessage = $seasonStatus['message'];
+        } else {
+            // Fallback jika method tidak ada
+            $seasonOpen = true; 
+            $seasonMessage = '';
+        }
         
-        // Ambil Detail Season untuk Tampilan View
-        $seasonDetail = Season::where('tahun_ajaran', $tahun_ajaran)
+        $seasonDetail = \App\Models\Season::where('tahun_ajaran', $tahun_ajaran)
             ->where('semester', $semesterInt)
             ->first();
 
-        // 4. AMBIL LIST MAPEL (Jika Kelas Dipilih)
+        // 4. AMBIL MAPEL
         if ($id_kelas) {
             $mapelList = DB::table('pembelajaran')
                 ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
@@ -73,21 +74,60 @@ class RekapNilaiController extends Controller
                 ->get();
         }
 
-        // 5. PROSES DATA SISWA (Dilakukan meskipun Season Terkunci)
+        // 5. PROSES DATA
         if ($id_kelas && $id_mapel) {
-            // Ambil Bobot
-            $bobot = BobotNilai::where('tahun_ajaran', $tahun_ajaran)
+            $bobot = \App\Models\BobotNilai::where('tahun_ajaran', $tahun_ajaran)
                 ->where('semester', strtoupper($semesterRaw))
                 ->first();
             
             $bobotInfo = $bobot;
 
-            // Set Default Bobot jika kosong (agar tidak error pembagian)
             $pSumatif  = $bobot->bobot_sumatif ?? 50;
             $pProject  = $bobot->bobot_project ?? 50;
             $targetMin = $bobot->jumlah_sumatif ?? 0;
 
-            $siswa = Siswa::where('id_kelas', $id_kelas)->orderBy('nama_siswa')->get();
+            // --- MODIFIKASI: FILTER AGAMA ---
+            
+            // A. Cek Nama Mapel
+            $mapelActive = DB::table('mata_pelajaran')->where('id_mapel', $id_mapel)->first();
+            $namaMapel   = $mapelActive->nama_mapel ?? '';
+
+            // B. Tentukan Filter Berdasarkan Nama Mapel
+            $filterAgama = null; 
+
+            if (stripos($namaMapel, 'Islam') !== false) {
+                $filterAgama = ['islam'];
+            } elseif (stripos($namaMapel, 'Kristen') !== false || stripos($namaMapel, 'Protestan') !== false) {
+                $filterAgama = ['kristen', 'protestan'];
+            } elseif (stripos($namaMapel, 'Katholik') !== false || stripos($namaMapel, 'Katolik') !== false) {
+                $filterAgama = ['katholik', 'katolik'];
+            } elseif (stripos($namaMapel, 'Hindu') !== false) {
+                $filterAgama = ['hindu'];
+            } elseif (stripos($namaMapel, 'Buddha') !== false || stripos($namaMapel, 'Budha') !== false) {
+                $filterAgama = ['buddha', 'budha'];
+            } elseif (stripos($namaMapel, 'Konghucu') !== false || stripos($namaMapel, 'Khonghucu') !== false) {
+                $filterAgama = ['konghucu', 'khonghucu', 'khong hu cu'];
+            }
+
+            // C. Query Siswa dengan Join ke Detail Siswa
+            $querySiswa = DB::table('siswa')
+                ->join('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
+                ->where('siswa.id_kelas', $id_kelas)
+                ->select(
+                    'siswa.id_siswa', 
+                    'siswa.nama_siswa', 
+                    'siswa.nisn',
+                    'detail_siswa.agama'
+                )
+                ->orderBy('siswa.nama_siswa', 'asc');
+
+            // D. Terapkan Filter Jika Ada
+            if ($filterAgama !== null) {
+                $querySiswa->whereIn(DB::raw('LOWER(detail_siswa.agama)'), $filterAgama);
+            }
+
+            $siswa = $querySiswa->get();
+            // ---------------------------------
 
             foreach ($siswa as $s) {
                 // A. SUMATIF
@@ -106,7 +146,9 @@ class RekapNilaiController extends Controller
                 $jmlTerisi = $nilaiSumatifValid->count();
                 $pembagi = max($jmlTerisi, $targetMin);
                 $rataS = ($pembagi > 0) ? round($nilaiSumatifValid->sum() / $pembagi, 2) : 0;
-                $bobotSNominal = round($rataS * ($pSumatif / 100), 2);
+                
+                // Pembulatan Bobot Sumatif
+                $bobotSNominal = (int) round($rataS * ($pSumatif / 100));
 
                 // B. PROJECT
                 $projectRow = DB::table('project')->where([
@@ -115,33 +157,39 @@ class RekapNilaiController extends Controller
                 ])->first();
                 
                 $nilaiP = $projectRow ? $projectRow->nilai : 0;
-                $bobotPNominal = round($nilaiP * ($pProject / 100), 2);
+                
+                // Pembulatan Bobot Project
+                $bobotPNominal = (int) round($nilaiP * ($pProject / 100));
 
-                // C. HITUNG NILAI AKHIR (Rumus)
+                // C. FINAL (Penjumlahan Integer)
                 $naRumus = 0;
                 if ($rataS > 0 || $nilaiP > 0) {
-                    $naRumus = (int) round($bobotSNominal + $bobotPNominal);
+                    $naRumus = $bobotSNominal + $bobotPNominal;
                 }
 
-                // D. CEK SNAPSHOT (Data yang sudah disimpan)
+                // D. SNAPSHOT
                 $saved = DB::table('nilai_akhir')->where([
                     'id_siswa' => $s->id_siswa, 'id_mapel' => $id_mapel,
                     'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
                 ])->first();
 
-                $nilaiFinal = $saved ? $saved->nilai_akhir : $naRumus;
-                $deskripsi  = $saved ? $saved->capaian_akhir : $this->generateDeskripsi($s->id_siswa, $id_mapel, $semesterInt, $tahun_ajaran);
+                // FIX: Pastikan Nilai Akhir selalu Integer (Bulat)
+                $nilaiFinal = $saved ? (int) $saved->nilai_akhir : $naRumus;
+                
+                // Pastikan method generateDeskripsi ada
+                $deskripsi = $saved ? $saved->capaian_akhir : $this->generateDeskripsi($s->id_siswa, $id_mapel, $semesterInt, $tahun_ajaran);
 
                 $dataSiswa[] = (object)[
                     'id_siswa'   => $s->id_siswa,
                     'nama_siswa' => $s->nama_siswa,
                     'nisn'       => $s->nisn,
+                    'agama'      => $s->agama, // Opsional: untuk debug
                     's1' => $s1 ?? '-', 's2' => $s2 ?? '-', 's3' => $s3 ?? '-', 's4' => $s4 ?? '-', 's5' => $s5 ?? '-',
                     'rata_s'     => $rataS,
-                    'bobot_s_v'  => $bobotSNominal,
+                    'bobot_s_v'  => $bobotSNominal, // Int
                     'nilai_p'    => $nilaiP, 
-                    'bobot_p_v'  => $bobotPNominal,
-                    'nilai_akhir'=> $nilaiFinal,
+                    'bobot_p_v'  => $bobotPNominal, // Int
+                    'nilai_akhir'=> $nilaiFinal,    // Int
                     'deskripsi'  => $deskripsi,
                     'is_saved'   => $saved ? true : false,
                     'na_rumus'   => $naRumus
@@ -149,7 +197,6 @@ class RekapNilaiController extends Controller
             }
         }
 
-        // Generator Dropdown Tahun Ajaran
         $tahunAjaranList = [];
         for ($t = $tahunSekarang - 3; $t <= $tahunSekarang + 1; $t++) {
             $tahunAjaranList[] = $t . '/' . ($t + 1);
@@ -171,6 +218,8 @@ class RekapNilaiController extends Controller
         $request->validate([
             'id_kelas' => 'required',
             'id_mapel' => 'required',
+            'semester'     => 'required',
+            'tahun_ajaran' => 'required',
         ]);
 
         $id_kelas = $request->id_kelas;
@@ -193,7 +242,21 @@ class RekapNilaiController extends Controller
 
         $mapel = MataPelajaran::find($id_mapel);
         $namaMapelSnapshot = $mapel->nama_mapel;
-        $kodeMapelSnapshot = $mapel->kode_mapel ?? null;
+        $kodeMapelSnapshot = $mapel->nama_singkat ?? null;
+        // --- LOGIKA MAPPING KATEGORI (Sesuai MapelController) ---
+        $kategoriLabel = $mapel->kategori; // Default (jaga-jaga jika di DB sudah string)
+
+        if (is_numeric($mapel->kategori)) {
+            $mapKategori = [
+                1 => 'Mata Pelajaran Umum',
+                2 => 'Mata Pelajaran Kejuruan',
+                3 => 'Mata Pelajaran Pilihan',
+                4 => 'Muatan Lokal',
+            ];
+            // Ambil dari array, jika tidak ada (null), default ke 'Mata Pelajaran Umum'
+            $kategoriLabel = $mapKategori[$mapel->kategori] ?? 'Mata Pelajaran Umum';
+        }
+        // ---------------------------------------------------------
 
         $pembelajaran = DB::table('pembelajaran')
             ->leftJoin('guru', 'pembelajaran.id_guru', '=', 'guru.id_guru')
@@ -226,6 +289,7 @@ class RekapNilaiController extends Controller
                         'nama_kelas_snapshot' => $namaKelasSnapshot,
                         'nama_mapel_snapshot' => $namaMapelSnapshot,
                         'kode_mapel_snapshot' => $kodeMapelSnapshot,
+                        'kategori_mapel_snapshot' => $kategoriLabel,
                         'nama_guru_snapshot' => $namaGuruSnapshot,
                         'status_data' => 'aktif', // Default status
                         'updated_at' => now()
@@ -289,27 +353,111 @@ class RekapNilaiController extends Controller
     }
 
     /**
-     * Helper: Generator Deskripsi
+     * Fungsi Helper untuk Generate Deskripsi Capaian Otomatis
+     * Menggabungkan Sumatif & Project, serta menggunakan logika Range Nilai.
      */
-    private function generateDeskripsi($id_siswa, $id_mapel, $smt, $ta)
+    private function generateDeskripsi($id_siswa, $id_mapel, $semester, $tahun_ajaran)
     {
-        $nilaiTp = DB::table('sumatif')
-            ->where(['id_siswa' => $id_siswa, 'id_mapel' => $id_mapel, 'semester' => $smt, 'tahun_ajaran' => $ta])
+        // 1. Ambil Nilai & TP Sumatif
+        $sumatif = DB::table('sumatif')
+            ->where([
+                'id_siswa' => $id_siswa,
+                'id_mapel' => $id_mapel,
+                'semester' => $semester,
+                'tahun_ajaran' => $tahun_ajaran
+            ])
             ->whereNotNull('nilai')
-            ->orderBy('nilai', 'asc')
-            ->get();
+            ->get()
+            ->map(function($item) {
+                return [
+                    'nilai' => (float) $item->nilai,
+                    'tp'    => $item->tujuan_pembelajaran,
+                    'sumber'=> 'Sumatif'
+                ];
+            });
 
-        if ($nilaiTp->isEmpty()) return 'Capaian kompetensi belum tersedia.';
+        // 2. Ambil Nilai & TP Project
+        $project = DB::table('project')
+            ->where([
+                'id_siswa' => $id_siswa,
+                'id_mapel' => $id_mapel,
+                'semester' => $semester,
+                'tahun_ajaran' => $tahun_ajaran
+            ])
+            ->get()
+            ->map(function($item) {
+                return [
+                    'nilai' => (float) $item->nilai,
+                    'tp'    => $item->tujuan_pembelajaran,
+                    'sumber'=> 'Project'
+                ];
+            });
 
-        $tpRendah = $nilaiTp->first();
-        $tpTinggi = $nilaiTp->last();
+        // 3. Gabungkan Data & Filter TP Kosong
+        $semuaNilai = $sumatif->merge($project)->filter(function($item) {
+            return !empty(trim((string)$item['tp'])); 
+        });
 
-        $narasiRendah = ($tpRendah->nilai < 78) ? 'Perlu peningkatan dalam' : 'Perlu penguatan dalam';
-        $narasiTinggi = ($tpTinggi->nilai >= 78) ? 'Baik dalam' : 'Cukup dalam';
-
-        if ($tpRendah->tujuan_pembelajaran === $tpTinggi->tujuan_pembelajaran) {
-            return "{$narasiRendah} {$tpRendah->tujuan_pembelajaran}.";
+        if ($semuaNilai->isEmpty()) {
+            return "Capaian kompetensi belum tersedia.";
         }
-        return "{$narasiRendah} {$tpRendah->tujuan_pembelajaran}, namun menunjukkan capaian {$narasiTinggi} {$tpTinggi->tujuan_pembelajaran}.";
+
+        // --- LOGIKA PEMBENTUKAN NARASI ---
+        
+        // Batasi Maksimal 2 TP (Terendah & Tertinggi) untuk narasi agar tidak kepanjangan
+        if ($semuaNilai->count() > 2) {
+            $terendahTmp  = $semuaNilai->sortBy('nilai')->first();
+            $tertinggiTmp = $semuaNilai->sortByDesc('nilai')->first();
+
+            // Jika TP terendah & tertinggi kebetulan sama, ambil satu saja
+            if ($terendahTmp['tp'] === $tertinggiTmp['tp']) {
+                $semuaNilai = collect([$terendahTmp]);
+            } else {
+                $semuaNilai = collect([$terendahTmp, $tertinggiTmp]);
+            }
+        }
+
+        $terendah  = $semuaNilai->sortBy('nilai')->first();
+        $tertinggi = $semuaNilai->sortByDesc('nilai')->first();
+
+        // KASUS 1: Nilai Tunggal atau Nilai Terendah = Tertinggi (Kemampuan Merata)
+        if ($semuaNilai->count() === 1 || $terendah['nilai'] === $tertinggi['nilai']) {
+            $nilaiKomparasi = $terendah['nilai'];
+            
+            // Logic threshold (Bisa disesuaikan dengan KKM sekolah)
+            if ($nilaiKomparasi > 84) {
+                $narasi = "Menunjukkan penguasaan yang baik dalam hal";
+            } else {
+                $narasi = "Perlu penguatan dalam hal";
+            }
+            
+            $allTujuan = $semuaNilai->pluck('tp')->unique()->implode(', ');
+            return $narasi . " " . $allTujuan . ".";
+        }
+
+        // KASUS 2: Nilai Bervariasi (Ada yang kurang, ada yang bagus)
+        // A. Bagian Terendah
+        $nilaiRendah = $terendah['nilai'];
+        $tpRendah    = trim($terendah['tp']);
+        
+        if ($nilaiRendah < 81) {
+            $kunciRendah = "Perlu peningkatan dalam hal";
+        } else {
+            $kunciRendah = "Perlu penguatan dalam hal";
+        }
+
+        // B. Bagian Tertinggi
+        $nilaiTinggi = $tertinggi['nilai'];
+        $tpTinggi    = trim($tertinggi['tp']);
+        
+        if ($nilaiTinggi > 89) {
+            $kunciTinggi = "Mahir dalam hal";
+        } else {
+            $kunciTinggi = "Baik dalam hal";
+        }
+
+        // Gabungkan kalimat
+        return "{$kunciRendah} {$tpRendah}, namun menunjukkan capaian {$kunciTinggi} {$tpTinggi}.";
     }
+
 }

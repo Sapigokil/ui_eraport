@@ -140,7 +140,7 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s3') ? 'active' : 'text-white' }}" href="{{ route('master.sumatif.s3') }}"><span class="sidenav-mini-icon"> S3 </span><span class="sidenav-normal"> Nilai Sumatif 3 </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s4') ? 'active' : 'text-white' }}" href="{{ route('master.sumatif.s4') }}"><span class="sidenav-mini-icon"> S4 </span><span class="sidenav-normal"> Nilai Sumatif 4 </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s5') ? 'active' : 'text-white' }}" href="{{ route('master.sumatif.s5') }}"><span class="sidenav-mini-icon"> S5 </span><span class="sidenav-normal"> Nilai Sumatif 5 </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.project.index') ? 'active' : 'text-white' }}" href="{{ route('master.project.index') }}"><span class="sidenav-mini-icon"> P5 </span><span class="sidenav-normal"> Nilai Project </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.project.index') ? 'active' : 'text-white' }}" href="{{ route('master.project.index') }}"><span class="sidenav-mini-icon"> P </span><span class="sidenav-normal"> Nilai Project </span></a></li>
                         
                         {{-- Catatan Walikelas --}}
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.catatan.input') ? 'active' : 'text-white' }}" href="{{ route('master.catatan.input') }}"><span class="sidenav-normal"> Catatan Walikelas </span></a></li>
@@ -187,6 +187,16 @@
                             <a class="nav-link {{ request()->routeIs('rapornilai.nilaiakhir.index') ? 'active' : 'text-white' }}" href="{{ route('rapornilai.nilaiakhir.index') }}">
                                 <span class="sidenav-mini-icon"><i class="fas fa-archive text-xs"></i></span>
                                 <span class="nav-link-text ms-1">Nilai Akhir</span>
+                            </a>
+                        </li>
+                        @endcan
+
+                        {{-- URUTAN 2: Monitoring RAPOR --}}
+                        @can('rapor.view')
+                        <li class="nav-item">
+                            <a class="nav-link {{ Route::is('rapornilai.monitoring.index') ? 'active' : 'text-white' }}" href="{{ route('rapornilai.monitoring.index') }}">
+                                <span class="sidenav-mini-icon"><i class="fas fa-print text-xs"></i></span>
+                                <span class="nav-link-text ms-1">Monitoring Rapor</span>
                             </a>
                         </li>
                         @endcan

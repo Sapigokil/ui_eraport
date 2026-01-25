@@ -108,42 +108,59 @@ class NilaiAkhirController extends Controller
 
     public function index(Request $request)
     {
+        // 1. SETUP DEFAULT
+        $bulanSekarang = date('n');
+        $tahunSekarang = date('Y');
+
+        if ($bulanSekarang >= 7) {
+            $semDefault = 'Ganjil';
+            $taDefault  = $tahunSekarang . '/' . ($tahunSekarang + 1);
+        } else {
+            $semDefault = 'Genap';
+            $taDefault  = ($tahunSekarang - 1) . '/' . $tahunSekarang;
+        }
+
+        $id_kelas     = $request->id_kelas;
+        $id_mapel     = $request->id_mapel;
+        $semesterRaw  = $request->semester ?? $semDefault;
+        $tahun_ajaran = $request->tahun_ajaran ?? $taDefault;
+        $semesterDB   = $this->mapSemesterToInt($semesterRaw);
+
+        // 2. DATA MASTER (DROPDOWN)
         $kelas = Kelas::orderBy('nama_kelas')->get();
         $mapel = collect();
-        $siswa = collect();
-        $rekap = [];
-        $error = null;
-        $bobotInfo = null;
         
-        if ($request->id_kelas) {
+        // Ambil List Mapel (Sesuai Logika Dropdown Monitoring)
+        if ($id_kelas) {
             $mapel = Pembelajaran::with(['mapel' => function ($q) {
                 $q->where('is_active', 1);
             }])
-            ->where('id_kelas', $request->id_kelas)
+            ->where('id_kelas', $id_kelas)
             ->get()
             ->pluck('mapel')
             ->filter()
-            // --- SORTING: KATEGORI DULU, BARU URUTAN ---
             ->sortBy([
-                ['kategori', 'asc'], // Prioritas 1
-                ['urutan', 'asc'],   // Prioritas 2
+                ['kategori', 'asc'], 
+                ['urutan', 'asc'],   
             ])
             ->values();
         }
 
+        $siswa = collect();
+        $rekap = [];
+        $error = null;
+        $bobotInfo = null;
+
+        // 3. PROSES DATA UTAMA
         if ($request->filled(['id_kelas', 'id_mapel', 'tahun_ajaran', 'semester'])) {
             
-            $semesterDB = $this->mapSemesterToInt($request->semester);
-            $idKelas = $request->id_kelas;
-            $idMapel = $request->id_mapel;
-            $tahunAjaran = trim($request->tahun_ajaran);
-
+            // Validasi Input
             if (is_null($semesterDB)) {
                 $error = 'Nilai semester tidak valid.';
                 goto render_view;
             }
 
-            $selectedMapel = MataPelajaran::where('id_mapel', $idMapel)
+            $selectedMapel = MataPelajaran::where('id_mapel', $id_mapel)
                 ->where('is_active', 1)
                 ->first();
 
@@ -152,171 +169,93 @@ class NilaiAkhirController extends Controller
                 goto render_view;
             }
 
-            $querySiswa = Siswa::with('detail')->where('id_kelas', $idKelas);
-            if ($selectedMapel && $selectedMapel->agama_khusus) {
-                $querySiswa->whereHas('detail', fn ($q) => $q->where('agama', $selectedMapel->agama_khusus));
+            // --- A. FILTER AGAMA (LOGIKA BARU) ---
+            $namaMapel   = $selectedMapel->nama_mapel;
+            $filterAgama = null;
+
+            if (stripos($namaMapel, 'Islam') !== false) {
+                $filterAgama = ['islam'];
+            } elseif (stripos($namaMapel, 'Kristen') !== false || stripos($namaMapel, 'Protestan') !== false) {
+                $filterAgama = ['kristen', 'protestan'];
+            } elseif (stripos($namaMapel, 'Katholik') !== false || stripos($namaMapel, 'Katolik') !== false) {
+                $filterAgama = ['katholik', 'katolik'];
+            } elseif (stripos($namaMapel, 'Hindu') !== false) {
+                $filterAgama = ['hindu'];
+            } elseif (stripos($namaMapel, 'Buddha') !== false || stripos($namaMapel, 'Budha') !== false) {
+                $filterAgama = ['buddha', 'budha'];
+            } elseif (stripos($namaMapel, 'Konghucu') !== false || stripos($namaMapel, 'Khonghucu') !== false) {
+                $filterAgama = ['konghucu', 'khonghucu', 'khong hu cu'];
             }
+
+            // --- B. AMBIL SISWA SESUAI FILTER ---
+            $querySiswa = Siswa::with('detail')->where('id_kelas', $id_kelas);
+
+            if ($filterAgama !== null) {
+                $querySiswa->whereHas('detail', function ($q) use ($filterAgama) {
+                    // Gunakan RAW untuk case-insensitive matching yang aman
+                    $q->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(agama)'), $filterAgama);
+                });
+            }
+
             $siswa = $querySiswa->orderBy('nama_siswa')->get();
 
             if ($siswa->isEmpty()) {
+                $error = 'Tidak ada siswa ditemukan (Cek filter agama atau data siswa).';
                 goto render_view;
             }
 
-            // --- QUERY UTAMA SUMATIF DAN PROJECT ---
-            $baseQuery = [
-                'id_kelas' => $idKelas,
-                'id_mapel' => $idMapel,
-                'semester' => $semesterDB, 
-                'tahun_ajaran' => $tahunAjaran,
-            ];
-            
-            $allSumatif = Sumatif::select(['id_siswa', 'nilai', 'sumatif', 'tujuan_pembelajaran']) 
-                ->where($baseQuery)
-                ->get()
-                ->groupBy('id_siswa'); 
-            
-            $allProject = Project::where($baseQuery)->get()->keyBy('id_siswa');
-
-            // --- AMBIL PENGATURAN BOBOT ---
-            $bobotSetting = BobotNilai::where('tahun_ajaran', $tahunAjaran)
-                ->where('semester', strtoupper($request->semester))
+            // --- C. AMBIL INFO BOBOT (Hanya untuk Info di View) ---
+            $bobotInfo = BobotNilai::where('tahun_ajaran', $tahun_ajaran)
+                ->where('semester', strtoupper($semesterRaw))
                 ->first();
 
-            if (!$bobotSetting) {
-                $error = 'Bobot nilai belum diatur untuk semester dan tahun ajaran ini.';
-                goto render_view;
-            }
+            // --- D. AMBIL NILAI AKHIR (DARI TABEL NILAI_AKHIR) ---
+            // Kita ambil sekaligus pakai whereIn id_siswa agar efisien
+            $siswaIds = $siswa->pluck('id_siswa')->toArray();
 
-            $bobotInfo = $bobotSetting; 
+            $nilaiAkhirData = NilaiAkhir::where('id_kelas', $id_kelas)
+                ->where('id_mapel', $id_mapel)
+                ->where('semester', $semesterDB)
+                ->where('tahun_ajaran', $tahun_ajaran)
+                ->whereIn('id_siswa', $siswaIds)
+                ->get()
+                ->keyBy('id_siswa');
 
-            // Parameter Perhitungan (Sama persis dengan RaporController)
-            $targetMinimalSumatif = $bobotSetting->jumlah_sumatif ?? 0;
-            $bobotSumatifPersen   = $bobotSetting->bobot_sumatif;       
-            $bobotProjectPersen   = $bobotSetting->bobot_project;       
-
+            // --- E. MAPPING DATA KE VIEW ---
             foreach ($siswa as $s) {
-                $idSiswa = $s->id_siswa;
+                $data = $nilaiAkhirData->get($s->id_siswa);
 
-                // --- 1. PROSES SUMATIF ---
-                $sumatifCollection = $allSumatif->get($idSiswa) ?? collect();
+                // Helper kecil untuk format angka: Jika null tampilkan '-', jika ada ubah ke Int
+                $formatInt = fn($val) => ($val !== null && $val !== '') ? (int) $val : '-';
                 
-                $s1_raw = optional($sumatifCollection->firstWhere('sumatif', 1))->nilai;
-                $s2_raw = optional($sumatifCollection->firstWhere('sumatif', 2))->nilai;
-                $s3_raw = optional($sumatifCollection->firstWhere('sumatif', 3))->nilai;
-                $s4_raw = optional($sumatifCollection->firstWhere('sumatif', 4))->nilai;
-                $s5_raw = optional($sumatifCollection->firstWhere('sumatif', 5))->nilai;
-                
-                $s1 = ($s1_raw !== null && $s1_raw !== '') ? (int)$s1_raw : null;
-                $s2 = ($s2_raw !== null && $s2_raw !== '') ? (int)$s2_raw : null;
-                $s3 = ($s3_raw !== null && $s3_raw !== '') ? (int)$s3_raw : null;
-                $s4 = ($s4_raw !== null && $s4_raw !== '') ? (int)$s4_raw : null;
-                $s5 = ($s5_raw !== null && $s5_raw !== '') ? (int)$s5_raw : null;
+                // Khusus Rata-rata biarkan ada koma (opsional, jika ingin bulat juga ganti jadi formatInt)
+                $rataSumatif = ($data && $data->rata_sumatif !== null) ? $data->rata_sumatif : '-';
 
-                // Data TP untuk Deskripsi
-                $tpSumatif = $sumatifCollection
-                    ->filter(fn ($i) => $i->nilai !== null)
-                    ->map(fn ($item) => [
-                        'nilai' => (float) $item->nilai,
-                        'tp'    => $item->tujuan_pembelajaran, 
-                        'label' => 'Sumatif ' . $item->sumatif, 
-                    ]);
-
-                // --- HITUNG RATA-RATA SUMATIF (LOGIKA BARU) ---
-                $nilaiSumatif = collect([$s1, $s2, $s3, $s4, $s5])->filter(fn ($v) => $v !== null);
-                
-                $jumlahTerisi = $nilaiSumatif->count();
-                $totalNilai   = $nilaiSumatif->sum();
-                
-                // Pembagi: Max antara Jumlah Terisi atau Target
-                $pembagi = max($jumlahTerisi, $targetMinimalSumatif);
-
-                // Hindari division by zero
-                if ($pembagi > 0) {
-                    $rataSumatif = round($totalNilai / $pembagi, 2);
-                } else {
-                    $rataSumatif = null;
-                }
-
-                // Hitung Bobot Nominal Sumatif
-                $bobotSumatif = $rataSumatif !== null
-                    ? round($rataSumatif * ($bobotSumatifPersen / 100), 2)
-                    : null;
-
-                // --- 2. PROSES PROJECT ---
-                $projectItem = $allProject->get($idSiswa);
-                $nilaiMentahProject = optional($projectItem)->nilai; 
-                $rataProject = $nilaiMentahProject; 
-
-                $tpProject = $projectItem
-                    ? collect([[
-                        'nilai' => (float) $projectItem->nilai,
-                        'tp'    => $projectItem->tujuan_pembelajaran, 
-                        'label' => 'Project',
-                    ]])
-                    : collect();
-
-                // Hitung Bobot Nominal Project
-                $bobotProject = $rataProject !== null
-                    ? round($rataProject * ($bobotProjectPersen / 100), 2)
-                    : null;
-
-                // --- 3. HITUNG NILAI AKHIR (KONSISTENSI DENGAN RAPOR) ---
-                // Menghilangkan aturan kaku (misal: wajib 3 nilai). 
-                // Jika nilai ada, hitung apa adanya sesuai bobot & pembagi.
-                
-                if ($bobotSumatif !== null || $bobotProject !== null) {
-                    // Pembulatan ke Integer (Sama seperti Rapor PDF)
-                    $nilaiAkhir = (int) round(($bobotSumatif ?? 0) + ($bobotProject ?? 0));
-                } else {
-                    $nilaiAkhir = 0;
-                }
-
-                // --- 4. GENERATE CAPAIAN AKHIR ---
-                $semuaNilai = $tpSumatif
-                    ->merge($tpProject)
-                    ->filter(fn ($n) => $n['nilai'] !== null); 
-                
-                $capaianAkhir = $this->generateCapaianAkhir($s, $semuaNilai);
-
-                // --- 5. SIMPAN KE DB ---
-                NilaiAkhir::updateOrCreate(
-                    [
-                        'id_kelas' => $idKelas,
-                        'id_mapel' => $idMapel,
-                        'id_siswa' => $idSiswa,
-                        'tahun_ajaran' => $tahunAjaran,
-                        'semester' => $semesterDB,
-                    ],
-                    [
-                        'nilai_s1' => $s1 ?? 0, 'nilai_s2' => $s2 ?? 0, 'nilai_s3' => $s3 ?? 0, 'nilai_s4' => $s4 ?? 0, 'nilai_s5' => $s5 ?? 0,
-                        'rata_sumatif' => $rataSumatif ?? 0.00,
-                        'bobot_sumatif' => $bobotSumatif ?? 0.00,
-                        'nilai_project' => $nilaiMentahProject ?? 0.00, 
-                        'rata_project' => $rataProject ?? 0.00, 
-                        'bobot_project' => $bobotProject ?? 0.00,
-                        'nilai_akhir' => $nilaiAkhir ?? 0.00,
-                        'capaian_akhir' => $capaianAkhir,
-                    ]
-                );
-
-                // --- 6. DATA UNTUK VIEW ---
+                // Jika data belum ada, set default '-'
                 $rekap[$s->id_siswa] = [
-                    's1' => ($s1 !== null) ? $s1 : '-', 
-                    's2' => ($s2 !== null) ? $s2 : '-',
-                    's3' => ($s3 !== null) ? $s3 : '-',
-                    's4' => ($s4 !== null) ? $s4 : '-',
-                    's5' => ($s5 !== null) ? $s5 : '-',
-                    'rata_sumatif' => $rataSumatif,
-                    'bobot_sumatif' => $bobotSumatif,
-                    'nilai_project' => $nilaiMentahProject ?? '-',
-                    'rata_project' => $rataProject, 
-                    'bobot_project' => $bobotProject,
-                    'nilai_akhir' => $nilaiAkhir,
-                    'capaian_akhir' => $capaianAkhir,
+                    // Sumatif Detail
+                    's1' => $data->nilai_s1 ?? '-',
+                    's2' => $data->nilai_s2 ?? '-',
+                    's3' => $data->nilai_s3 ?? '-',
+                    's4' => $data->nilai_s4 ?? '-',
+                    's5' => $data->nilai_s5 ?? '-',
+                    
+                    // Rata & Bobot Sumatif
+                    'rata_sumatif'  => $data->rata_sumatif ?? '-',
+                    'bobot_sumatif' => $formatInt($data->bobot_sumatif ?? '-'),
+                    
+                    // Project
+                    'nilai_project' => $formatInt($data->nilai_project ?? '-'),
+                    'rata_project'  => $data->rata_project ?? '-', // Jika kolom ini ada
+                    'bobot_project' => $formatInt($data->bobot_project ?? '-'),
+                    
+                    // Final
+                    'nilai_akhir'   => $formatInt($data->nilai_akhir ?? '-'),
+                    'capaian_akhir' => $data->capaian_akhir ?? 'Belum dilakukan finalisasi nilai.',
                 ];
             }
         }
-        
+
         render_view:
         return view('nilai.nilaiakhir', compact(
             'kelas',
@@ -324,7 +263,7 @@ class NilaiAkhirController extends Controller
             'siswa',
             'rekap',
             'error',
-            'bobotInfo' // Kirim data bobot ke view untuk notifikasi
+            'bobotInfo'
         ));
     }
 }

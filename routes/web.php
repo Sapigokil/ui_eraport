@@ -28,6 +28,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RekapNilaiController;
 use App\Http\Controllers\NilaiAkhirController;
 use App\Http\Controllers\CatatanController;
+use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\RaporController;
 use App\Http\Controllers\LedgerController;
 
@@ -236,6 +237,9 @@ Route::middleware(['auth'])->group(function () {
         });
     
         // Monitoring
+        Route::get('/monitoring/kesiapan-rapor', [MonitoringController::class, 'index'])->name('monitoring.index');
+
+        // Rapor
         Route::post('/sinkronkan', [RaporController::class, 'sinkronkanKelas'])->name('sinkronkan');
         Route::post('/sinkronkan-kelas', [RaporController::class, 'sinkronkanKelas'])->name('sinkronkan_kelas');
         Route::get('/detail-siswa', [RaporController::class, 'getDetailSiswa'])->name('detail_siswa');
