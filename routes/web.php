@@ -29,6 +29,7 @@ use App\Http\Controllers\RekapNilaiController;
 use App\Http\Controllers\NilaiAkhirController;
 use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\MonitoringWaliController;
 use App\Http\Controllers\RaporController;
 use App\Http\Controllers\LedgerController;
 
@@ -204,6 +205,32 @@ Route::middleware(['auth'])->group(function () {
         });
 
         // 4. Catatan Wali Kelas
+        // Route::group(['prefix' => 'catatan', 'as' => 'catatan.', 'controller' => CatatanController::class], function () {
+        //     Route::get('/input', 'inputCatatan')->name('input');
+        //     Route::get('/template', 'downloadTemplate')->name('template');
+        //     Route::get('/get-siswa/{id_kelas}', 'getSiswa')->name('getSiswa');
+        //     Route::get('check-prerequisite', 'checkPrerequisite')->name('check_prerequisite');
+            
+        //     Route::middleware('can:nilai.input')->group(function() {
+        //         Route::post('/simpan', 'simpanCatatan')->name('simpan');
+        //         Route::post('/import', 'importExcel')->name('import');
+        //     });
+        // });
+
+        // 5. Rekap Nilai (Finalisasi) - ✅ Route Name: master.rekap.index
+        Route::group(['prefix' => 'rekap-nilai', 'as' => 'rekap.', 'controller' => RekapNilaiController::class], function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/simpan', 'store')->name('store');
+        });
+    });
+
+    // ==========================================================================
+    // MODULE: CATATAN WALI KELAS & REKAP RAPOR
+    // Permission: nilai.view (Guru & Admin Erapor)
+    // ==========================================================================
+    Route::group(['prefix' => 'walikelas', 'as' => 'walikelas.', 'middleware' => ['can:nilai.view']], function () {
+        
+        // 1. Catatan Wali Kelas
         Route::group(['prefix' => 'catatan', 'as' => 'catatan.', 'controller' => CatatanController::class], function () {
             Route::get('/input', 'inputCatatan')->name('input');
             Route::get('/template', 'downloadTemplate')->name('template');
@@ -216,12 +243,13 @@ Route::middleware(['auth'])->group(function () {
             });
         });
 
-        // 5. Rekap Nilai (Finalisasi) - ✅ Route Name: master.rekap.index
-        Route::group(['prefix' => 'rekap-nilai', 'as' => 'rekap.', 'controller' => RekapNilaiController::class], function () {
-            Route::get('/', 'index')->name('index');
-            Route::post('/simpan', 'store')->name('store');
-        });
+        Route::get('/rekap', [MonitoringWaliController::class, 'index'])
+            ->name('monitoring.wali');
+        Route::post('/generate-rapor-walikelas', [RaporController::class, 'generateRaporWalikelas'])
+            ->name('generate.rapor.walikelas'); // Nama route: walikelas.generate.rapor
+
     });
+
 
 
     // ==========================================================================
@@ -343,4 +371,25 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+});
+
+Route::get('/fix-wali-kelas', function() {
+    $kelas = \App\Models\Kelas::all();
+    $updated = 0;
+    $notFound = [];
+
+    foreach($kelas as $k) {
+        // Cari ID Guru berdasarkan String Nama yang tersimpan
+        $guru = \App\Models\Guru::where('nama_guru', 'LIKE', $k->wali_kelas)->first();
+        
+        if($guru) {
+            $k->id_guru = $guru->id_guru;
+            $k->save();
+            $updated++;
+        } else {
+            $notFound[] = $k->nama_kelas . " (" . $k->wali_kelas . ")";
+        }
+    }
+
+    return "Berhasil update ID Guru untuk $updated kelas. <br> Guru tidak ditemukan untuk: " . implode(', ', $notFound);
 });

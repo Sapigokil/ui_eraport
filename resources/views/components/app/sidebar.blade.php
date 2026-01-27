@@ -5,8 +5,35 @@
             id="iconSidenav"></i>
 
         {{-- LINK KE DASHBOARD --}}
-        <a class="navbar-brand d-flex align-items-center m-0" href="{{ route('dashboard') }}" target="_self">
+        {{-- <a class="navbar-brand d-flex align-items-center m-0" href="{{ route('dashboard') }}" target="_self">
             <span class="font-weight-bold text-lg text-white">E-Rapor Corporate</span>
+        </a> --}}
+        <a class="navbar-brand d-flex align-items-center m-0 pl-3 mb-4" href="{{ route('dashboard') }}" target="_self" 
+        style="height: auto; padding-top: 1.5rem; padding-bottom: 0.5rem; width: 100%;">
+            
+            <div class="d-flex flex-column justify-content-center">
+                
+                <span class="font-weight-bold text-white text-uppercase" style="font-size: 1.25rem; line-height: 1; letter-spacing: 0.5px;">
+                    E-RAPOR
+                </span>
+
+                <div class="d-flex align-items-center mt-1">
+                    
+                    <span class="text-white-50 font-weight-bold" style="font-size: 0.8rem; line-height: 1.2;">
+                        SMKN 1 Salatiga
+                    </span>
+
+                    <span class="badge badge-secondary font-weight-light ms-2" 
+                        style="background-color: rgba(255,255,255,0.1); 
+                                font-size: 0.65rem; 
+                                padding: 3px 8px; 
+                                border: 1px solid rgba(255,255,255,0.1);">
+                        v{{ config('app_history.current_version') }}
+                    </span>
+                    
+                </div>
+
+            </div>
         </a>
     </div>
 
@@ -143,7 +170,7 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.project.index') ? 'active' : 'text-white' }}" href="{{ route('master.project.index') }}"><span class="sidenav-mini-icon"> P </span><span class="sidenav-normal"> Nilai Project </span></a></li>
                         
                         {{-- Catatan Walikelas --}}
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.catatan.input') ? 'active' : 'text-white' }}" href="{{ route('master.catatan.input') }}"><span class="sidenav-normal"> Catatan Walikelas </span></a></li>
+                        {{-- <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.catatan.input') ? 'active' : 'text-white' }}" href="{{ route('master.catatan.input') }}"><span class="sidenav-normal"> Catatan Walikelas </span></a></li> --}}
                         
                         {{-- MENU BARU: REKAP NILAI (FINALISASI) --}}
                         <li class="nav-item">
@@ -158,6 +185,50 @@
                 </div> 
             </li>
             @endcan
+
+            {{-- ========================================================= --}}
+            {{-- 4. INPUT WALI KELAS (WALI KELAS DAN ADMIN) --}}
+            {{-- ========================================================= --}}
+            {{-- 4. INPUT WALI KELAS --}}
+            @canany(['nilai.view', 'rapor.view'])
+            @php
+                // Filter agar menu tetap aktif saat berada di sub-menu walikelas
+                $waliRoutes = ['walikelas.*'];
+                $isWaliActive = request()->routeIs($waliRoutes); 
+            @endphp
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#waliKelasMenu" class="nav-link {{ $isWaliActive ? 'active' : 'text-white' }}" aria-controls="waliKelasMenu" role="button" aria-expanded="{{ $isWaliActive ? 'true' : 'false' }}">
+                    <div class="me-2 d-flex align-items-center justify-content-center"><i class="fas fa-user-graduate text-white"></i></div>
+                    <span class="nav-link-text ms-1">Input Wali Kelas</span>
+                </a>
+                
+                <div class="collapse {{ $isWaliActive ? 'show' : '' }}" id="waliKelasMenu">
+                    <ul class="nav ms-4 ps-3">
+                        {{-- 1. Input Catatan --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('walikelas.catatan.input') ? 'active' : 'text-white' }}" href="{{ route('walikelas.catatan.input') }}">
+                                <span class="sidenav-mini-icon">C</span><span class="sidenav-normal">Catatan Walikelas</span>
+                            </a>
+                        </li>
+
+                        {{-- 2. Cek Rapor --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('walikelas.monitoring.wali') ? 'active' : 'text-white' }}" href="{{ route('walikelas.monitoring.wali') }}">
+                                <span class="sidenav-mini-icon">C</span><span class="sidenav-normal">Cek Rapor</span>
+                            </a>
+                        </li>
+                        
+                        {{-- 2. Monitoring (Route Baru)
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('walikelas.monitoring.wali') ? 'active' : 'text-white' }}" href="{{ route('walikelas.monitoring.wali') }}">
+                                <span class="sidenav-mini-icon text-warning">M</span>
+                                <span class="sidenav-normal text-warning font-weight-bold">Monitoring Kesiapan</span>
+                            </a>
+                        </li> --}}
+                    </ul>
+                </div> 
+            </li>
+            @endcanany
 
             {{-- ========================================================= --}}
             {{-- 4. LAPORAN & RAPOR (Guru & Admin) --}}

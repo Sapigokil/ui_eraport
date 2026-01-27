@@ -252,6 +252,9 @@ class NilaiAkhirController extends Controller
                     // Final
                     'nilai_akhir'   => $formatInt($data->nilai_akhir ?? '-'),
                     'capaian_akhir' => $data->capaian_akhir ?? 'Belum dilakukan finalisasi nilai.',
+                
+                    // [BARU] Tambahkan status data untuk ditampilkan
+                    'status_data'   => $data->status_data ?? 'draft',
                 ];
             }
         }

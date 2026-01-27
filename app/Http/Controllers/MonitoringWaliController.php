@@ -6,29 +6,134 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Kelas;
 use App\Models\Pembelajaran;
+use App\Models\Season; // Pastikan Model Season di-import
+use Carbon\Carbon;     // Untuk cek tanggal
 use Illuminate\Support\Str;
 
-class MonitoringController extends Controller
+class MonitoringWaliController extends Controller
 {
     /**
-     * MENU 1: MONITORING GLOBAL (ADMIN)
-     * Menampilkan List Semua Kelas
+     * MENU 2: MONITORING KHUSUS WALI KELAS
+     * Menampilkan Detail Satu Kelas & Gatekeeper
      */
     public function index(Request $request)
     {
         $periode = $this->getPeriode($request);
         
-        // Ambil Semua Kelas
-        $listKelas = Kelas::orderBy('nama_kelas', 'asc')->get();
-        
-        // Hitung Data (Logic Internal Admin)
-        $result = $this->hitungMonitoringData($listKelas, $periode);
+        $kelasList = Kelas::orderBy('nama_kelas', 'asc')->get();
 
-        return view('monitoring.kesiapan_rapor.index', array_merge($result, $periode));
+        // 1. Tentukan Kelas Target
+        if ($request->has('id_kelas') && $request->id_kelas != '') {
+            $kelasTarget = Kelas::find($request->id_kelas);
+        } else {
+            $kelasTarget = $kelasList->first();
+        }
+
+        if (!$kelasTarget) {
+             return redirect()->back()->with('error', 'Data Kelas Kosong. Silakan hubungi admin.');
+        }
+
+        // 2. Hitung Data (Logic Internal Wali)
+        $result = $this->hitungMonitoringData(collect([$kelasTarget]), $periode);
+        $singleData = $result['monitoringData'][0] ?? null;
+
+        // 3. [BARU] CEK PRASYARAT (GATEKEEPER)
+        // Kita kirim $singleData untuk dicek kelengkapannya
+        $gate = $this->checkPrerequisites($periode, $singleData);
+
+        return view('monitoring.kesiapan_rapor.index_wali', array_merge(
+            [
+                'dataKelas' => $singleData,
+                'kelasList' => $kelasList, 
+                'selected_kelas_id' => $kelasTarget->id_kelas,
+                'gate' => $gate // Kirim hasil pengecekan ke View
+            ], 
+            $periode,
+            ['stats' => $result['stats']]
+        ));
     }
 
     // =========================================================================
-    // PRIVATE HELPER (KHUSUS ADMIN)
+    // PRIVATE HELPER: GATEKEEPER (VALIDASI BUKA/TUTUP AKSES)
+    // =========================================================================
+    private function checkPrerequisites($periode, $dataKelas)
+    {
+        // Default Response
+        $response = [
+            'allowed' => false,
+            'message' => 'Memuat status...',
+            'icon'    => 'fas fa-lock'
+        ];
+
+        // --- LAYER 1: VALIDASI SEASON (WAKTU & ADMIN) ---
+        
+        $activeSeason = Season::where('is_active', 1)->first();
+
+        // 1. Cek Ketersediaan Season
+        if (!$activeSeason) {
+            $response['message'] = 'Season belum diatur oleh Admin.';
+            return $response;
+        }
+
+        // 2. Cek Switch Open/Close Manual
+        if ($activeSeason->is_open == 0) {
+            $response['message'] = 'Akses Generate Rapor sedang DITUTUP oleh Admin.';
+            return $response;
+        }
+
+        // 3. Cek Rentang Tanggal
+        $today = Carbon::today();
+        if ($today->lt($activeSeason->start_date)) {
+            $response['message'] = 'Periode Generate Rapor BELUM DIMULAI (Mulai: '.date('d-m-Y', strtotime($activeSeason->start_date)).').';
+            return $response;
+        }
+        if ($today->gt($activeSeason->end_date)) {
+            $response['message'] = 'Periode Generate Rapor TELAH BERAKHIR (Tutup: '.date('d-m-Y', strtotime($activeSeason->end_date)).').';
+            return $response;
+        }
+
+        // 4. Cek Kesesuaian Periode Filter dengan Season Aktif
+        // Filter Wali Kelas harus SAMA PERSIS dengan Season yang sedang aktif
+        $filterTahun = $periode['tahun_ajaran'];
+        $filterSemStr = $periode['semester']; 
+        $filterSemInt = ($filterSemStr == 'Ganjil' || $filterSemStr == '1') ? 1 : 2;
+
+        if ($filterTahun != $activeSeason->tahun_ajaran || $filterSemInt != $activeSeason->semester) {
+            $response['message'] = 'Anda sedang melihat arsip lama. Generate Rapor hanya bisa dilakukan pada Tahun & Semester yang aktif.';
+            return $response;
+        }
+
+        // --- LAYER 2: VALIDASI KELENGKAPAN DATA (LOGIC PROGRESS) ---
+
+        if (!$dataKelas) {
+            $response['message'] = 'Data kelas tidak terbaca.';
+            return $response;
+        }
+
+        // 5. Cek Kelengkapan Nilai Mapel (Harus 100%)
+        if ($dataKelas->persen < 100) {
+            $response['message'] = 'Nilai Mata Pelajaran belum lengkap (Baru '.$dataKelas->persen.'%). Mohon tagih Guru Mapel terkait.';
+            $response['icon'] = 'fas fa-exclamation-circle';
+            return $response;
+        }
+
+        // 6. Cek Kelengkapan Catatan Wali (Harus 100%)
+        if ($dataKelas->persen_catatan < 100) {
+            $response['message'] = 'Catatan Wali Kelas / Absensi belum lengkap (Baru '.$dataKelas->persen_catatan.'%). Silakan lengkapi inputan Anda.';
+            $response['icon'] = 'fas fa-user-edit';
+            return $response;
+        }
+
+        // --- LOLOS SEMUA CEK ---
+        return [
+            'allowed' => true,
+            'message' => 'Data Lengkap. Silakan Generate Rapor.',
+            'icon'    => 'fas fa-check-circle'
+        ];
+    }
+
+    // =========================================================================
+    // PRIVATE HELPER: PERIODE & HITUNG DATA (Full Logic)
     // =========================================================================
 
     private function getPeriode($request)
@@ -72,9 +177,10 @@ class MonitoringController extends Controller
         ];
 
         foreach ($listKelas as $k) {
-            // A. DATA SISWA
+            
+            // A. DATA SISWA (LEFT JOIN)
             $siswaCollection = DB::table('siswa')
-                ->join('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
+                ->leftJoin('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
                 ->where('siswa.id_kelas', $k->id_kelas)
                 ->select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nisn', 'detail_siswa.agama')
                 ->orderBy('siswa.nama_siswa')
@@ -83,7 +189,7 @@ class MonitoringController extends Controller
             $totalSiswaKelas = $siswaCollection->count();
             if ($totalSiswaKelas == 0) continue; 
 
-            // BAGIAN 1: NILAI MAPEL
+            // B. NILAI MAPEL
             $pembelajaran = Pembelajaran::with(['mapel' => function ($q) {
                     $q->where('is_active', 1);
                 }, 'guru']) 
@@ -143,7 +249,7 @@ class MonitoringController extends Controller
                     'progress'   => $sudahMasuk,
                     'total'      => $targetSiswa,
                     'status'     => $status,
-                    'persen'     => round(($sudahMasuk / $targetSiswa) * 100),
+                    'persen'     => ($targetSiswa > 0) ? round(($sudahMasuk / $targetSiswa) * 100) : 0,
                     'kategori'   => $m->kategori
                 ];
                 
@@ -151,7 +257,7 @@ class MonitoringController extends Controller
                 $stats['mapel_total']++;
             }
 
-            // BAGIAN 2: CATATAN WALI KELAS
+            // C. CATATAN WALI
             $catatanList = DB::table('catatan')
                 ->whereIn('id_siswa', $siswaCollection->pluck('id_siswa'))
                 ->where('semester', $smtInt)
@@ -164,17 +270,18 @@ class MonitoringController extends Controller
 
             foreach ($siswaCollection as $s) {
                 $c = $catatanList->get($s->id_siswa);
-                $hasData = ($c !== null);
+                $isiCatatan = $c->catatan_wali_kelas ?? null;
+                $hasData = !empty($isiCatatan) && trim($isiCatatan) !== '' && trim($isiCatatan) !== '-';
 
                 $ekskulFormatted = [];
-                if ($hasData && !empty($c->ekskul)) {
+                if ($c && !empty($c->ekskul)) {
                     $ids = explode(',', $c->ekskul);
                     $preds = explode(',', $c->predikat ?? '');
                     $kets = explode('|', $c->keterangan ?? ''); 
 
                     foreach ($ids as $idx => $idEx) {
                         if (empty(trim($idEx))) continue;
-                        $namaEx = $masterEkskul[$idEx] ?? 'Ekskul-' . $idEx;
+                        $namaEx = $masterEkskul[trim($idEx)] ?? 'Ekskul ID:'.$idEx;
                         $predEx = $preds[$idx] ?? '-';
                         $ketEx  = $kets[$idx] ?? '-';
                         $ekskulFormatted[] = "• <b>$namaEx</b> ($predEx)<br><span class='text-muted text-xxs'>$ketEx</span>";
@@ -190,16 +297,17 @@ class MonitoringController extends Controller
                     'kokurikuler' => $c->kokurikuler ?? '-', 
                     'ekskul_html' => empty($ekskulFormatted) ? '-' : implode('<br>', $ekskulFormatted), 
                     'sakit'       => $c->sakit ?? 0, 
-                    'ijin'        => $c->ijin ?? 0, 
+                    'ijin'        => $c->ijin ?? 0,
                     'alpha'       => $c->alpha ?? 0, 
                     'catatan_short' => $catatanShort, 
                     'catatan_full'  => $catatanFull,
-                    'status'      => $hasData ? 'ada' : 'kosong'
+                    'status'        => $hasData ? 'ada' : 'kosong'
                 ];
 
                 if ($hasData) $siswaAdaCatatan++;
             }
 
+            // D. SUMMARY
             $persenKelas = ($kelasMapelTotalHitung > 0) ? round(($kelasMapelSelesai / $kelasMapelTotalHitung) * 100) : 0;
             $persenCatatan = ($totalSiswaKelas > 0) ? round(($siswaAdaCatatan / $totalSiswaKelas) * 100) : 0;
 
@@ -210,8 +318,8 @@ class MonitoringController extends Controller
                 'mapel_selesai' => $kelasMapelSelesai,
                 'persen'        => $persenKelas,
                 'persen_catatan'=> $persenCatatan,
-                'detail'        => $detailMapel,
-                'detail_catatan'=> $detailCatatan
+                'detail'        => $detailMapel, 
+                'detail_catatan'=> $detailCatatan 
             ];
         }
 

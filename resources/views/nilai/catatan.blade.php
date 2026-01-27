@@ -71,7 +71,7 @@
 
                         {{-- FILTER DATA (CLEAN LAYOUT) --}}
                         <div class="p-4 border-bottom">
-                            <form method="GET" action="{{ route('master.catatan.input') }}" class="row align-items-end mb-0">
+                            <form method="GET" action="{{ route('walikelas.catatan.input') }}" class="row align-items-end mb-0">
                                 <div class="col-md-3 mb-3">
                                     <label for="kelasSelect" class="form-label">Kelas:</label>
                                     <select name="id_kelas" id="kelasSelect" required class="form-select ajax-select-kelas" onchange="this.form.submit()">
@@ -148,7 +148,7 @@
                                     <p class="text-secondary mb-0">Silakan pilih <strong>Kelas</strong> dan <strong>Siswa</strong> untuk mulai mengisi catatan.</p>
                                 </div>
                             @else
-                                <form action="{{ route('master.catatan.simpan') }}" method="POST">
+                                <form action="{{ route('walikelas.catatan.simpan') }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="id_kelas" value="{{ $request->id_kelas }}">
                                     <input type="hidden" name="id_siswa" value="{{ $request->id_siswa }}">
@@ -276,7 +276,7 @@
                 <h6 class="modal-title font-weight-bolder text-dark"><i class="fas fa-file-import text-success me-2"></i> Import Catatan Wali</h6>
                 <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('master.catatan.import') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('walikelas.catatan.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body py-4 text-start">
                     <div class="mb-3">
@@ -338,7 +338,7 @@
 
             if(semester && tahunAjaran) {
                 $.ajax({
-                    url: "{{ route('master.catatan.check_prerequisite') }}",
+                    url: "{{ route('walikelas.catatan.check_prerequisite') }}",
                     method: "GET",
                     data: {
                         semester: semester,

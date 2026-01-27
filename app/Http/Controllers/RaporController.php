@@ -254,6 +254,151 @@ class RaporController extends Controller
     }
 
     /**
+     * GENERATE RAPOR WALI KELAS (BATCH / MASSAL)
+     * Fungsi: Mengunci data rapor (Header, Absen, Ekskul, Catatan) untuk SELURUH SISWA dalam satu kelas.
+     * Dipanggil dari: Halaman Monitoring Wali Kelas.
+     */
+    public function generateRaporWalikelas(Request $request)
+    {
+        // 1. Validasi Input
+        $request->validate([
+            'id_kelas' => 'required',
+            'semester' => 'required',
+            'tahun_ajaran' => 'required',
+        ]);
+
+        $id_kelas = $request->id_kelas;
+        $tahun_ajaran = $request->tahun_ajaran;
+        
+        // Konversi Semester
+        $semesterRaw = $request->semester;
+        $semesterInt = (strtoupper($semesterRaw) == 'GENAP' || $semesterRaw == '2') ? 2 : 1;
+
+        // 2. Ambil Data Kelas & Guru (Untuk Snapshot Header)
+        $kelas = Kelas::find($id_kelas);
+        if (!$kelas) return back()->with('error', 'Kelas tidak ditemukan');
+
+        // Logic Snapshot Wali Kelas (Cari via ID Guru dulu, fallback ke String Nama)
+        $guruWali = DB::table('guru')->where('id_guru', $kelas->id_guru)->first();
+        if (!$guruWali) {
+             $guruWali = DB::table('guru')->where('nama_guru', $kelas->wali_kelas)->first();
+        }
+        $namaWaliSnapshot = $guruWali->nama_guru ?? $kelas->wali_kelas ?? '-';
+        $nipWaliSnapshot  = $guruWali->nip ?? '-';
+
+        // Logic Snapshot Kepsek (Ambil dari Info Sekolah)
+        $sekolah = DB::table('info_sekolah')->first(); // Asumsi nama tabel info_sekolah
+        $kepsekName = $sekolah->nama_kepsek ?? '-';
+        $kepsekNip  = $sekolah->nip_kepsek ?? '-';
+
+        // 3. Ambil Seluruh Siswa di Kelas Tersebut
+        $siswaList = Siswa::where('id_kelas', $id_kelas)->get();
+
+        if ($siswaList->isEmpty()) {
+            return back()->with('error', 'Tidak ada siswa di kelas ini.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $countUpdated = 0;
+
+            foreach ($siswaList as $siswa) {
+                
+                // A. Ambil Data Mentah dari Inputan Wali Kelas (Tabel 'catatan')
+                $catatanData = DB::table('catatan')
+                    ->where('id_siswa', $siswa->id_siswa)
+                    ->where('semester', $semesterInt)
+                    ->where('tahun_ajaran', $tahun_ajaran)
+                    ->first();
+
+                // B. PROSES SNAPSHOT EKSKUL (Convert ID -> JSON Nama & Nilai)
+                $ekskulSnapshot = [];
+                if ($catatanData && !empty($catatanData->ekskul)) {
+                    $ids = explode(',', $catatanData->ekskul);
+                    $predikats = explode(',', $catatanData->predikat ?? '');
+                    $descs = explode('|', $catatanData->keterangan ?? ''); // Separator pipe (|)
+
+                    foreach($ids as $idx => $idEkskul) {
+                        if(trim($idEkskul) == "") continue;
+                        
+                        // Lookup Nama Ekskul
+                        $namaEkskul = DB::table('ekskul')->where('id_ekskul', trim($idEkskul))->value('nama_ekskul');
+                        
+                        $ekskulSnapshot[] = [
+                            'nama' => $namaEkskul ?? 'Ekskul Tidak Ditemukan',
+                            'predikat' => $predikats[$idx] ?? '-',
+                            'keterangan' => $descs[$idx] ?? '-'
+                        ];
+                    }
+                }
+                $jsonEkskul = json_encode($ekskulSnapshot);
+
+                // Default Value jika catatan kosong
+                $sakit = $catatanData->sakit ?? 0;
+                $izin  = $catatanData->ijin ?? 0; 
+                $alpha = $catatanData->alpha ?? 0;
+                $catatan_text = $catatanData->catatan_wali_kelas ?? '-';
+                $status_naik  = $catatanData->status_kenaikan ?? null;
+
+                // C. SIMPAN KE TABEL 'nilai_akhir_rapor' (HEADER FINAL)
+                DB::table('nilai_akhir_rapor')->updateOrInsert(
+                    [
+                        'id_siswa' => $siswa->id_siswa,
+                        'id_kelas' => $id_kelas,
+                        'semester' => $semesterInt,
+                        'tahun_ajaran' => $tahun_ajaran
+                    ],
+                    [
+                        // Snapshot Identitas
+                        'nama_siswa_snapshot' => $siswa->nama_siswa,
+                        'nisn_snapshot' => $siswa->nisn,
+                        'nipd_snapshot' => $siswa->nipd ?? '-',
+                        
+                        'nama_kelas_snapshot' => $kelas->nama_kelas,
+                        'tingkat' => $kelas->tingkat,
+                        'fase_snapshot' => $kelas->fase ?? 'E', // Asumsi ada accessor fase di Model Kelas
+                        
+                        'nama_wali' => $namaWaliSnapshot,
+                        'nip_wali' => $nipWaliSnapshot,
+                        
+                        'kepsek_snapshot' => $kepsekName,
+                        'nip_kepsek_snapshot' => $kepsekNip,
+                        
+                        // Snapshot Nilai Non-Mapel
+                        'sakit' => $sakit,
+                        'izin'  => $izin,
+                        'alpha' => $alpha,
+                        'catatan_wali' => $catatan_text,
+                        'ekskul_data'  => $jsonEkskul, // JSON Final
+                        'status_naik'  => $status_naik,
+                        
+                        // Metadata
+                        'tanggal_rapor' => now(),
+                        'status_data'   => 'final',
+                        'updated_at'    => now()
+                    ]
+                );
+
+                // D. (Opsional) Kunci juga tabel nilai_akhir (Mapel) menjadi 'final'
+                DB::table('nilai_akhir')
+                    ->where('id_siswa', $siswa->id_siswa)
+                    ->where('semester', $semesterInt)
+                    ->where('tahun_ajaran', $tahun_ajaran)
+                    ->update(['status_data' => 'final']);
+                
+                $countUpdated++;
+            }
+
+            DB::commit();
+            return back()->with('success', "Berhasil memfinalisasi rapor untuk $countUpdated siswa. Data siap dicetak oleh Admin.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal generate rapor massal: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * UNLOCK RAPOR (REVISI)
      * Mengembalikan status menjadi 'draft'
      */

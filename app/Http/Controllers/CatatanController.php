@@ -13,7 +13,7 @@ use App\Exports\CatatanTemplateExport;
 use App\Imports\CatatanImport;         
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\RaporController;
+// use App\Http\Controllers\RaporController;
 
 class CatatanController extends Controller
 {
@@ -264,12 +264,12 @@ class CatatanController extends Controller
             ]
         );
 
-        // Update Status Rapor (Generate/Lock status)
-        app(RaporController::class)->perbaruiStatusRapor(
-            $request->id_siswa, 
-            $request->semester, 
-            $request->tahun_ajaran
-        );
+        // // Update Status Rapor (Generate/Lock status)
+        // app(RaporController::class)->perbaruiStatusRapor(
+        //     $request->id_siswa, 
+        //     $request->semester, 
+        //     $request->tahun_ajaran
+        // );
 
         return back()->with('success', 'Data catatan berhasil disimpan!');
     }

@@ -55,4 +55,9 @@ class Guru extends Model
     {
         return $query->where('status', 'aktif');
     }
+
+    public function kelasBinaan()
+    {
+        return $this->hasOne(Kelas::class, 'id_guru', 'id_guru');
+    }
 }
