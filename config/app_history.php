@@ -23,6 +23,7 @@ return [
                 'Memperbaiki Rapor Siswa agar data selalu konsisten',
                 'Update database nilai_akhir_rapor izinkan null pada kolom status_kenaikan',
                 'Menambahkan Helper NilaiCalculator untuk perhitungan nilai akhir',
+                'Penataan ulang halaman Ledger dan Sorting Data',
             ],
         ],
         [

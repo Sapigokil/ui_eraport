@@ -128,7 +128,6 @@ class LedgerController extends Controller
                 ];
             })
             ->sort(function ($a, $b) {
-                // Sorting: Agama -> Kategori -> Urutan
                 $aIsAgama = ($a->id_mapel === 'AGAMA');
                 $bIsAgama = ($b->id_mapel === 'AGAMA');
 
@@ -142,9 +141,9 @@ class LedgerController extends Controller
             })
             ->values();
 
-        // B. Ambil Siswa
+        // B. Ambil Siswa (Urutkan by id_siswa agar sesuai urutan absen sistem)
         $siswaList = Siswa::whereIn('id_kelas', $kelasIds)
-            ->orderBy('nama_siswa')
+            ->orderBy('id_siswa')
             ->get();
 
         // C. Ambil Nilai Akhir
@@ -167,7 +166,7 @@ class LedgerController extends Controller
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
             ->where('semester', $semesterInt)
             ->where('tahun_ajaran', trim($tahun_ajaran))
-            ->select('id_siswa', 'sakit', 'ijin', 'alpha') // Pastikan nama kolom 'izin' atau 'ijin' sesuai DB
+            ->select('id_siswa', 'sakit', 'ijin', 'alpha')
             ->get();
         
         $mapAbsen = [];
@@ -175,7 +174,7 @@ class LedgerController extends Controller
             $mapAbsen[$ra->id_siswa] = $ra;
         }
 
-        // E. Build Data Ledger Awal (Belum Ranking)
+        // E. Build Data Ledger Awal
         $dataLedger = [];
 
         foreach ($siswaList as $siswa) {
@@ -186,7 +185,6 @@ class LedgerController extends Controller
             foreach ($daftarMapel as $mapel) {
                 $score = 0;
 
-                // Logika Mapel Agama vs Biasa
                 if ($mapel->id_mapel === 'AGAMA') {
                     foreach ($globalAgamaIds as $idAgamaAsli) {
                         if (isset($mapNilai[$siswa->id_siswa][$idAgamaAsli])) {
@@ -215,6 +213,7 @@ class LedgerController extends Controller
             $absensi = $mapAbsen[$siswa->id_siswa] ?? null;
 
             $dataLedger[] = (object)[
+                'id_siswa'   => $siswa->id_siswa,
                 'nama_siswa' => $siswa->nama_siswa,
                 'nipd'       => $siswa->nipd,
                 'nisn'       => $siswa->nisn,
@@ -223,16 +222,16 @@ class LedgerController extends Controller
                 'rata_rata'  => $jumlahMapelTerisi ? round($totalNilai / $jumlahMapelTerisi, 2) : 0,
                 'absensi'    => (object)[
                     'sakit' => $absensi->sakit ?? 0,
-                    'izin'  => $absensi->izin ?? 0, // Sesuaikan 'izin' atau 'ijin'
+                    'izin'  => $absensi->ijin ?? 0,
                     'alpha' => $absensi->alpha ?? 0,
                 ],
-                'ranking_no' => 0 // Placeholder ranking
+                'ranking_no' => 0
             ];
         }
 
         return [
             'daftarMapel' => $daftarMapel,
-            'dataLedger'  => collect($dataLedger), // Return Collection agar mudah di-sort
+            'dataLedger'  => collect($dataLedger),
             'kelasObj'    => Kelas::find($kelasIds[0] ?? null)
         ];
     }
@@ -242,57 +241,34 @@ class LedgerController extends Controller
      */
     private function calculateRankingAndSort($collection, $sortBy)
     {
-        // 1. HITUNG RANKING (Berdasarkan Nilai Tertinggi)
-        // Kita sort dulu by Rata-rata DESC untuk memberi nomor ranking yang benar
+        // 1. HITUNG RANKING (Berdasarkan Rata-rata Nilai Tertinggi)
         $rankedData = $collection->sort(function ($a, $b) {
-            // Prioritas 1: Rata-rata Tinggi -> Rendah
             if ($b->rata_rata != $a->rata_rata) {
                 return $b->rata_rata <=> $a->rata_rata;
             }
-            // Prioritas 2: Nama A -> Z (Jika nilai sama)
             return strcmp($a->nama_siswa, $b->nama_siswa);
         })->values();
 
-        // Assign Nomor Ranking (Juara 1, 2, 3...)
         foreach ($rankedData as $index => $item) {
             $item->ranking_no = $index + 1;
         }
 
-        // 2. SORTING TAMPILAN (Sesuai Pilihan User)
+        // 2. SORTING TAMPILAN SESUAI PERMINTAAN USER
         if ($sortBy === 'absen') {
-            // Jika user minta urut Absen, kita sort ulang berdasarkan Nama
-            // TAPI nomor ranking ($item->ranking_no) TETAP NEMPEL (tidak berubah)
-            return $rankedData->sortBy(fn($item) => $item->nama_siswa)->values();
+            // REVISI: Sort by id_siswa (Urutan Absen Sistem)
+            return $rankedData->sortBy(fn($item) => $item->id_siswa)->values();
         } 
         
-        // Default: Sort by Ranking (Nilai Tertinggi) -> Sudah dilakukan di step 1
-        return $rankedData;
+        // Sort by Ranking
+        return $rankedData->sortBy(fn($item) => $item->ranking_no)->values();
     }
-
-    /**
-     * =========================================================================
-     * 3. MAIN PAGES
-     * =========================================================================
-     */
 
     public function index(Request $request)
     {
-        // 1. Data Pendukung Filter
         $kelas = Kelas::orderBy('nama_kelas', 'asc')->get();
-        
-        $jurusanList = Kelas::select('jurusan')
-            ->whereNotNull('jurusan')
-            ->distinct()
-            ->orderBy('jurusan')
-            ->pluck('jurusan');
+        $jurusanList = Kelas::select('jurusan')->whereNotNull('jurusan')->distinct()->orderBy('jurusan')->pluck('jurusan');
+        $tingkatList = Kelas::select('tingkat')->whereNotNull('tingkat')->distinct()->orderBy('tingkat')->pluck('tingkat');
 
-        $tingkatList = Kelas::select('tingkat')
-            ->whereNotNull('tingkat')
-            ->distinct()
-            ->orderBy('tingkat')
-            ->pluck('tingkat');
-
-        // Logic Tahun Ajaran
         $tahunSekarang = date('Y');
         $tahunAjaranList = [];
         for ($t = $tahunSekarang - 3; $t <= $tahunSekarang + 3; $t++) {
@@ -309,50 +285,37 @@ class LedgerController extends Controller
             $defaultTahunAjaran = $tahunSekarang . '/' . ($tahunSekarang + 1);
         }
 
-        // Set default request jika kosong
         if (!$request->has('tahun_ajaran')) {
             $request->merge([
                 'tahun_ajaran' => $defaultTahunAjaran, 
                 'semester' => $defaultSemester,
                 'mode' => 'kelas',
-                // Default Filter Baru
-                'show_ranking' => '0', // Sembunyikan Ranking
-                'sort_by' => 'absen'   // Urutkan Absen
+                'show_ranking' => '0', 
+                'sort_by' => 'absen'
             ]);
         }
 
-        // 2. Ambil Parameter Request
         $mode = $request->mode;
         $id_kelas = $request->id_kelas;
         $jurusan = $request->jurusan;
         $semesterRaw = $request->semester;
         $tahun_ajaran = $request->tahun_ajaran;
-        
-        // Parameter Filter Baru
         $showRanking = $request->show_ranking ?? '0';
         $sortBy = $request->sort_by ?? 'absen';
 
-        // Validasi Logika: Jika Ranking Disembunyikan, Paksa Sort by Absen
         if ($showRanking == '0') {
             $sortBy = 'absen';
         }
         
         $semesterInt = $this->mapSemesterToInt($semesterRaw);
-
-        // 3. Cek apakah filter terisi
         $kelasIds = $this->getKelasIdsFromRequest($request);
 
-        // Default Kosong
         $daftarMapel = collect();
         $dataLedger = collect();
 
         if (!empty($kelasIds)) {
-            // Panggil Core Logic
             $coreData = $this->buildDataCore($kelasIds, $semesterInt, $tahun_ajaran);
-            
             $daftarMapel = $coreData['daftarMapel'];
-            
-            // HITUNG RANKING & SORTING AKHIR
             $dataLedger = $this->calculateRankingAndSort($coreData['dataLedger'], $sortBy);
         }
 
@@ -360,29 +323,13 @@ class LedgerController extends Controller
         $kbm = 75;
 
         return view('rapor.ledger_index', compact(
-            'kelas',
-            'jurusanList',
-            'tingkatList',
-            'mode',
-            'id_kelas',
-            'jurusan',
-            'semesterRaw',
-            'tahun_ajaran',
-            'daftarMapel',
-            'dataLedger',
-            'tahunAjaranList',
-            'semesterList',
-            'defaultSemester',
-            'defaultTahunAjaran',
-            'kbm',
-            'showRanking', // Variable untuk View
-            'sortBy'       // Variable untuk View
+            'kelas', 'jurusanList', 'tingkatList', 'mode', 'id_kelas', 'jurusan',
+            'semesterRaw', 'tahun_ajaran', 'daftarMapel', 'dataLedger',
+            'tahunAjaranList', 'semesterList', 'defaultSemester', 'defaultTahunAjaran',
+            'kbm', 'showRanking', 'sortBy'
         ));
     }
 
-    /**
-     * Export Excel
-     */
     public function exportExcel(Request $request)
     {
         return Excel::download(
@@ -391,9 +338,6 @@ class LedgerController extends Controller
         );
     }
 
-    /**
-     * Export PDF
-     */
     public function exportPdf(Request $request)
     {
         ini_set('memory_limit', '1024M');
@@ -402,12 +346,9 @@ class LedgerController extends Controller
         $semesterRaw = $request->semester ?? 'Ganjil';
         $semesterInt = $this->mapSemesterToInt($semesterRaw);
         $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
-
         $kelasIds = $this->getKelasIdsFromRequest($request);
         
         $core = $this->buildDataCore($kelasIds, $semesterInt, $tahun_ajaran);
-        
-        // Sorting PDF (Default Ranking agar rapi / Sesuai Request bisa disesuaikan)
         $sortBy = $request->sort_by ?? 'ranking'; 
         $dataLedger = $this->calculateRankingAndSort($core['dataLedger'], $sortBy);
 
@@ -426,7 +367,6 @@ class LedgerController extends Controller
             : ($kelasObj->nama_kelas ?? '-');
 
         $nama_wali = $kelasObj->wali_kelas ?? '-';
-        $nip_wali  = '-';
 
         $dataView = [
             'namaSekolah'   => $namaSekolah,
@@ -437,24 +377,22 @@ class LedgerController extends Controller
             'semesterRaw'   => $semesterRaw,
             'tahun_ajaran'  => $tahun_ajaran,
             'nama_wali'     => $nama_wali,
-            'nip_wali'      => $nip_wali,
-            'showRanking'   => $request->show_ranking ?? '1' // PDF biasanya tampil ranking
+            'nip_wali'      => '-',
+            'showRanking'   => $request->show_ranking ?? '1'
         ];
 
-        $pdf = Pdf::loadView('rapor.ledger_pdf', $dataView)
-            ->setPaper('a4', 'landscape');
-
+        $pdf = Pdf::loadView('rapor.ledger_pdf', $dataView)->setPaper('a4', 'landscape');
         return $pdf->stream($this->buildFilename($request, 'pdf'));
     }
 
-    /**
-     * PUBLIC API: Digunakan oleh LedgerTemplateExport (EXCEL)
-     */
     public function buildLedgerData(Request $request)
     {
         $semesterRaw = $request->semester ?? 'Ganjil';
         $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
         $semesterInt = $this->mapSemesterToInt($semesterRaw);
+
+        // Ambil parameter sorting dari request, default ke 'absen' jika tidak ada
+        $sortBy = $request->sort_by ?? 'absen';
 
         $kelasIds = $this->getKelasIdsFromRequest($request);
         $core = $this->buildDataCore($kelasIds, $semesterInt, $tahun_ajaran);
@@ -462,7 +400,6 @@ class LedgerController extends Controller
         $infoSekolah = InfoSekolah::first();
         $data['namaSekolah'] = $infoSekolah->nama_sekolah ?? 'SEKOLAH';
         $data['alamatSekolah'] = $infoSekolah->alamat ?? '';
-        
         $data['semester'] = $semesterRaw;
         $data['tahun_ajaran'] = $tahun_ajaran;
         
@@ -470,9 +407,12 @@ class LedgerController extends Controller
         $data['namaKelas'] = $kelasObj ? $kelasObj->nama_kelas : 'Semua';
         $data['waliKelas'] = $kelasObj ? $kelasObj->wali_kelas : '-';
 
-        // Excel biasanya urut ranking
-        $data['dataLedger'] = $this->calculateRankingAndSort($core['dataLedger'], 'ranking');
+        // REVISI: Gunakan variabel $sortBy, jangan di-hardcode 'ranking'
+        $data['dataLedger'] = $this->calculateRankingAndSort($core['dataLedger'], $sortBy);
         $data['daftarMapel'] = $core['daftarMapel'];
+
+        // Tambahkan flag showRanking jika diperlukan di view Excel
+        $data['showRanking'] = $request->show_ranking ?? '0';
 
         return $data;
     }
