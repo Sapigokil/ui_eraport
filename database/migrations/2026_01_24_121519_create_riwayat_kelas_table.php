@@ -11,40 +11,67 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('riwayat_kelas', function (Blueprint $table) {
-            $table->id();
+        // 1. Buat tabel jika belum ada sama sekali
+        if (!Schema::hasTable('riwayat_kelas')) {
+            Schema::create('riwayat_kelas', function (Blueprint $table) {
+                $table->id();
+                $table->timestamps();
+            });
+        }
+
+        // 2. Tambahkan atau update kolom satu per satu
+        Schema::table('riwayat_kelas', function (Blueprint $table) {
             
             // Relasi ke Siswa
-            // Pastikan 'siswa' dan 'id_siswa' sesuai dengan nama tabel/PK Anda
-            $table->foreignId('id_siswa')->index(); 
-            
+            if (!Schema::hasColumn('riwayat_kelas', 'id_siswa')) {
+                $table->foreignId('id_siswa')->index()->after('id');
+            }
+
             // Kelas Awal (Snapshot sebelum pindah/naik)
-            $table->foreignId('id_kelas_lama')->nullable()->comment('ID Kelas asal');
-            $table->string('nama_kelas_lama_snapshot', 50)->nullable()->comment('Nama kelas asal (Snapshot)');
-            
+            if (!Schema::hasColumn('riwayat_kelas', 'id_kelas_lama')) {
+                $table->foreignId('id_kelas_lama')->nullable()->comment('ID Kelas asal')->after('id_siswa');
+            }
+            if (!Schema::hasColumn('riwayat_kelas', 'nama_kelas_lama_snapshot')) {
+                $table->string('nama_kelas_lama_snapshot', 50)->nullable()->comment('Nama kelas asal (Snapshot)')->after('id_kelas_lama');
+            }
+
             // Kelas Tujuan (Snapshot setelah pindah/naik)
-            $table->foreignId('id_kelas_baru')->nullable()->comment('ID Kelas tujuan (Null jika Lulus/Keluar)');
-            $table->string('nama_kelas_baru_snapshot', 50)->nullable()->comment('Nama kelas tujuan (Snapshot)');
+            if (!Schema::hasColumn('riwayat_kelas', 'id_kelas_baru')) {
+                $table->foreignId('id_kelas_baru')->nullable()->comment('ID Kelas tujuan (Null jika Lulus/Keluar)')->after('nama_kelas_lama_snapshot');
+            }
+            if (!Schema::hasColumn('riwayat_kelas', 'nama_kelas_baru_snapshot')) {
+                $table->string('nama_kelas_baru_snapshot', 50)->nullable()->comment('Nama kelas tujuan (Snapshot)')->after('id_kelas_baru');
+            }
 
-            $table->string('tahun_ajaran', 10)->comment('Tahun Ajaran saat mutasi terjadi');
-            
-            // Jenis Mutasi (Enum untuk mempermudah filter)
-            $table->enum('jenis_mutasi', [
-                'naik_kelas',       // Proses Kenaikan Kelas Biasa
-                'tinggal_kelas',    // Tidak Naik Kelas
-                'pindah_kelas',     // Pindah Jurusan/Kelas di tengah semester
-                'mutasi_keluar',    // Pindah Sekolah
-                'lulus',            // Lulus Sekolah
-                'masuk_baru'        // Siswa Baru
-            ])->default('pindah_kelas');
-            
-            $table->date('tanggal_mutasi');
-            $table->text('keterangan')->nullable()->comment('Alasan pindah atau No SK');
-            
-            // Log Admin (Opsional, sesuaikan jika tabel user Anda bukan 'users')
-            $table->foreignId('id_user_admin')->nullable()->comment('ID Admin yang memproses');
+            // Detail Waktu & Tahun Ajaran
+            if (!Schema::hasColumn('riwayat_kelas', 'tahun_ajaran')) {
+                $table->string('tahun_ajaran', 10)->comment('Tahun Ajaran saat mutasi terjadi')->after('nama_kelas_baru_snapshot');
+            }
 
-            $table->timestamps();
+            // Jenis Mutasi (Enum)
+            if (!Schema::hasColumn('riwayat_kelas', 'jenis_mutasi')) {
+                $table->enum('jenis_mutasi', [
+                    'naik_kelas',      // Proses Kenaikan Kelas Biasa
+                    'tinggal_kelas',    // Tidak Naik Kelas
+                    'pindah_kelas',     // Pindah Jurusan/Kelas di tengah semester
+                    'mutasi_keluar',    // Pindah Sekolah
+                    'lulus',            // Lulus Sekolah
+                    'masuk_baru'        // Siswa Baru
+                ])->default('pindah_kelas')->after('tahun_ajaran');
+            }
+
+            if (!Schema::hasColumn('riwayat_kelas', 'tanggal_mutasi')) {
+                $table->date('tanggal_mutasi')->after('jenis_mutasi');
+            }
+
+            if (!Schema::hasColumn('riwayat_kelas', 'keterangan')) {
+                $table->text('keterangan')->nullable()->comment('Alasan pindah atau No SK')->after('tanggal_mutasi');
+            }
+
+            // Log Admin
+            if (!Schema::hasColumn('riwayat_kelas', 'id_user_admin')) {
+                $table->foreignId('id_user_admin')->nullable()->comment('ID Admin yang memproses')->after('keterangan');
+            }
         });
     }
 

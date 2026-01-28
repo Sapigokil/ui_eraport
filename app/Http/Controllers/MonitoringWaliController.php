@@ -99,7 +99,7 @@ class MonitoringWaliController extends Controller
         $filterSemInt = ($filterSemStr == 'Ganjil' || $filterSemStr == '1') ? 1 : 2;
 
         if ($filterTahun != $activeSeason->tahun_ajaran || $filterSemInt != $activeSeason->semester) {
-            $response['message'] = 'Anda sedang melihat arsip lama. Generate Rapor hanya bisa dilakukan pada Tahun & Semester yang aktif.';
+            $response['message'] = 'Generate Rapor hanya bisa dilakukan pada Tahun & Semester yang aktif.';
             return $response;
         }
 
