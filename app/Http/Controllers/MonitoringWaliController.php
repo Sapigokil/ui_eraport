@@ -244,13 +244,11 @@ class MonitoringWaliController extends Controller
                         'nip_kepsek_snapshot' => $kepsekNip,
 
                         'sakit'      => $catatan->sakit ?? 0, 
-                        'izin'       => $catatan->ijin ?? 0, 
+                        'ijin'       => $catatan->ijin ?? 0, 
                         'alpha'      => $catatan->alpha ?? 0,
-                        'dispensasi' => $catatan->dispensasi ?? 0,
                         
-                        'catatan_akademik'   => $catatan->catatan_akademik ?? '-',
+                        'kokurikuler'   => $catatan->kokurikuler ?? '-',
                         'catatan_wali_kelas' => $catatan->catatan_wali_kelas ?? '-',
-                        'catatan_p5'         => $catatan->catatan_p5 ?? '-',
                         
                         'data_ekskul'     => json_encode($ekskulSnapshot),
                         'status_kenaikan' => $catatan->status_kenaikan ?? 'proses',
@@ -597,10 +595,10 @@ class MonitoringWaliController extends Controller
                     
                     $isDifferent = (
                         (int)($c->sakit ?? 0) !== (int)($f->sakit ?? 0) ||
-                        (int)($c->ijin ?? 0)  !== (int)($f->izin ?? 0)  || 
+                        (int)($c->ijin ?? 0)  !== (int)($f->ijin ?? 0)  || 
                         (int)($c->alpha ?? 0) !== (int)($f->alpha ?? 0) ||
                         trim((string)($c->catatan_wali_kelas ?? '-')) !== trim((string)($f->catatan_wali_kelas ?? '-')) ||
-                        trim((string)($c->catatan_akademik ?? '-'))    !== trim((string)($f->catatan_akademik ?? '-'))
+                        trim((string)($c->kokurikuler ?? '-'))    !== trim((string)($f->kokurikuler ?? '-'))
                     );
                     
                     $statusCatatan = $isDifferent ? 'update' : 'final';
@@ -609,7 +607,9 @@ class MonitoringWaliController extends Controller
                 $detailCatatan[] = [
                     'nama_siswa' => $s->nama_siswa,
                     'nisn'       => $s->nisn,
-                    'kokurikuler'=> $c->kokurikuler ?? '-', 
+                    // 'kokurikuler'=> $c->kokurikuler ?? '-', 
+                    'kokurikuler_short'=> \Illuminate\Support\Str::limit($c->kokurikuler ?? '-', 30), 
+                    'kokurikuler_full' => $c->kokurikuler ?? '-',
                     'ekskul_html'=> empty($ekskulFormatted) ? '-' : implode('<br>', $ekskulFormatted), 
                     'sakit'      => $c->sakit ?? 0, 
                     'ijin'       => $c->ijin ?? 0, 

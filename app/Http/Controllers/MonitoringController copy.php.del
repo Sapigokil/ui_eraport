@@ -1,0 +1,226 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Models\Kelas;
+use App\Models\Pembelajaran;
+use Illuminate\Support\Str;
+
+class MonitoringController extends Controller
+{
+    /**
+     * MENU 1: MONITORING GLOBAL (ADMIN)
+     * Menampilkan List Semua Kelas
+     */
+    public function index(Request $request)
+    {
+        $periode = $this->getPeriode($request);
+        
+        // Ambil Semua Kelas
+        $listKelas = Kelas::orderBy('nama_kelas', 'asc')->get();
+        
+        // Hitung Data (Logic Internal Admin)
+        $result = $this->hitungMonitoringData($listKelas, $periode);
+
+        return view('monitoring.kesiapan_rapor.index', array_merge($result, $periode));
+    }
+
+    // =========================================================================
+    // PRIVATE HELPER (KHUSUS ADMIN)
+    // =========================================================================
+
+    private function getPeriode($request)
+    {
+        $bulanSekarang = date('n');
+        $tahunSekarang = date('Y');
+        
+        if ($bulanSekarang >= 7) {
+            $semDefault = 'Ganjil';
+            $taDefault  = $tahunSekarang . '/' . ($tahunSekarang + 1);
+        } else {
+            $semDefault = 'Genap';
+            $taDefault  = ($tahunSekarang - 1) . '/' . $tahunSekarang;
+        }
+
+        $tahun_ajaran = $request->tahun_ajaran ?? $taDefault;
+        $semester     = $request->semester ?? $semDefault;
+        
+        $tahunAjaranList = [];
+        for ($t = $tahunSekarang - 2; $t <= $tahunSekarang + 1; $t++) {
+            $tahunAjaranList[] = $t . '/' . ($t + 1);
+        }
+
+        return compact('tahun_ajaran', 'semester', 'tahunAjaranList');
+    }
+
+    private function hitungMonitoringData($listKelas, $periode)
+    {
+        $tahun_ajaran = $periode['tahun_ajaran'];
+        $semester = $periode['semester'];
+        $smtInt = ($semester == 'Ganjil' || $semester == '1') ? 1 : 2;
+
+        $masterEkskul = DB::table('ekskul')->pluck('nama_ekskul', 'id_ekskul');
+        
+        $monitoringData = [];
+        $stats = [
+            'total_rombel' => $listKelas->count(),
+            'mapel_final'  => 0,
+            'mapel_total'  => 0,
+            'persen_global'=> 0
+        ];
+
+        foreach ($listKelas as $k) {
+            // A. DATA SISWA
+            $siswaCollection = DB::table('siswa')
+                ->join('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
+                ->where('siswa.id_kelas', $k->id_kelas)
+                ->select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nisn', 'detail_siswa.agama')
+                ->orderBy('siswa.nama_siswa')
+                ->get();
+
+            $totalSiswaKelas = $siswaCollection->count();
+            if ($totalSiswaKelas == 0) continue; 
+
+            // BAGIAN 1: NILAI MAPEL
+            $pembelajaran = Pembelajaran::with(['mapel' => function ($q) {
+                    $q->where('is_active', 1);
+                }, 'guru']) 
+                ->where('id_kelas', $k->id_kelas)
+                ->get();
+
+            $mapelDiKelas = $pembelajaran->map(function ($item) {
+                if (!$item->mapel) return null;
+                $item->mapel->nama_guru_pengampu = $item->guru->nama_guru ?? 'Belum diset';
+                return $item->mapel;
+            })->filter()->sortBy([['kategori', 'asc'], ['urutan', 'asc']]);
+
+            $detailMapel = [];
+            $kelasMapelSelesai = 0;
+            $kelasMapelTotalHitung = 0;
+
+            foreach ($mapelDiKelas as $m) {
+                $targetSiswa = $totalSiswaKelas; 
+                $namaMapel = $m->nama_mapel;
+                
+                $agamas = ['Islam', 'Kristen', 'Katholik', 'Katolik', 'Hindu', 'Buddha', 'Budha', 'Khonghucu', 'Konghucu'];
+                foreach ($agamas as $rel) {
+                    if (stripos($namaMapel, $rel) !== false) {
+                        $search = ($rel == 'Katolik') ? ['katholik', 'katolik'] : 
+                                  (($rel == 'Budha') ? ['buddha', 'budha'] : 
+                                  (($rel == 'Konghucu') ? ['konghucu', 'khonghucu'] : [strtolower($rel)]));
+                        
+                        $targetSiswa = $siswaCollection->filter(function($s) use ($search) {
+                            return in_array(strtolower($s->agama), $search);
+                        })->count();
+                        break; 
+                    }
+                }
+
+                if ($targetSiswa == 0) continue; 
+
+                $sudahMasuk = DB::table('nilai_akhir')
+                    ->where('id_kelas', $k->id_kelas)
+                    ->where('id_mapel', $m->id_mapel)
+                    ->where('semester', $smtInt)
+                    ->where('tahun_ajaran', $tahun_ajaran)
+                    ->count();
+
+                $status = 'kosong'; 
+                if ($sudahMasuk >= $targetSiswa) {
+                    $status = 'lengkap';
+                    $kelasMapelSelesai++;
+                    $stats['mapel_final']++;
+                } elseif ($sudahMasuk > 0) {
+                    $status = 'proses';
+                }
+
+                $detailMapel[] = [
+                    'id_mapel'   => $m->id_mapel,
+                    'mapel'      => $m->nama_mapel,
+                    'guru'       => $m->nama_guru_pengampu,
+                    'progress'   => $sudahMasuk,
+                    'total'      => $targetSiswa,
+                    'status'     => $status,
+                    'persen'     => round(($sudahMasuk / $targetSiswa) * 100),
+                    'kategori'   => $m->kategori
+                ];
+                
+                $kelasMapelTotalHitung++;
+                $stats['mapel_total']++;
+            }
+
+            // BAGIAN 2: CATATAN WALI KELAS
+            $catatanList = DB::table('catatan')
+                ->whereIn('id_siswa', $siswaCollection->pluck('id_siswa'))
+                ->where('semester', $smtInt)
+                ->where('tahun_ajaran', $tahun_ajaran)
+                ->get()
+                ->keyBy('id_siswa');
+
+            $detailCatatan = [];
+            $siswaAdaCatatan = 0;
+
+            foreach ($siswaCollection as $s) {
+                $c = $catatanList->get($s->id_siswa);
+                $hasData = ($c !== null);
+
+                $ekskulFormatted = [];
+                if ($hasData && !empty($c->ekskul)) {
+                    $ids = explode(',', $c->ekskul);
+                    $preds = explode(',', $c->predikat ?? '');
+                    $kets = explode('|', $c->keterangan ?? ''); 
+
+                    foreach ($ids as $idx => $idEx) {
+                        if (empty(trim($idEx))) continue;
+                        $namaEx = $masterEkskul[$idEx] ?? 'Ekskul-' . $idEx;
+                        $predEx = $preds[$idx] ?? '-';
+                        $ketEx  = $kets[$idx] ?? '-';
+                        $ekskulFormatted[] = "• <b>$namaEx</b> ($predEx)<br><span class='text-muted text-xxs'>$ketEx</span>";
+                    }
+                }
+
+                $catatanFull = $c->catatan_wali_kelas ?? '-';
+                $catatanShort = Str::limit($catatanFull, 30, '...'); 
+
+                $detailCatatan[] = [
+                    'nama_siswa'  => $s->nama_siswa,
+                    'nisn'        => $s->nisn,
+                    'kokurikuler' => $c->kokurikuler ?? '-', 
+                    'ekskul_html' => empty($ekskulFormatted) ? '-' : implode('<br>', $ekskulFormatted), 
+                    'sakit'       => $c->sakit ?? 0, 
+                    'ijin'        => $c->ijin ?? 0, 
+                    'alpha'       => $c->alpha ?? 0, 
+                    'catatan_short' => $catatanShort, 
+                    'catatan_full'  => $catatanFull,
+                    'status'      => $hasData ? 'ada' : 'kosong'
+                ];
+
+                if ($hasData) $siswaAdaCatatan++;
+            }
+
+            $persenKelas = ($kelasMapelTotalHitung > 0) ? round(($kelasMapelSelesai / $kelasMapelTotalHitung) * 100) : 0;
+            $persenCatatan = ($totalSiswaKelas > 0) ? round(($siswaAdaCatatan / $totalSiswaKelas) * 100) : 0;
+
+            $monitoringData[] = (object) [
+                'kelas'         => $k,
+                'wali_kelas'    => $k->wali_kelas ?? '-',
+                'jml_mapel'     => $kelasMapelTotalHitung,
+                'mapel_selesai' => $kelasMapelSelesai,
+                'persen'        => $persenKelas,
+                'persen_catatan'=> $persenCatatan,
+                'detail'        => $detailMapel,
+                'detail_catatan'=> $detailCatatan
+            ];
+        }
+
+        if ($stats['mapel_total'] > 0) {
+            $persen = round(($stats['mapel_final'] / $stats['mapel_total']) * 100);
+            if ($persen >= 100 && $stats['mapel_final'] < $stats['mapel_total']) $persen = 99;
+            $stats['persen_global'] = (int) $persen;
+        }
+
+        return compact('monitoringData', 'stats');
+    }
+}

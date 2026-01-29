@@ -239,7 +239,9 @@
                                                                         <span class="text-xs text-secondary">{{ $cat['nisn'] }}</span>
                                                                     </td>
                                                                     <td class="py-2 align-top">
-                                                                        <span class="text-xs text-dark d-block text-wrap" style="max-width: 150px;">{{ $cat['kokurikuler'] }}</span>
+                                                                        <span class="text-xs font-weight-bold text-dark" title="{{ $cat['kokurikuler_full'] }}" data-bs-toggle="tooltip">
+                                                                            {{ $cat['kokurikuler_short'] }}
+                                                                        </span>
                                                                     </td>
                                                                     <td class="py-2 align-top">
                                                                         <span class="text-xs text-dark d-block text-wrap">{!! $cat['ekskul_html'] !!}</span>

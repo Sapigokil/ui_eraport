@@ -161,12 +161,12 @@ class LedgerController extends Controller
             $mapNilai[$sId][$mId] = $rn->nilai_akhir;
         }
 
-        // D. Ambil Absensi
-        $rawAbsen = DB::table('catatan')
+        // D. Ambil Absensi (REVISI: Dari table nilai_akhir_rapor)
+        $rawAbsen = DB::table('nilai_akhir_rapor')
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
             ->where('semester', $semesterInt)
             ->where('tahun_ajaran', trim($tahun_ajaran))
-            ->select('id_siswa', 'sakit', 'ijin', 'alpha')
+            ->select('id_siswa', 'sakit', 'izin', 'alpha') // Pastikan kolom 'izin' menggunakan 'z' sesuai struktur table nilai_akhir_rapor
             ->get();
         
         $mapAbsen = [];

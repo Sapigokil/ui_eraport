@@ -209,7 +209,8 @@
                                                         <span class="text-xs text-secondary">{{ $cat['nisn'] }}</span>
                                                     </div>
                                                 </td>
-                                                <td class="align-top py-3"><p class="text-xs font-weight-bold mb-0 text-dark text-wrap" style="max-width: 200px;">{{ $cat['kokurikuler'] }}</p></td>
+                                                {{-- <td class="align-top py-3"><p class="text-xs font-weight-bold mb-0 text-dark text-wrap" style="max-width: 200px;">{{ $cat['kokurikuler'] }}</p></td> --}}
+                                                <td class="align-top py-3"><span class="text-xs text-secondary text-wrap d-block" style="max-width: 200px;" data-bs-toggle="tooltip" title="{{ $cat['kokurikuler_full'] }}">{{ $cat['kokurikuler_short'] }}</span></td>
                                                 <td class="align-top py-3"><span class="text-xs text-secondary d-block text-wrap">{!! $cat['ekskul_html'] !!}</span></td>
                                                 <td class="align-middle text-center align-top py-3">
                                                     <span class="badge badge-sm bg-light text-dark border">S: <b class="text-danger">{{ $cat['sakit'] }}</b> | I: <b class="text-warning">{{ $cat['ijin'] }}</b> | A: <b class="text-dark">{{ $cat['alpha'] }}</b></span>
