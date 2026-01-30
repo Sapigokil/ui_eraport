@@ -124,9 +124,13 @@
                             
                             {{-- TOMBOL DOWNLOAD MASSAL (MUNCUL JIKA ADA DATA FINAL) --}}
                             @if($stats['final_count'] > 0)
-                            <a href="{{ route('rapornilai.download_massal_pdf') }}?id_kelas={{ $id_kelas }}&semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
+                            {{-- <a href="{{ route('rapornilai.download_massal_pdf') }}?id_kelas={{ $id_kelas }}&semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
                                class="btn btn-sm btn-outline-primary mb-0" target="_blank">
                                 <i class="fas fa-file-pdf me-2"></i> Download Semua PDF
+                            </a> --}}
+                            <a href="{{ route('rapornilai.download_massal_merge') }}?id_kelas={{ $id_kelas }}&semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
+                               class="btn btn-sm btn-outline-primary mb-0" target="_blank">
+                                <i class="fas fa-file-pdf me-2"></i> Download & Merge PDF
                             </a>
                             @endif
                         </div>
@@ -164,11 +168,11 @@
                                         {{-- KOLOM KELENGKAPAN --}}
                                         <td class="text-center align-middle">
                                             @if($s->snapshot_status != 'kosong')
-                                                <span class="badge badge-sm bg-gradient-success">LENGKAP (SNAPSHOT)</span>
+                                                <span class="badge badge-sm bg-gradient-success">LENGKAP</span>
                                             @elseif($s->raw_status == 'lengkap')
-                                                <span class="badge badge-sm bg-gradient-warning text-dark">LENGKAP (RAW)</span>
+                                                <span class="badge badge-sm bg-gradient-warning text-dark">BELUM REKAP</span>
                                             @else
-                                                <span class="badge badge-sm bg-gradient-danger">BELUM LENGKAP</span>
+                                                <span class="badge badge-sm bg-gradient-danger">BELUM ADA</span>
                                             @endif
                                         </td>
 
@@ -176,7 +180,7 @@
                                         <td class="text-center align-middle">
                                             @if($s->snapshot_status == 'cetak' && $s->tanggal_cetak)
                                                 <span class="text-xs font-weight-bold d-block">{{ \Carbon\Carbon::parse($s->tanggal_cetak)->format('d M Y') }}</span>
-                                                <span class="text-xxs text-secondary">{{ \Carbon\Carbon::parse($s->tanggal_cetak)->format('H:i') }} WIB</span>
+                                                {{-- <span class="text-xxs text-secondary">{{ \Carbon\Carbon::parse($s->tanggal_cetak)->format('H:i') }} WIB</span> --}}
                                             @else
                                                 <span class="text-xs text-secondary">-</span>
                                             @endif
@@ -235,25 +239,44 @@
                                                 <div class="row p-3">
                                                     {{-- DETAIL MAPEL --}}
                                                     <div class="col-md-7 border-end">
-                                                        <h6 class="text-xs font-weight-bold text-uppercase text-secondary mb-2 ms-2">Detail Mapel</h6>
-                                                        <div class="table-responsive bg-white border-radius-md shadow-xs mx-2">
-                                                            <table class="table table-sm mb-0">
-                                                                <thead class="bg-light">
+                                                        <h6 class="text-xs font-weight-bold text-uppercase text-secondary mb-2 ms-2">Detail Mapel ({{ count($s->detail_mapel) }})</h6>
+                                                        <div class="table-responsive bg-white border-radius-md shadow-xs mx-2" style="max-height: 300px; overflow-y: auto;">
+                                                            <table class="table table-sm mb-0 align-middle">
+                                                                <thead class="bg-light sticky-top">
                                                                     <tr>
-                                                                        <th class="text-xs ps-3">Mapel</th>
-                                                                        <th class="text-center text-xs">Raw</th>
-                                                                        <th class="text-center text-xs">Snap</th>
+                                                                        <th class="text-xs ps-3 text-secondary font-weight-bold">Mapel</th>
+                                                                        <th class="text-center text-xs text-secondary font-weight-bold">Angka</th>
+                                                                        <th class="text-center text-xs text-secondary font-weight-bold">Nilai</th>
+                                                                        <th class="text-center text-xs text-secondary font-weight-bold">Rekap</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
                                                                     @foreach($s->detail_mapel as $dm)
                                                                     <tr>
+                                                                        {{-- Nama Mapel --}}
                                                                         <td class="text-xs ps-3 text-dark">{{ $dm['mapel'] }}</td>
-                                                                        <td class="text-center">
-                                                                            @if($dm['raw']) <i class="fas fa-check text-success text-xs"></i> @else <i class="fas fa-times text-danger text-xs"></i> @endif
+                                                                        
+                                                                        {{-- Nilai (Angka Bulat) --}}
+                                                                        <td class="text-center text-xs font-weight-bold text-dark">
+                                                                            {{ $dm['nilai_score'] }}
                                                                         </td>
+
+                                                                        {{-- Status Nilai (Raw) --}}
                                                                         <td class="text-center">
-                                                                            @if($dm['snap']) <i class="fas fa-check text-success text-xs"></i> @else <i class="fas fa-times text-danger text-xs"></i> @endif
+                                                                            @if($dm['ada_nilai']) 
+                                                                                <span class="badge badge-xxs bg-success"><i class="fas fa-check"></i></span> 
+                                                                            @else 
+                                                                                <span class="badge badge-xxs bg-danger"><i class="fas fa-times"></i></span> 
+                                                                            @endif
+                                                                        </td>
+
+                                                                        {{-- Status Rekap (Snap) --}}
+                                                                        <td class="text-center">
+                                                                            @if($dm['ada_rekap']) 
+                                                                                <span class="badge badge-xxs bg-success"><i class="fas fa-check"></i></span> 
+                                                                            @else 
+                                                                                <span class="badge badge-xxs bg-secondary"><i class="fas fa-minus"></i></span> 
+                                                                            @endif
                                                                         </td>
                                                                     </tr>
                                                                     @endforeach
@@ -264,18 +287,53 @@
 
                                                     {{-- DETAIL NON AKADEMIK --}}
                                                     <div class="col-md-5">
-                                                        <h6 class="text-xs font-weight-bold text-uppercase text-secondary mb-2 ms-2">Info Tambahan</h6>
+                                                        <h6 class="text-xs font-weight-bold text-uppercase text-secondary mb-2 ms-2">Info Non-Akademik</h6>
                                                         <div class="card card-body p-3 bg-white shadow-xs mx-2">
-                                                            <div class="d-flex justify-content-between mb-2">
-                                                                <span class="text-xs">Catatan Wali (Raw):</span>
-                                                                @if($s->detail_non_akademik['raw']) <span class="badge badge-xs bg-success">ADA</span> @else <span class="badge badge-xs bg-danger">KOSONG</span> @endif
+                                                            
+                                                            {{-- Status Data --}}
+                                                            <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
+                                                                <span class="text-xs font-weight-bold text-secondary">Status Data:</span>
+                                                                <div>
+                                                                    <span class="badge badge-xxs {{ $s->detail_non_akademik['raw'] ? 'bg-success' : 'bg-danger' }}">Nilai</span>
+                                                                    <span class="badge badge-xxs {{ $s->detail_non_akademik['snap'] ? 'bg-success' : 'bg-secondary' }}">Rekap</span>
+                                                                </div>
                                                             </div>
-                                                            <div class="d-flex justify-content-between mb-2">
-                                                                <span class="text-xs">Header Rapor (Snap):</span>
-                                                                @if($s->detail_non_akademik['snap']) <span class="badge badge-xs bg-success">ADA</span> @else <span class="badge badge-xs bg-secondary">BELUM</span> @endif
+
+                                                            {{-- Kokurikuler --}}
+                                                            <div class="mb-2">
+                                                                <span class="text-xs text-secondary d-block">Kokurikuler:</span>
+                                                                <span class="text-xs text-dark font-weight-bold" 
+                                                                      data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $s->detail_non_akademik['kokurikuler_full'] }}" style="cursor: pointer;">
+                                                                    {{ $s->detail_non_akademik['kokurikuler_short'] }}
+                                                                </span>
                                                             </div>
-                                                            <hr class="my-1">
-                                                            <p class="text-xs mb-0"><strong>Absensi (S/I/A):</strong> {{ $s->detail_non_akademik['sakit'] }} / {{ $s->detail_non_akademik['izin'] }} / {{ $s->detail_non_akademik['alpha'] }}</p>
+
+                                                            {{-- Ekstrakurikuler --}}
+                                                            <div class="mb-2">
+                                                                <span class="text-xs text-secondary d-block">Ekstrakurikuler:</span>
+                                                                <ul class="mb-0 ps-3 text-xs text-dark font-weight-bold">
+                                                                    @foreach($s->detail_non_akademik['ekskul_list'] as $eks)
+                                                                        <li>{{ $eks }}</li>
+                                                                    @endforeach
+                                                                </ul>
+                                                            </div>
+
+                                                            {{-- Catatan Wali --}}
+                                                            <div class="mb-2">
+                                                                <span class="text-xs text-secondary d-block">Catatan Wali Kelas:</span>
+                                                                <span class="text-xs text-dark font-weight-bold" 
+                                                                      data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $s->detail_non_akademik['catatan_full'] }}" style="cursor: pointer;">
+                                                                    {{ $s->detail_non_akademik['catatan_short'] }}
+                                                                </span>
+                                                            </div>
+
+                                                            {{-- Absensi --}}
+                                                            <div class="mt-2 pt-2 border-top text-center">
+                                                                <span class="text-xs text-secondary">Sakit: <b class="text-dark">{{ $s->detail_non_akademik['sakit'] }}</b></span> | 
+                                                                <span class="text-xs text-secondary">Ijin: <b class="text-dark">{{ $s->detail_non_akademik['izin'] }}</b></span> | 
+                                                                <span class="text-xs text-secondary">Alpha: <b class="text-danger">{{ $s->detail_non_akademik['alpha'] }}</b></span>
+                                                            </div>
+
                                                         </div>
                                                     </div>
                                                 </div>

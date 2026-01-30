@@ -265,7 +265,7 @@
                     <tr>
                         <td style="width: 120px;">Fase</td>
                         <td style="width: 15px;">:</td>
-                        <td>{{ $siswa->kelas->fase ?? '-' }}</td>
+                        <td>{{ $fase }}</td>
                     </tr>
                 </table>
             </td>
@@ -273,7 +273,7 @@
         <tr>
             <td class="col-title-left">Nama Sekolah</td>
             <td class="col-dots">:</td>
-            <td class="col-value-left" style="font-weight: normal;">{{ $infoSekolah->nama_sekolah ?? 'SMKN 1 SALATIGA' }}</td>
+            <td class="col-value-left" style="font-weight: normal;">{{ $infoSekolah->nama_sekolah ?? '-' }}</td>
             
             <td class="col-spacer"></td>
             
@@ -290,7 +290,7 @@
         <tr>
             <td class="col-title-left">Alamat</td>
             <td class="col-dots">:</td>
-            <td class="col-value-left font-alamat">{{ $infoSekolah }}</td>
+            <td class="col-value-left font-alamat">{{ $infoSekolah->jalan ?? '-' }}</td>
             
             <td class="col-spacer"></td>
             

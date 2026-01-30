@@ -2488,7 +2488,8 @@ progress {
 }
 
 .table-group-divider {
-  border-top: calc(2 * $table-border-width) solid currentColor;
+  /* Gunakan var(--bs-border-width) dengan fallback 1px */
+  border-top: calc(2 * var(--bs-border-width, 1px)) solid currentColor;
 }
 
 .caption-top {
@@ -5591,7 +5592,8 @@ fieldset:disabled .btn {
 }
 
 .page-item:not(:first-child) .page-link {
-  margin-left: calc($pagination-border-width * -1);
+  /* Menggunakan variable CSS dengan nilai default 1px */
+  margin-left: calc(var(--bs-border-width, 1px) * -1);
 }
 
 .page-item:first-child .page-link {
@@ -20254,39 +20256,39 @@ fieldset:disabled .btn {
 }
 
 .badge.bg-primary {
-  background: rgba(119, 77, 211, 0.1) !important;
+  background: rgba(119, 77, 211, 100) !important;
 }
 
 .badge.bg-secondary {
-  background: rgba(100, 116, 139, 0.1) !important;
+  background: rgba(100, 116, 139, 100) !important;
 }
 
 .badge.bg-success {
-  background: rgba(103, 194, 58, 0.1) !important;
+  background: rgba(103, 194, 58, 100) !important;
 }
 
 .badge.bg-info {
-  background: rgba(85, 166, 248, 0.1) !important;
+  background: rgba(85, 166, 248, 100) !important;
 }
 
 .badge.bg-warning {
-  background: rgba(241, 153, 55, 0.1) !important;
+  background: rgba(241, 153, 55, 100) !important;
 }
 
 .badge.bg-danger {
-  background: rgba(234, 78, 61, 0.1) !important;
+  background: rgba(234, 78, 61, 100) !important;
 }
 
 .badge.bg-light {
-  background: rgba(203, 213, 225, 0.1) !important;
+  background: rgba(203, 213, 225, 100) !important;
 }
 
 .badge.bg-dark {
-  background: rgba(30, 41, 59, 0.1) !important;
+  background: rgba(30, 41, 59, 100) !important;
 }
 
 .badge.bg-white {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 100) !important;
 }
 
 .badge {
@@ -26362,7 +26364,7 @@ span.flatpickr-weekday {
   background: #fff;
   cursor: default;
   box-shadow: inset 0 0 1px #fff, inset 0 1px 7px #EBEBEB, 0 3px 6px -3px #BBB;
-  webkit-transition: .3s ease 0s;
+  -webkit-transition: .3s ease 0s;
   -moz-transition: .3s ease 0s;
   -ms-transition: .3s ease 0s;
   -o-transform: .3s ease 0s;

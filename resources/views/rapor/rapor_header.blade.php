@@ -10,7 +10,7 @@
                         <span class="h-label">Nama Sekolah</span><span class="h-sep">:</span>
                         <span class="h-val">{{ $data['sekolah'] }}</span><br>
                         <span class="h-label" style="font-size:11pt">Alamat</span><span class="h-sep">:</span>
-                        <span class="h-val" style="font-size:10pt;display:inline-block;max-width:300px;">{{ $data['infoSekolah'] ?? '-' }}</span>
+                        <span class="h-val" style="font-size:10pt;display:inline-block;max-width:300px;">{{ $data['alamat_sekolah'] ?? '-' }}</span>
                     </td>
 
                     <td width="35%">

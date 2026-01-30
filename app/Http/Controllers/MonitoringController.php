@@ -128,7 +128,7 @@ class MonitoringController extends Controller
                     ->where('id_mapel', $p->id_mapel)
                     ->where('semester', $smtInt)
                     ->where('tahun_ajaran', $tahun_ajaran)
-                    ->where('status_data', 'final')
+                    ->where('status_data', ['final', 'cetak'])
                     ->count();
 
                 $statusMapel = 'kosong'; 
@@ -176,10 +176,10 @@ class MonitoringController extends Controller
                     // FIX: Sertakan data _short dan _full untuk Catatan
                     'catatan_short' => Str::limit($snap->catatan_wali_kelas ?? '-', 30), 
                     'catatan_full'  => $snap->catatan_wali_kelas ?? '-',
-                    'status'        => ($hasSnapshot && $snap->status_data === 'final') ? 'ada' : 'kosong'
+                    'status'            => ($hasSnapshot && in_array($snap->status_data, ['final', 'cetak'])) ? 'ada' : 'kosong'
                 ];
 
-                if ($hasSnapshot && $snap->status_data === 'final') {
+                if ($hasSnapshot && in_array($snap->status_data, ['final', 'cetak'])) {
                     $siswaTersnapshot++;
                 }
             }
