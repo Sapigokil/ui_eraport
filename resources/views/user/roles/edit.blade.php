@@ -36,7 +36,7 @@
                                     <input type="text" id="inputRoleName" name="name" 
                                            value="{{ old('name', $role->name) }}" 
                                            class="form-control rounded-pill py-2 @error('name') is-invalid @enderror"
-                                           {{ in_array($role->name, ['admin', 'guru', 'wali murid']) ? 'disabled' : '' }}>
+                                           {{ in_array($role->name, ['admin', 'guru', 'wali murid']) ? 'readonly' : '' }}>
                                     
                                     @if(in_array($role->name, ['admin', 'guru', 'wali murid']))
                                         <small class="text-danger">Nama role krusial tidak dapat diubah.</small>
@@ -51,20 +51,37 @@
                                 <h6 class="text-sm font-weight-bolder mb-3 text-danger">Atur Izin (Permissions)</h6>
 
                                 <div class="row">
-                                    @foreach ($permissions->chunk(3) as $chunk) {{-- Bagi Permissions menjadi 3 kolom --}}
-                                        <div class="col-md-4">
-                                            @foreach ($chunk as $permission)
-                                                <div class="form-check">
-                                                    {{-- Cek apakah role saat ini sudah memiliki permission tersebut --}}
-                                                    <input class="form-check-input" type="checkbox" name="permissions[]" 
-                                                           value="{{ $permission->name }}" id="perm-{{ $permission->id }}" 
-                                                           {{ $role->hasPermissionTo($permission->name) ? 'checked' : '' }}>
-                                                    
-                                                    <label class="custom-control-label" for="perm-{{ $permission->id }}">
-                                                        {{ Str::title(str_replace('-', ' ', $permission->name)) }}
-                                                    </label>
+                                    @foreach($permissions as $group => $items)
+                                        <div class="col-md-6 mb-4"> {{-- Menggunakan 2 kolom agar rapi --}}
+                                            <div class="card h-100 border shadow-sm">
+                                                
+                                                {{-- HEADER: Menampilkan Nama Group --}}
+                                                <div class="card-header bg-light py-2">
+                                                    <h6 class="mb-0 text-dark font-weight-bold">
+                                                        {{ $group ?? 'Permissions Lainnya' }}
+                                                    </h6>
                                                 </div>
-                                            @endforeach
+
+                                                {{-- BODY: Menampilkan Checkbox dengan Label --}}
+                                                <div class="card-body py-2">
+                                                    @foreach($items as $permission)
+                                                        <div class="form-check my-2">
+                                                            {{-- Input tetap mengirimkan 'name' (misal: users.create) --}}
+                                                            <input class="form-check-input" type="checkbox" 
+                                                                name="permissions[]" 
+                                                                value="{{ $permission->name }}" 
+                                                                id="perm-{{ $permission->id }}"
+                                                                {{ $role->permissions->contains('id', $permission->id) ? 'checked' : '' }}>
+                                                            
+                                                            {{-- Label menampilkan teks manusiawi (misal: Menambahkan Pengguna Baru) --}}
+                                                            <label class="form-check-label text-sm cursor-pointer" for="perm-{{ $permission->id }}">
+                                                                {{ $permission->label ?? $permission->name }} 
+                                                                {{-- Fallback ke name jika label kosong --}}
+                                                            </label>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>

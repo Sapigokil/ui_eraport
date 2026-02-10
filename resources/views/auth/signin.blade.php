@@ -1,111 +1,96 @@
 <x-guest-layout>
-    <!-- <div class="container position-sticky z-index-sticky top-0">
-        <div class="row">
-            <div class="col-12">
-                <x-guest.sidenav-guest />
-            </div>
-        </div>
-    </div> -->
-    <main class="main-content  mt-0">
+    <main class="main-content mt-0">
         <section>
             <div class="page-header min-vh-100">
+                
+                {{-- 1. BACKGROUND MODERN (Ringan, Tanpa Gambar Besar) --}}
+                <div class="position-absolute top-0 start-0 w-100 h-100" 
+                     style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); z-index: -1;">
+                     {{-- Opsi lain: Background Mesh Gradient (lihat CSS di bawah) --}}
+                </div>
+
                 <div class="container">
-                    <div class="row">
-                        <div class="col-xl-4 col-md-6 d-flex flex-column mx-auto">
-                            <div class="card card-plain mt-8">
-                                <div class="card-header pb-0 text-left bg-transparent text-center">
-                                    <h3 class="font-weight-black text-dark display-6">E-rapor</h3>
-                                    <p class="mb-0">Selamat Datang!</p>
-                                    <p class="mb-0">Buat akun baru atau Sign in:<br></p>
-                                    {{-- <p class="mb-0">atau Sign in:</p> --}}
-                                    {{-- <p class="mb-0">Email: <b>admin@erapor.test</b></p>
-                                    <p class="mb-0">Password: <b>password</b></p> --}}
+                    <div class="row justify-content-center">
+                        <div class="col-xl-4 col-lg-5 col-md-7 d-flex flex-column mx-auto">
+                            
+                            {{-- 2. CARD LOGIN (Dibuat Pop-up dengan Shadow) --}}
+                            <div class="card shadow-lg mt-5 border-0 rounded-3">
+                                <div class="card-header pb-0 text-center bg-white border-0 pt-4">
+                                    {{-- Ikon atau Logo Kecil (Opsional) --}}
+                                    <div class="mb-3">
+                                        <i class="fas fa-school fa-3x text-dark"></i>
+                                    </div>
+                                    <h4 class="font-weight-bold text-dark">E-Rapor SMK</h4>
+                                    <p class="mb-0 text-secondary text-sm">Masuk untuk melanjutkan</p>
                                 </div>
-                                <div class="text-center">
+
+                                <div class="card-body">
+                                    {{-- Alert Status / Error --}}
                                     @if (session('status'))
-                                        <div class="mb-4 font-medium text-sm text-green-600">
+                                        <div class="alert alert-success text-white text-sm p-2 mb-3" role="alert">
                                             {{ session('status') }}
                                         </div>
                                     @endif
                                     @error('message')
-                                        <div class="alert alert-danger text-sm" role="alert">
+                                        <div class="alert alert-danger text-white text-sm p-2 mb-3" role="alert">
                                             {{ $message }}
                                         </div>
                                     @enderror
-                                </div>
-                                <div class="card-body">
-                                    <form role="form" class="text-start" method="POST" action="sign-in">
+
+                                    <form role="form" method="POST" action="sign-in">
                                         @csrf
-                                        <label>Email / Username</label>
+                                        
                                         <div class="mb-3">
+                                            <label class="form-label text-xs font-weight-bold text-uppercase text-secondary">Email / Username</label>
                                             <input type="text" 
-                                                    id="login" 
-                                                    name="login" 
-                                                    class="form-control"
-                                                    placeholder="Enter your email or username"
-                                                    value="{{ old('login') }}"
-                                                    aria-label="Email or Username" 
-                                                    aria-describedby="email-addon"
-                                                    required autofocus>
+                                                   id="login" 
+                                                   name="login" 
+                                                   class="form-control form-control-lg ps-3"
+                                                   placeholder="Ketik username anda"
+                                                   value="{{ old('login') }}"
+                                                   required autofocus>
                                         </div>
-                                        <label>Password</label>
+
                                         <div class="mb-3">
-                                            <input type="password" id="password" name="password"
-                                                value="{{ old('password') ? old('password') : 'password' }}"
-                                                class="form-control" placeholder="Enter password" aria-label="Password"
-                                                aria-describedby="password-addon">
-                                        </div>
-                                        <!-- <div class="d-flex align-items-center">
-                                            <div class="form-check form-check-info text-left mb-0">
-                                                <input class="form-check-input" type="checkbox" value=""
-                                                    id="flexCheckDefault">
-                                                <label class="font-weight-normal text-dark mb-0" for="flexCheckDefault">
-                                                    Remember for 14 days
-                                                </label>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="form-label text-xs font-weight-bold text-uppercase text-secondary">Password</label>
                                             </div>
-                                            <a href="{{ route('password.request') }}"
-                                                class="text-xs font-weight-bold ms-auto">Forgot
-                                                password</a>
-                                        </div> -->
+                                            <input type="password" 
+                                                   id="password" 
+                                                   name="password"
+                                                   class="form-control form-control-lg ps-3" 
+                                                   placeholder="Ketik password"
+                                                   required>
+                                        </div>
+
+                                        {{-- Tombol Login --}}
                                         <div class="text-center">
-                                            <button type="submit" class="btn btn-dark w-100 mt-4 mb-3">Sign in</button>
-                                            <!-- <button type="button" class="btn btn-white btn-icon w-100 mb-3">
-                                                <span class="btn-inner--icon me-1">
-                                                    <img class="w-5" src="../assets/img/logos/google-logo.svg"
-                                                        alt="google-logo" />
-                                                </span>
-                                                <span class="btn-inner--text">Sign in with Google</span>
-                                            </button> -->
+                                            <button type="submit" class="btn btn-dark btn-lg w-100 mt-4 mb-0">Masuk Aplikasi</button>
                                         </div>
                                     </form>
                                 </div>
-                                <div class="card-footer text-center pt-0 px-lg-2 px-1">
-                                    <p class="mb-4 text-xs mx-auto">
+
+                                <div class="card-footer text-center pt-0 px-lg-2 px-1 bg-white border-0 pb-4">
+                                    <p class="mb-4 text-sm mx-auto text-secondary">
                                         Belum punya akun?
-                                        <a href="{{ route('sign-up') }}" class="text-dark font-weight-bold">Sign up</a>
+                                        <a href="{{ route('sign-up') }}" class="text-dark font-weight-bold text-decoration-none">Daftar Sekarang</a>
                                     </p>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="position-absolute w-40 top-0 end-0 h-100 d-md-block d-none">
-                                <div class="oblique-image position-absolute fixed-top ms-auto h-100 z-index-0 bg-cover ms-n8"
-                                    style="background-image:url('{{ asset('assets/img/sign-in-bg-2.jpg') }}');  background-size: cover;
-                                    background-position: 70% center;">
-                                    <!-- <div
-                                        class="blur mt-12 p-4 text-center border border-white border-radius-md position-absolute fixed-bottom m-4">
-                                        <h2 class="mt-3 text-dark font-weight-bold">Enter our global community of
-                                            developers.</h2>
-                                        <h6 class="text-dark text-sm mt-5">Copyright © 2022 Corporate UI Design System
-                                            by Creative Tim.</h6>
-                                    </div> -->
-                                </div>
+                            
+                            {{-- Footer Copyright Kecil --}}
+                            <div class="text-center mt-3 text-sm text-secondary">
+                                &copy; {{ date('Y') }} E-Rapor SMK by 
+                                <a href="https://campus.web.id" class="text-secondary font-weight-bold text-decoration-none" target="_blank">
+                                    CampusCreative
+                                </a>. 
+                                All rights reserved.
                             </div>
+
                         </div>
                     </div>
                 </div>
             </div>
         </section>
     </main>
-
 </x-guest-layout>

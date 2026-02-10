@@ -13,7 +13,7 @@
                         <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
                             <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 d-flex justify-content-between align-items-center">
                                 <h6 class="text-white text-capitalize ps-3">Daftar Role Pengguna E-Rapor</h6>
-                                @can('roles.create')
+                                @can('roles.menu')
                                 <a href="{{ route('settings.system.roles.create') }}" class="btn btn-white me-3 mb-0">
                                     <i class="fas fa-plus me-1"></i> Tambah Role Baru
                                 </a>
@@ -37,7 +37,7 @@
                                         
                                         {{-- REVISI DISINI: Tambahkan 'guru' dan 'siswa' ke dalam array --}}
                                         @php
-                                            $isSystemRole = in_array(strtolower($role->name), ['developer', 'admin_erapor', 'guru_erapor', 'guru', 'siswa']);
+                                            $isSystemRole = in_array(strtolower($role->name), ['developer', 'admin_erapor', 'guru_erapor', 'guru_ekskul', 'guru', 'siswa']);
                                         @endphp
 
                                         <tr>
@@ -65,13 +65,13 @@
                                                 <span class="badge badge-sm bg-gradient-success">{{ $role->users->count() }} User</span>
                                             </td>
                                             <td class="align-middle">
-                                                @can('roles.update')
+                                                @can('roles.menu')
                                                 <a href="{{ route('settings.system.roles.edit', $role->id) }}" class="text-primary font-weight-bold text-xs me-3" data-toggle="tooltip" title="Atur Izin">
                                                     <i class="fas fa-pencil-alt me-1"></i> Edit
                                                 </a>
                                                 @endcan
                                                 
-                                                @can('roles.delete')
+                                                @can('roles.menu')
                                                     @if ($isSystemRole)
                                                         {{-- Role Default/Sistem TERKUNCI --}}
                                                         <span class="text-secondary text-xs" data-toggle="tooltip" title="Role Sistem/Default tidak dapat dihapus">

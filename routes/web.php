@@ -25,6 +25,7 @@ use App\Http\Controllers\PesertaEkskulController;
 // Nilai & Rapor
 use App\Http\Controllers\SumatifController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\EkskulNilaiController;
 use App\Http\Controllers\RekapNilaiController;
 use App\Http\Controllers\NilaiAkhirController;
 use App\Http\Controllers\CatatanController;
@@ -204,23 +205,32 @@ Route::middleware(['auth'])->group(function () {
             });
         });
 
-        // 4. Catatan Wali Kelas
-        // Route::group(['prefix' => 'catatan', 'as' => 'catatan.', 'controller' => CatatanController::class], function () {
-        //     Route::get('/input', 'inputCatatan')->name('input');
-        //     Route::get('/template', 'downloadTemplate')->name('template');
-        //     Route::get('/get-siswa/{id_kelas}', 'getSiswa')->name('getSiswa');
-        //     Route::get('check-prerequisite', 'checkPrerequisite')->name('check_prerequisite');
-            
-        //     Route::middleware('can:nilai.input')->group(function() {
-        //         Route::post('/simpan', 'simpanCatatan')->name('simpan');
-        //         Route::post('/import', 'importExcel')->name('import');
-        //     });
-        // });
-
         // 5. Rekap Nilai (Finalisasi) - ✅ Route Name: master.rekap.index
         Route::group(['prefix' => 'rekap-nilai', 'as' => 'rekap.', 'controller' => RekapNilaiController::class], function () {
             Route::get('/', 'index')->name('index');
             Route::post('/simpan', 'store')->name('store');
+        });
+    });
+
+    // ==========================================================================
+    // MODULE: PENILAIAN / INPUT NILAI Ekstrakurikuler
+    // Permission: ekskul.view (Guru & Admin Erapor)
+    // ==========================================================================
+    Route::group(['prefix' => 'ekskul', 'as' => 'ekskul.', 'middleware' => ['can:ekskul.view']], function () {
+        
+        // Group Controller: EkskulNilaiController
+        Route::controller(EkskulNilaiController::class)->group(function () {
+            
+            // 1. MENU PESERTA EKSKUL (Menautkan Siswa & Ekskul)
+            Route::get('peserta', 'indexPeserta')->name('peserta.index');
+            Route::get('peserta/{id}/edit', 'editPeserta')->name('peserta.edit');
+            Route::put('peserta/{id}', 'updatePeserta')->name('peserta.update');
+
+            // 2. INPUT NILAI EKSKUL (New)
+            Route::get('nilai', 'indexNilai')->name('nilai.index'); // Halaman List Ekskul + Progress
+            Route::get('nilai/{id}/input', 'inputNilai')->name('nilai.input'); // Form Input
+            Route::post('nilai/store', 'storeNilai')->name('nilai.store'); // Simpan Data
+            Route::get('nilai/check-prerequisite', 'checkPrerequisite')->name('nilai.check_prerequisite'); // AJAX Check
         });
     });
 
@@ -311,15 +321,15 @@ Route::middleware(['auth'])->group(function () {
             // Users Granular
             Route::controller(UserController::class)->prefix('users')->name('users.')->group(function () {
                 Route::get('/', 'index')->name('index')->middleware('can:users.read');
-                Route::get('/create', 'create')->name('create')->middleware('can:users.create');
-                Route::post('/', 'store')->name('store')->middleware('can:users.create');
-                Route::get('/{user}/edit', 'edit')->name('edit')->middleware('can:users.update');
-                Route::put('/{user}', 'update')->name('update')->middleware('can:users.update');
-                Route::delete('/{user}', 'destroy')->name('destroy')->middleware('can:users.delete');
+                Route::get('/create', 'create')->name('create')->middleware('can:users.edit');
+                Route::post('/', 'store')->name('store')->middleware('can:users.edit');
+                Route::get('/{user}/edit', 'edit')->name('edit')->middleware('can:users.edit');
+                Route::put('/{user}', 'update')->name('update')->middleware('can:users.edit');
+                Route::delete('/{user}', 'destroy')->name('destroy')->middleware('can:users.edit');
             });
 
             // Roles
-            Route::resource('roles', RoleController::class)->middleware('can:roles.read');
+            Route::resource('roles', RoleController::class)->middleware('can:roles.menu');
         });
 
         // B. SETTING ERAPOR (Akademik - Admin Erapor Only)

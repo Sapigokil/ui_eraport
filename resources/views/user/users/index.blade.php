@@ -20,7 +20,7 @@
                                 <h6 class="text-white text-capitalize ps-3">Daftar Akun Pengguna E-Rapor</h6>
                                 
                                 {{-- Hanya Admin/Developer yang berhak menambah pengguna --}}
-                                @can('users.create')
+                                @can('users.edit')
                                 <a href="{{ route('settings.system.users.create') }}" class="btn btn-white me-3 mb-0">
                                     <i class="fas fa-plus me-1"></i> Tambah Pengguna Baru
                                 </a>

@@ -36,5 +36,10 @@ class Ekskul extends Model
         return $this->belongsToMany(Siswa::class, 'ekskul_siswa', 'id_ekskul', 'id_siswa');
     }
 
+    public function nilai()
+    {
+        return $this->hasMany(NilaiEkskul::class, 'id_ekskul', 'id_ekskul');
+    }
+
 }
 

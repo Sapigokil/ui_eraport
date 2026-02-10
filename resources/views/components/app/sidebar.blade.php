@@ -187,9 +187,59 @@
             @endcan
 
             {{-- ========================================================= --}}
-            {{-- 4. INPUT WALI KELAS (WALI KELAS DAN ADMIN) --}}
+            {{-- 4. INPUT EKSKUL (Pembimbing & Admin) --}}
             {{-- ========================================================= --}}
-            {{-- 4. INPUT WALI KELAS --}}
+            @can('ekskul.view')
+            @php
+                // Definisikan route yang membuat menu induk ini terbuka/aktif
+                // Sesuai dengan prefix route yang kita buat: 'ekskul.*'
+                $ekskulActiveRoutes = ['ekskul.peserta.*', 'ekskul.nilai.*'];
+                $isEkskulActive = request()->routeIs($ekskulActiveRoutes); 
+            @endphp
+
+            <li class="nav-item">
+                {{-- ID Menu saya ganti jadi 'inputEkskulMenu' agar unik --}}
+                <a data-bs-toggle="collapse" href="#inputEkskulMenu" 
+                   class="nav-link {{ $isEkskulActive ? 'active' : 'text-white' }}" 
+                   aria-controls="inputEkskulMenu" role="button" aria-expanded="{{ $isEkskulActive ? 'true' : 'false' }}">
+                    
+                    <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                        {{-- Saya ganti icon jadi bola/running agar beda dengan input nilai mapel --}}
+                        <i class="fas fa-futbol text-white"></i> 
+                    </div>
+                    <span class="nav-link-text ms-1">Ekstrakurikuler</span>
+                </a>
+                
+                <div class="collapse {{ $isEkskulActive ? 'show' : '' }}" id="inputEkskulMenu">
+                    <ul class="nav ms-4 ps-3">
+                        
+                        {{-- SUB MENU 1: PESERTA EKSKUL --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('ekskul.peserta.*') ? 'active' : 'text-white' }}" 
+                               href="{{ route('ekskul.peserta.index') }}">
+                                <span class="sidenav-mini-icon"> P </span>
+                                <span class="sidenav-normal"> Peserta Ekskul </span>
+                            </a>
+                        </li>
+
+                        {{-- SUB MENU 2: INPUT NILAI --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('ekskul.nilai.*') ? 'active' : 'text-white' }}" 
+                               href="{{ route('ekskul.nilai.index') }}">
+                                <span class="sidenav-mini-icon"> N </span>
+                                <span class="sidenav-normal"> Input Nilai </span>
+                            </a>
+                        </li>
+                        
+                    </ul>
+                </div> 
+            </li>
+            @endcan
+
+            {{-- ========================================================= --}}
+            {{-- 5. INPUT WALI KELAS (WALI KELAS DAN ADMIN) --}}
+            {{-- ========================================================= --}}
+            {{-- 5. INPUT WALI KELAS --}}
             @canany(['nilai.view', 'rapor.view'])
             @php
                 // Filter agar menu tetap aktif saat berada di sub-menu walikelas
@@ -231,7 +281,7 @@
             @endcanany
 
             {{-- ========================================================= --}}
-            {{-- 4. LAPORAN & RAPOR (Guru & Admin) --}}
+            {{-- 6. LAPORAN & RAPOR (Guru & Admin) --}}
             {{-- ========================================================= --}}
             {{-- Tambahkan 'nilai.view' di permission check agar menu ini muncul untuk guru --}}
             @canany(['rapor.view', 'ledger.view',])
@@ -300,7 +350,7 @@
             <hr class="horizontal light my-2">
             
             {{-- ========================================================= --}}
-            {{-- 5. SETTING: ERAPOR / AKADEMIK (Admin & Admin Erapor) --}}
+            {{-- 7. SETTING: ERAPOR / AKADEMIK (Admin & Admin Erapor) --}}
             {{-- ========================================================= --}}
             @can('settings.erapor.read')
             @php 
@@ -328,9 +378,9 @@
             @endcan
 
             {{-- ========================================================= --}}
-            {{-- 6. SETTING: SYSTEM (Admin Only) --}}
+            {{-- 8. SETTING: SYSTEM (Admin Only) --}}
             {{-- ========================================================= --}}
-            @canany(['users.read', 'roles.read'])
+            @canany(['users.read', 'roles.menu'])
             @php 
                 $systemSettingRoutes = ['settings.system.*'];
                 $isSystemSetActive = request()->routeIs($systemSettingRoutes);
@@ -350,7 +400,7 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.system.users.index') ? 'active' : 'text-white' }}" href="{{ route('settings.system.users.index') }}"><span class="sidenav-mini-icon"> U </span><span class="sidenav-normal"> Manajemen User </span></a></li>
                         @endcan
                         
-                        @can('roles.read')
+                        @can('roles.menu')
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.system.roles.index') ? 'active' : 'text-white' }}" href="{{ route('settings.system.roles.index') }}"><span class="sidenav-mini-icon"> R </span><span class="sidenav-normal"> Role & Permission </span></a></li>
                         @endcan
                     </ul>
@@ -359,7 +409,7 @@
             @endcanany
 
             {{-- ========================================================= --}}
-            {{-- 7. PROFIL SAYA (SEMUA USER) --}}
+            {{-- 9. PROFIL SAYA (SEMUA USER) --}}
             {{-- ========================================================= --}}
             @php $isProfileActive = request()->routeIs('profile.*'); @endphp
             <li class="nav-item">

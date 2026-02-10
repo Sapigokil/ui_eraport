@@ -73,7 +73,7 @@ class RoleController extends Controller
             abort(403, 'Akses Ditolak: Restricted Role');
         }
 
-        $permissions = Permission::all();
+        $permissions = Permission::all()->groupBy('group_name');
     
         return view('user.roles.edit', compact('role', 'permissions'));
     }

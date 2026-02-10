@@ -32,32 +32,56 @@ class RolePermissionSeeder extends Seeder
         // ====================================================
         $permissions = [
             // A. DASHBOARD
-            'dashboard.view',
-            
-            // B. MASTER DATA (Admin Only)
-            'master.view',      // Lihat menu
-            'master.create',    // Tambah data
-            'master.update',    // Edit data
-            'master.delete',    // Hapus data
+            '01. Dashboard (Semua)' => [
+                'dashboard.view' => 'Melihat Halaman Dashboard',
+            ],
 
+            // B. MASTER DATA (Admin Only)
+            '02. Master Data (Admin Only)' => [
+                'master.view' => 'Melihat Data Sekolah',      // Lihat menu
+                'master.edit' => 'Mengelola Data Sekolah',    // Simpan/edit data sekolah
+            ],
+            
             // C. PENILAIAN (Guru & Admin)
-            'nilai.view',       // Akses menu input nilai
-            'nilai.input',      // Hak simpan/edit nilai
+            '03. Penilaian (Guru & Admin)' => [
+                'nilai.view' => 'Melihat Data Nilai',       // Akses menu input nilai
+                'nilai.input' => 'Mengelola Data Nilai',      // Hak simpan/edit nilai
+            ],
+
+            // C2. EKSTRAKURIKULER (Guru & Admin)
+            '04. Ekstrakurikuler (Guru & Admin)' => [
+                'ekskul.view' => 'Melihat Data Ekstrakurikuler',      // Akses menu input nilai ekskul
+                'ekskul.edit' => 'Mengelola Ekstrakurikuler',     // Hak simpan/edit nilai ekskul
+            ],
 
             // D. LAPORAN & RAPOR (Guru & Admin)
-            'rapor.view',       // Akses menu cetak rapor
-            'rapor.cetak',      // Hak print/download
-            'ledger.view',      // Akses menu ledger
-            'ledger.cetak',     // Hak download ledger
+            '05. Laporan & Rapor (Guru & Admin)' => [
+                'rapor.view' => 'Melihat Rapor Siswa',       // Akses menu cetak rapor
+                'rapor.cetak' => 'Mencetak Rapor Siswa',      // Hak print/download
+                'ledger.view' => 'Melihat Ledger Nilai',      // Akses menu ledger
+                'ledger.cetak' => 'Mencetak Legder Nilai',     // Hak download ledger
+            ],
 
             // E. SYSTEM SETTINGS (Admin Only)
-            'users.read', 'users.create', 'users.update', 'users.delete',
-            'roles.read', 'roles.create', 'roles.update', 'roles.delete',
-            'settings.erapor.read', 'settings.erapor.update',
+            '06. System Settings (Admin Only)' => [
+                'users.read' => 'Melihat Menu Manajemen User', 
+                'users.edit' => 'Mengelola Data User',
+                'roles.menu' => 'Mengakses Menu Role & Permission',
+                'settings.erapor.read' => 'Melihat Pengaturan E-Rapor', 
+                'settings.erapor.update' => 'Mengelola Pengaturan E-Rapor',
+            ],
         ];
 
-        foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+        foreach ($permissions as $group => $perms) {
+            foreach ($perms as $permName => $permLabel) {
+                Permission::updateOrCreate(
+                    ['name' => $permName], // Cek berdasarkan name
+                    [
+                        'group_name' => $group, // Simpan Group
+                        'label'      => $permLabel // Simpan Label
+                    ]
+                );
+            }
         }
 
         // ====================================================
@@ -79,7 +103,15 @@ class RolePermissionSeeder extends Seeder
             'nilai.view', 'nilai.input',
             // Full Akses Rapor & Ledger
             'rapor.view', 'rapor.cetak',
-            'ledger.view', 'ledger.cetak'
+            'ledger.view', 'ledger.cetak',
+            'ekskul.view', 'ekskul.edit',
+        ]);
+
+        // --- Role 2a: GURU EKSTRAKURIKULER (Opsional) ---
+        $roleGuruEkskul = Role::create(['name' => 'guru_ekskul']);
+        $roleGuruEkskul->givePermissionTo([
+            'dashboard.view',
+            'ekskul.view', 'ekskul.edit',
         ]);
 
         // --- ROLE 3: GURU REGULER (Standar) ---
@@ -87,7 +119,8 @@ class RolePermissionSeeder extends Seeder
         $roleGuru->givePermissionTo([
             'dashboard.view',
             'nilai.view', 'nilai.input',
-            'rapor.view', 'ledger.view' // Mungkin guru biasa view saja, cetak urusan admin? (Opsional)
+            'rapor.view', 'ledger.view', // Mungkin guru biasa view saja, cetak urusan admin? (Opsional)
+            'ekskul.view', 'ekskul.edit',
         ]);
 
         // --- ROLE 4: SISWA ---
@@ -122,8 +155,8 @@ class RolePermissionSeeder extends Seeder
             [
                 'name'      => 'Administrator E-Rapor',
                 'username'  => 'admin.erapor',
-                'email'     => 'admin@erapor.test',
-                'password'  => Hash::make('password'), // Password Default
+                'email'     => 'admin@smkn1salatiga.sch.id',
+                'password'  => Hash::make('adminerapor#'), // Password Default
                 'role'      => 'admin_erapor', // Kolom manual (backup)
             ]
         );
@@ -135,15 +168,29 @@ class RolePermissionSeeder extends Seeder
             [
                 'name'      => 'Guru E-Rapor (Backup)',
                 'username'  => 'guru.erapor',
-                'email'     => 'guru@erapor.test',
-                'password'  => Hash::make('password'),
+                'email'     => 'guru@smkn1salatiga.sch.id',
+                'password'  => Hash::make('gurusmkn1'),
                 'role'      => 'guru_erapor',
             ]
         );
         $guruUser->assignRole($roleGuruErapor);
 
+         // USER 2b: GURU ERAPOR (BACKUP)
+        $guruEkskulUser = User::firstOrCreate(
+            ['username' => 'guru.ekskul'], 
+            [
+                'name'      => 'Guru Ekskul E-Rapor (Backup)',
+                'username'  => 'guru.ekskul',
+                'email'     => 'ekskul@smkn1salatiga.sch.id',
+                'password'  => Hash::make('ekskulsmkn1'),
+                'role'      => 'guru_ekskul',
+            ]
+        );
+        $guruEkskulUser->assignRole($roleGuruEkskul);
+
         $this->command->info('SUKSES! User Spesial telah dibuat:');
         $this->command->info('1. Admin: admin.erapor / password');
         $this->command->info('2. Guru: guru.erapor / password');
+        $this->command->info('3. Guru: guru.ekskul / password');
     }
 }
