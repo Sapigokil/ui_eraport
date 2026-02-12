@@ -48,16 +48,44 @@
         <div class="row">
             <div class="col-12">
                 <div class="card my-4 shadow-xs border">
+                    
+                    {{-- HEADER YANG DIPERBAIKI (GAYA GRADIENT PRIMARY + ICON DEKORASI) --}}
+                    @php
+                        // Logic sederhana untuk ambil nama mapel dari koleksi $mapel yang ada
+                        $namaMapelProject = 'Mata Pelajaran'; 
+                        if(request('id_mapel') && isset($mapel)) {
+                            $found = $mapel->firstWhere('id_mapel', request('id_mapel'));
+                            if($found) {
+                                $namaMapelProject = $found->nama_mapel;
+                            }
+                        }
+                    @endphp
+
                     <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                        <div class="bg-gradient-dark shadow-dark border-radius-lg pt-4 pb-3 d-flex justify-content-between align-items-center">
-                            <h6 class="text-white text-capitalize ps-3 mb-0"><i class="fas fa-rocket me-2"></i> Input Nilai Project</h6>
-                            <div class="pe-3">
-                                <button class="btn btn-outline-white btn-sm mb-0 me-2" data-bs-toggle="modal" data-bs-target="#downloadTemplateModal">
-                                    <i class="fas fa-file-excel me-1"></i> Download Template
-                                </button>
-                                <button class="btn bg-gradient-success btn-sm mb-0 btn-import-trigger" data-bs-toggle="modal" data-bs-target="#importModal">
-                                    <i class="fas fa-file-import me-1"></i> Import Project
-                                </button>
+                        <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 overflow-hidden position-relative">
+                            {{-- Dekorasi Icon Besar di Pojok Kanan --}}
+                            <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3">
+                                <i class="fas fa-rocket text-white" style="font-size: 8rem;"></i>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center position-relative z-index-1 px-3">
+                                <div>
+                                    <h6 class="text-white text-capitalize mb-0">
+                                        <i class="fas fa-rocket me-2"></i> Input Nilai Project
+                                    </h6>
+                                    {{-- TEXT DINAMIS: Kelola Project [Nama Mapel] --}}
+                                    <p class="text-white text-xs opacity-8 mb-0 ms-4 ps-1">
+                                        Kelola Project <strong>{{ $namaMapelProject }}</strong>
+                                    </p>
+                                </div>
+                                <div class="pe-3">
+                                    <button class="btn btn-outline-white btn-sm mb-0 me-2" data-bs-toggle="modal" data-bs-target="#downloadTemplateModal">
+                                        <i class="fas fa-file-excel me-1"></i> Template
+                                    </button>
+                                    <button class="btn bg-white text-primary btn-sm mb-0 btn-import-trigger" data-bs-toggle="modal" data-bs-target="#importModal">
+                                        <i class="fas fa-file-import me-1"></i> Import
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -339,9 +367,7 @@
                             $('#info-status').text(response.season.status)
                                 .attr('class', 'badge badge-sm bg-gradient-success');
                             
-                            // Gabungkan tanggal start dan end
                             $('#info-date-range').text(response.season.start + ' s/d ' + response.season.end);
-                            
                             $('#season-info-box').show();
                         } else {
                             $('#season-info-box').hide();
@@ -350,8 +376,6 @@
                         // 2. Logika Lock/Unlock Tampilan
                         if(response.status === 'locked_season') {
                             $('#prerequisite-message').html(response.message);
-                            
-                            // GANTI KE MERAH MUDA (Teks Gelap agar terbaca)
                             alertContainer.removeClass('alert-warning alert-danger text-dark').addClass('alert-danger text-dark');
                             $('#alert-icon').attr('class', 'fas fa-ban me-3 mt-1');
                             $('#alert-title').text('AKSES DITOLAK');
@@ -360,7 +384,6 @@
                             $('#input-form-container').slideUp();
                             btnImport.prop('disabled', true).addClass('opacity-5');
                         } else {
-                            // AMAN (Season Sesuai & Dalam Rentang Tanggal)
                             $('#prerequisite-alert').slideUp();
                             $('#input-form-container').slideDown();
                             btnImport.prop('disabled', false).removeClass('opacity-5');
@@ -387,7 +410,6 @@
                         let html = '<option value="">-- Pilih Mapel --</option>';
                         res.forEach(item => { html += `<option value="${item.id_mapel}">${item.nama_mapel}</option>`; });
                         dropdownMapel.html(html);
-                        // Trigger check ulang setelah mapel dimuat
                         checkProjectPrerequisite();
                     }
                 });

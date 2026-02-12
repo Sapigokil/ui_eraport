@@ -225,7 +225,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('peserta', 'indexPeserta')->name('peserta.index');
             Route::get('peserta/{id}/edit', 'editPeserta')->name('peserta.edit');
             Route::put('peserta/{id}', 'updatePeserta')->name('peserta.update');
-
+            
             // 2. INPUT NILAI EKSKUL (New)
             Route::get('nilai', 'indexNilai')->name('nilai.index'); // Halaman List Ekskul + Progress
             Route::get('nilai/{id}/input', 'inputNilai')->name('nilai.input'); // Form Input

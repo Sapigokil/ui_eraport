@@ -5,8 +5,9 @@
 @php
     $request = request();
     $tahunSekarang = date('Y');
+    
+    // Default Values Logic
     $bulanSekarang = date('n');
-
     if ($bulanSekarang < 7) {
         $defaultTA1 = $tahunSekarang - 1;
         $defaultTA2 = $tahunSekarang;
@@ -26,7 +27,6 @@
         $tahunAjaranList[] = $tahun . '/' . ($tahun + 1);
     }
     $semesterList = ['Ganjil', 'Genap']; 
-    $dataEkskul = $dataEkskulTersimpan ?? [];
 @endphp
 
 @section('content')
@@ -38,79 +38,90 @@
             <div class="col-12">
                 <div class="card my-4 shadow-xs border">
                     
-                    {{-- HEADER --}}
+                    {{-- 1. HEADER UTAMA --}}
                     <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                        <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 d-flex justify-content-between align-items-center">
-                            <h6 class="text-white text-capitalize ps-3 mb-0">
-                                <i class="fas fa-clipboard-check me-2"></i> Input Catatan & Absensi Wali Kelas
-                            </h6>
-                            <div class="pe-3">
-                                <button class="btn bg-gradient-light text-dark btn-sm mb-0 me-2" data-bs-toggle="modal" data-bs-target="#downloadTemplateModal">
-                                    <i class="fas fa-file-excel me-1"></i> Template
-                                </button>
-                                <button class="btn bg-gradient-success btn-sm mb-0 btn-import-trigger" data-bs-toggle="modal" data-bs-target="#importModal">
-                                    <i class="fas fa-file-import me-1"></i> Import
-                                </button>
+                        <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 overflow-hidden position-relative">
+                            {{-- Dekorasi Icon Besar --}}
+                            <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3">
+                                <i class="fas fa-clipboard-user text-white" style="font-size: 8rem;"></i>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center position-relative z-index-1 px-3">
+                                <div>
+                                    <h6 class="text-white text-capitalize mb-0">
+                                        <i class="fas fa-user-edit me-2"></i> Input Catatan Wali Kelas
+                                    </h6>
+                                    <p class="text-white text-xs opacity-8 mb-0 ms-4 ps-1">
+                                        Kelola catatan perkembangan, ekstrakurikuler, dan absensi siswa
+                                    </p>
+                                </div>
+                                <div class="pe-3">
+                                    <button class="btn btn-outline-white btn-sm mb-0 me-2" data-bs-toggle="modal" data-bs-target="#downloadTemplateModal">
+                                        <i class="fas fa-file-excel me-1"></i> Template
+                                    </button>
+                                    <button class="btn bg-white text-primary btn-sm mb-0 btn-import-trigger" data-bs-toggle="modal" data-bs-target="#importModal">
+                                        <i class="fas fa-file-import me-1"></i> Import
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="card-body px-0 pb-2">
-                        @if (session('success'))
-                            <div class="alert bg-gradient-success mx-4 alert-dismissible text-white fade show" role="alert">
-                                <span class="text-sm"><strong>Sukses!</strong> {!! session('success') !!}</span>
-                                <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert">&times;</button>
-                            </div>
-                        @endif
-                        @if (session('error'))
-                            <div class="alert bg-gradient-danger mx-4 alert-dismissible text-white fade show" role="alert">
-                                <span class="text-sm"><strong>Gagal!</strong> {{ session('error') }}</span>
-                                <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert">&times;</button>
-                            </div>
-                        @endif
+                        
+                        {{-- 2. ALERT SYSTEM --}}
+                        <div class="px-4 mt-2">
+                            @if (session('success'))
+                                <div class="alert bg-gradient-success alert-dismissible text-white fade show" role="alert">
+                                    <span class="text-sm"><strong>Sukses!</strong> {!! session('success') !!}</span>
+                                    <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert">&times;</button>
+                                </div>
+                            @endif
+                            @if (session('error'))
+                                <div class="alert bg-gradient-danger alert-dismissible text-white fade show" role="alert">
+                                    <span class="text-sm"><strong>Gagal!</strong> {{ session('error') }}</span>
+                                    <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert">&times;</button>
+                                </div>
+                            @endif
+                        </div>
 
-                        {{-- FILTER DATA (CLEAN LAYOUT) --}}
-                        <div class="p-4 border-bottom">
+                        {{-- 3. FILTER DATA --}}
+                        <div class="p-4 border-bottom bg-gray-100">
+                            {{-- Route Input Utama --}}
                             <form method="GET" action="{{ route('walikelas.catatan.input') }}" class="row align-items-end mb-0">
                                 <div class="col-md-3 mb-3">
-                                    <label for="kelasSelect" class="form-label">Kelas:</label>
-                                    <select name="id_kelas" id="kelasSelect" required class="form-select ajax-select-kelas" onchange="this.form.submit()">
-                                        <option value="">Pilih Kelas</option>
+                                    <label for="kelasSelect" class="form-label font-weight-bold text-xs text-uppercase mb-1">Pilih Kelas:</label>
+                                    <select name="id_kelas" id="kelasSelect" required class="form-select border ps-2 bg-white" onchange="this.form.submit()">
+                                        <option value="">- Pilih Kelas -</option>
                                         @foreach ($kelas as $k)
                                             <option value="{{ $k->id_kelas }}" {{ $request->id_kelas == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-5 mb-3">
-                                    <label for="siswaSelect" class="form-label">Nama Siswa:</label>
-                                    <select name="id_siswa" id="siswaSelect" required class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }} onchange="this.form.submit()">
-                                        <option value="">Pilih Siswa</option>
-                                        @foreach ($siswa as $s)
-                                            <option value="{{ $s->id_siswa }}" {{ $request->id_siswa == $s->id_siswa ? 'selected' : '' }}>{{ $s->nama_siswa }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
                                 <div class="col-md-2 mb-3">
-                                    <label class="form-label">Semester:</label>
-                                    <select name="semester" id="input_semester" required class="form-select" onchange="this.form.submit()">
+                                    <label class="form-label font-weight-bold text-xs text-uppercase mb-1">Semester:</label>
+                                    <select name="semester" id="input_semester" required class="form-select border ps-2 bg-white" onchange="this.form.submit()">
                                         @foreach ($semesterList as $sem)
                                             <option value="{{ $sem }}" {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>{{ $sem }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="col-md-2 mb-3">
-                                    <label class="form-label">Tahun Ajaran:</label>
-                                    <select name="tahun_ajaran" id="input_tahun_ajaran" required class="form-select" onchange="this.form.submit()">
+                                    <label class="form-label font-weight-bold text-xs text-uppercase mb-1">Tahun Ajaran:</label>
+                                    <select name="tahun_ajaran" id="input_tahun_ajaran" required class="form-select border ps-2 bg-white" onchange="this.form.submit()">
                                         @foreach ($tahunAjaranList as $ta)
                                             <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>{{ $ta }}</option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <button type="submit" class="d-none"></button>
+                                {{-- Hidden Input untuk menjaga siswa terpilih saat ganti semester/tahun --}}
+                                @if($request->id_siswa)
+                                    <input type="hidden" name="id_siswa" value="{{ $request->id_siswa }}">
+                                @endif
                             </form>
                         </div>
 
-                        {{-- BOX INFO SEASON --}}
+                        {{-- 4. BOX INFO SEASON --}}
                         <div id="season-info-box" class="mx-4 mt-3" style="display: none;">
                             <div class="d-flex align-items-center bg-light border-radius-lg p-3 border shadow-xs">
                                 <div class="d-flex align-items-center flex-wrap">
@@ -129,7 +140,7 @@
                             </div>
                         </div>
 
-                        {{-- ALERT PREREQUISITE --}}
+                        {{-- 5. ALERT PREREQUISITE --}}
                         <div id="prerequisite-alert" class="mx-4 mt-3" style="display: none;">
                             <div class="alert d-flex align-items-start border-radius-lg shadow-sm" id="alert-box-container" role="alert">
                                 <i id="alert-icon" class="fas fa-lock me-3 mt-1"></i>
@@ -140,126 +151,186 @@
                             </div>
                         </div>
 
-                        {{-- INPUT FORM AREA --}}
-                        <div class="p-4" id="input-form-container">
-                            @if (!$request->id_kelas || !$request->id_siswa)
-                                <div class="text-center py-5 border rounded bg-gray-100">
-                                    <i class="fas fa-user-graduate text-secondary mb-3 fa-2x"></i>
-                                    <p class="text-secondary mb-0">Silakan pilih <strong>Kelas</strong> dan <strong>Siswa</strong> untuk mulai mengisi catatan.</p>
-                                </div>
-                            @else
-                                <form action="{{ route('walikelas.catatan.simpan') }}" method="POST">
-                                    @csrf
-                                    <input type="hidden" name="id_kelas" value="{{ $request->id_kelas }}">
-                                    <input type="hidden" name="id_siswa" value="{{ $request->id_siswa }}">
-                                    <input type="hidden" name="tahun_ajaran" value="{{ $request->tahun_ajaran }}">
-                                    <input type="hidden" name="semester" value="{{ $request->semester }}">
-
-                                    <div class="row">
-                                        {{-- SISI KIRI: PENGEMBANGAN DIRI --}}
-                                        <div class="col-lg-7 border-end">
-                                            <h6 class="text-uppercase text-primary text-xs font-weight-bolder opacity-7 mb-3 text-start">I. Aspek Pengembangan Diri</h6>
-                                            
-                                            <div class="mb-4 text-start">
-                                                <label class="form-label font-weight-bold text-xs text-uppercase">1. Kokurikuler (Tingkat {{ $siswaTerpilih->kelas->tingkat ?? '' }})</label>
-                                                <div class="input-group input-group-outline mb-2">
-                                                    <select id="select-judul-kok" class="form-select border ps-2 text-sm">
-                                                        <option value="">-- Pilih Template Capaian --</option>
-                                                        @foreach($set_kokurikuler as $kok)
-                                                            <option value="{{ $kok->id_kok }}" data-deskripsi="{{ $kok->deskripsi }}">{{ $kok->judul }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div class="input-group input-group-outline is-filled">
-                                                    <textarea id="kokurikulerText" name="kokurikuler" rows="5" class="form-control text-sm" placeholder="Pilih template atau isi manual...">{{ old('kokurikuler', $rapor->kokurikuler ?? '') }}</textarea>
-                                                </div>
-                                            </div>
-
-                                            <div class="mb-4 text-start">
-                                                <label class="form-label font-weight-bold text-dark d-flex align-items-center text-xs text-uppercase">
-                                                    <i class="fas fa-star text-warning me-2"></i> 2. Ekstrakurikuler (Maks 3)
-                                                </label>
-                                                <div class="table-responsive border border-radius-lg shadow-sm">
-                                                    <table class="table align-items-center mb-0">
-                                                        <thead class="bg-dark text-white text-center">
-                                                            <tr>
-                                                                <th class="text-xxs font-weight-bolder text-uppercase ps-3 py-3 text-white">Ekstrakurikuler</th>
-                                                                <th class="text-xxs font-weight-bolder text-uppercase py-3 text-white" width="150px">Predikat</th>
-                                                                <th class="text-xxs font-weight-bolder text-uppercase py-3 text-white">Keterangan</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody class="bg-white">
-                                                            @for ($i = 0; $i < 3; $i++)
-                                                                @php
-                                                                    $savedId = $dataEkskul[$i]['id_ekskul'] ?? '';
-                                                                    $savedPred = $dataEkskul[$i]['predikat'] ?? '';
-                                                                    $savedKet = $dataEkskul[$i]['keterangan'] ?? '';
-                                                                    $rowBg = ($i % 2 == 0) ? 'bg-white' : 'bg-gray-50';
-                                                                @endphp
-                                                                <tr class="{{ $rowBg }}">
-                                                                    <td class="p-2 ps-3">
-                                                                        <select name="ekskul[{{ $i }}][id_ekskul]" class="form-select border-0 text-xs font-weight-bold">
-                                                                            <option value="">-- Pilih --</option>
-                                                                            @foreach($ekskul as $e)
-                                                                                <option value="{{ $e->id_ekskul }}" {{ $savedId == $e->id_ekskul ? 'selected' : '' }}>{{ $e->nama_ekskul }}</option>
-                                                                            @endforeach
-                                                                        </select>
-                                                                    </td>
-                                                                    <td class="p-2">
-                                                                        <select name="ekskul[{{ $i }}][predikat]" class="form-select border-0 text-xs font-weight-bold text-primary">
-                                                                            <option value="">-- Pilih --</option>
-                                                                            @foreach(['Sangat Baik','Baik','Cukup','Kurang'] as $p)
-                                                                                <option value="{{ $p }}" {{ $savedPred == $p ? 'selected' : '' }}>{{ $p }}</option>
-                                                                            @endforeach
-                                                                        </select>
-                                                                    </td>
-                                                                    <td class="p-2">
-                                                                        <input type="text" name="ekskul[{{ $i }}][keterangan]" class="form-control form-control-sm border-0 bg-transparent text-xs" value="{{ $savedKet }}">
-                                                                    </td>
-                                                                </tr>
-                                                            @endfor
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
+                        {{-- 6. KONTEN UTAMA (Hanya Muncul Jika Kelas Dipilih) --}}
+                        @if($request->id_kelas)
+                            <div class="row px-4 mt-4 pb-5">
+                                
+                                {{-- TABEL MONITORING SISWA (KIRI) --}}
+                                <div class="col-lg-4 mb-4">
+                                    <div class="card border shadow-none h-100">
+                                        <div class="card-header bg-light border-bottom p-3">
+                                            <h6 class="mb-0 text-dark font-weight-bold"><i class="fas fa-list-ol me-2"></i> Daftar Siswa</h6>
                                         </div>
-
-                                        {{-- SISI KANAN: ABSENSI & CATATAN --}}
-                                        <div class="col-lg-5 text-start">
-                                            <h6 class="text-uppercase text-primary text-xs font-weight-bolder opacity-7 mb-3">II. Absensi & Catatan Wali</h6>
-                                            <div class="bg-light p-3 border-radius-lg mb-4">
-                                                <label class="text-xs font-weight-bold text-dark text-uppercase">Ketidakhadiran (Hari)</label>
-                                                <div class="row text-center mt-2">
-                                                    <div class="col-4">
-                                                        <label class="text-xxs">Sakit</label>
-                                                        <input type="number" name="sakit" class="form-control form-control-sm border text-center" value="{{ $rapor->sakit ?? 0 }}">
-                                                    </div>
-                                                    <div class="col-4">
-                                                        <label class="text-xxs">Ijin</label>
-                                                        <input type="number" name="ijin" class="form-control form-control-sm border text-center" value="{{ $rapor->ijin ?? 0 }}">
-                                                    </div>
-                                                    <div class="col-4">
-                                                        <label class="text-xxs">Alpha</label>
-                                                        <input type="number" name="alpha" class="form-control form-control-sm border text-center" value="{{ $rapor->alpha ?? 0 }}">
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div class="mb-4">
-                                                <label class="form-label font-weight-bold text-dark text-xs text-uppercase">Catatan Wali Kelas</label>
-                                                <div class="input-group input-group-outline is-filled">
-                                                    <textarea name="catatan_wali_kelas" class="form-control text-sm" rows="6" placeholder="Tulis catatan perkembangan siswa di sini...">{{ $rapor->catatan_wali_kelas ?? '' }}</textarea>
-                                                </div>
-                                            </div>
-
-                                            <button type="submit" class="btn bg-gradient-success w-100 py-2 btn-simpan-catatan">
-                                                <i class="fas fa-save me-2 text-xs"></i> Simpan Seluruh Data
-                                            </button>
+                                        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                                            <table class="table align-items-center mb-0 table-hover table-striped">
+                                                <thead class="sticky-top bg-white shadow-sm" style="z-index: 5;">
+                                                    <tr>
+                                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-3">Nama Siswa</th>
+                                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($siswa as $s)
+                                                        @php
+                                                            // Cek apakah siswa ini punya data catatan di semester terpilih
+                                                            // Asumsi: relasi 'catatan' sudah diload di controller
+                                                            $catatanSiswa = $s->catatan->first(); 
+                                                            $isActive = $request->id_siswa == $s->id_siswa;
+                                                            $hasData = $catatanSiswa && ($catatanSiswa->sakit !== 0 || $catatanSiswa->ijin !== 0 || $catatanSiswa->alpha !== 0 || !empty($catatanSiswa->catatan_wali_kelas));
+                                                        @endphp
+                                                        <tr class="{{ $isActive ? 'bg-primary-soft border-start border-4 border-primary' : '' }} cursor-pointer" 
+                                                            {{-- Route Klik Baris Tabel --}}
+                                                            onclick="window.location.href='{{ route('walikelas.catatan.input', array_merge($request->query(), ['id_siswa' => $s->id_siswa])) }}'">
+                                                            <td class="text-xs font-weight-bold px-3 py-3 {{ $isActive ? 'text-primary' : 'text-dark' }}">
+                                                                {{ $s->nama_siswa }}
+                                                                <br>
+                                                                <span class="text-xxs text-secondary font-weight-normal">{{ $s->nisn }}</span>
+                                                            </td>
+                                                            <td class="text-center align-middle">
+                                                                @if($hasData)
+                                                                    <span class="badge badge-sm bg-gradient-success"><i class="fas fa-check"></i></span>
+                                                                @else
+                                                                    <span class="badge badge-sm bg-secondary opacity-5"><i class="fas fa-minus"></i></span>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
-                                </form>
-                            @endif
-                        </div>
+                                </div>
+
+                                {{-- FORM INPUT (KANAN) --}}
+                                <div class="col-lg-8" id="input-form-container">
+                                    @if($request->id_siswa && $siswaTerpilih)
+                                        <div class="card border border-primary shadow-sm h-100">
+                                            <div class="card-header bg-gradient-primary p-3 d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0 text-white"><i class="fas fa-edit me-2"></i> Input Penilaian: {{ $siswaTerpilih->nama_siswa }}</h6>
+                                            </div>
+                                            <div class="card-body p-4">
+                                                
+                                                {{-- A. REFERENSI NILAI EKSKUL (READ ONLY) --}}
+                                                {{-- <div class="alert bg-gray-100 border border-light mb-4 p-3 shadow-none rounded-3">
+                                                    <h6 class="text-dark text-xs font-weight-bold text-uppercase mb-2">
+                                                        <i class="fas fa-star text-warning me-1"></i> Referensi Nilai Ekstrakurikuler (Read Only)
+                                                    </h6>
+                                                    @if(count($dataEkskulTersimpan) > 0)
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm mb-0">
+                                                                <thead class="text-xs text-secondary text-uppercase bg-white">
+                                                                    <tr>
+                                                                        <th class="ps-2">Nama Ekskul</th>
+                                                                        <th>Predikat</th>
+                                                                        <th>Keterangan</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    @foreach($dataEkskulTersimpan as $eks)
+                                                                        <tr>
+                                                                            <td class="text-xs font-weight-bold text-dark ps-2">{{ $eks['nama_ekskul'] }}</td>
+                                                                            <td class="text-xs"><span class="badge bg-gradient-info">{{ $eks['predikat'] }}</span></td>
+                                                                            <td class="text-xs text-secondary text-wrap fst-italic" style="max-width: 200px;">{{ $eks['keterangan'] ?? '-' }}</td>
+                                                                        </tr>
+                                                                    @endforeach
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    @else
+                                                        <div class="text-center py-2">
+                                                            <p class="text-xs text-secondary mb-0 fst-italic">Belum ada nilai ekstrakurikuler yang masuk dari Guru Pembina.</p>
+                                                        </div>
+                                                    @endif
+                                                </div> --}}
+
+                                                {{-- B. FORM INPUT WALI KELAS --}}
+                                                {{-- Route Simpan Data --}}
+                                                <form action="{{ route('walikelas.catatan.simpan') }}" method="POST">
+                                                    @csrf
+                                                    <input type="hidden" name="id_kelas" value="{{ $request->id_kelas }}">
+                                                    <input type="hidden" name="id_siswa" value="{{ $request->id_siswa }}">
+                                                    <input type="hidden" name="tahun_ajaran" value="{{ $request->tahun_ajaran }}">
+                                                    <input type="hidden" name="semester" value="{{ $request->semester }}">
+
+                                                    <div class="row">
+                                                        {{-- Kolom Kiri Form: Kokurikuler --}}
+                                                        <div class="col-md-6 border-end">
+                                                            <h6 class="text-uppercase text-dark text-xs font-weight-bolder opacity-7 mb-2">I. Capaian Kokurikuler</h6>
+                                                            <div class="mb-3">
+                                                                <label class="form-label text-xs">Pilih Template Capaian (Opsional)</label>
+                                                                <select id="select-judul-kok" class="form-select border ps-2 text-sm bg-white">
+                                                                    <option value="">-- Pilih Template --</option>
+                                                                    @foreach($set_kokurikuler as $kok)
+                                                                        <option value="{{ $kok->id_kok }}" data-deskripsi="{{ $kok->deskripsi }}">{{ $kok->judul }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div class="input-group input-group-outline is-filled mb-3">
+                                                                <textarea id="kokurikulerText" name="kokurikuler" class="form-control text-sm" rows="6" placeholder="Deskripsi capaian kokurikuler siswa...">{{ old('kokurikuler', $rapor->kokurikuler ?? $templateKokurikuler) }}</textarea>
+                                                            </div>
+                                                        </div>
+
+                                                        {{-- Kolom Kanan Form: Absensi & Catatan --}}
+                                                        <div class="col-md-6 ps-md-4">
+                                                            <h6 class="text-uppercase text-dark text-xs font-weight-bolder opacity-7 mb-2">II. Ketidakhadiran (Hari)</h6>
+                                                            <div class="row mb-4">
+                                                                <div class="col-4">
+                                                                    <div class="input-group input-group-outline is-filled">
+                                                                        <label class="form-label">Sakit</label>
+                                                                        <input type="number" name="sakit" class="form-control text-center font-weight-bold" value="{{ $rapor->sakit ?? 0 }}" min="0">
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-4">
+                                                                    <div class="input-group input-group-outline is-filled">
+                                                                        <label class="form-label">Ijin</label>
+                                                                        <input type="number" name="ijin" class="form-control text-center font-weight-bold" value="{{ $rapor->ijin ?? 0 }}" min="0">
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-4">
+                                                                    <div class="input-group input-group-outline is-filled">
+                                                                        <label class="form-label">Alpha</label>
+                                                                        <input type="number" name="alpha" class="form-control text-center font-weight-bold" value="{{ $rapor->alpha ?? 0 }}" min="0">
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <h6 class="text-uppercase text-dark text-xs font-weight-bolder opacity-7 mb-2">III. Catatan Wali Kelas</h6>
+                                                            <div class="input-group input-group-outline is-filled mb-4">
+                                                                <textarea name="catatan_wali_kelas" class="form-control text-sm" rows="4" placeholder="Berikan catatan perkembangan akademik dan karakter siswa...">{{ $rapor->catatan_wali_kelas ?? '' }}</textarea>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Tombol Simpan --}}
+                                                    <div class="text-end pt-3 border-top">
+                                                        <button type="submit" class="btn bg-gradient-primary btn-lg w-100 mb-0 btn-simpan-catatan">
+                                                            <i class="fas fa-save me-2"></i> SIMPAN DATA SISWA INI
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    @else
+                                        {{-- EMPTY STATE (Jika belum pilih siswa) --}}
+                                        <div class="card border border-dashed text-center h-100 d-flex justify-content-center align-items-center bg-gray-100" style="min-height: 400px;">
+                                            <div class="py-5">
+                                                <i class="fas fa-user-graduate text-secondary mb-3 fa-3x opacity-5"></i>
+                                                <h5 class="text-dark font-weight-bold">Pilih Siswa</h5>
+                                                <p class="text-secondary text-sm px-5">Klik salah satu nama siswa pada tabel <strong>Daftar Siswa</strong> di sebelah kiri untuk mulai menginput data.</p>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @else
+                            {{-- EMPTY STATE UTAMA (Belum Pilih Kelas) --}}
+                            <div class="p-5 text-center">
+                                <i class="fas fa-school text-secondary mb-3 fa-4x opacity-3"></i>
+                                <h5 class="text-dark">Silakan Pilih Kelas Terlebih Dahulu</h5>
+                                <p class="text-secondary">Gunakan filter di atas untuk menampilkan daftar siswa.</p>
+                            </div>
+                        @endif
+
                     </div>
                 </div>
             </div>
@@ -268,51 +339,77 @@
     <x-app.footer />
 </main>
 
-{{-- MODAL IMPORT (READONLY FILTER) --}}
-<div class="modal fade" id="importModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header bg-gray-100">
-                <h6 class="modal-title font-weight-bolder text-dark"><i class="fas fa-file-import text-success me-2"></i> Import Catatan Wali</h6>
+{{-- MODAL IMPORT --}}
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-normal"><i class="fas fa-file-import me-2 text-success"></i>Import Catatan</h5>
                 <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            {{-- Route Import --}}
             <form action="{{ route('walikelas.catatan.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-body py-4 text-start">
+                <div class="modal-body">
+                    <div class="alert alert-info text-white text-xs mb-3">
+                        <i class="fas fa-info-circle me-1"></i> Pastikan file Excel sesuai dengan template.
+                    </div>
                     <div class="mb-3">
-                        <label class="form-label">Pilih Kelas</label>
-                        {{-- Readonly: Mengikuti Filter Utama --}}
-                        <select name="id_kelas" class="form-select bg-light border ps-2 text-sm" style="pointer-events: none;" tabindex="-1">
-                            @foreach($kelas as $k)
-                                <option value="{{ $k->id_kelas }}" {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
-                            @endforeach
-                        </select>
+                        <label class="form-label">Pilih File Excel:</label>
+                        <input type="file" name="file_excel" class="form-control border ps-2" required accept=".xlsx, .xls">
                     </div>
-                    <div class="row text-start mb-3">
-                        <div class="col-6">
-                            <label class="form-label">Semester</label>
-                            <input type="text" name="semester" value="{{ request('semester', $defaultSemester) }}" class="form-control bg-light border ps-2 text-sm" readonly>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label">Tahun Ajaran</label>
-                            <input type="text" name="tahun_ajaran" value="{{ request('tahun_ajaran', $defaultTahunAjaran) }}" class="form-control bg-light border ps-2 text-sm" readonly>
-                        </div>
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label">Pilih File Excel</label>
-                        <input type="file" name="file_excel" class="form-control border ps-2 text-sm" required accept=".xlsx, .xls">
-                    </div>
+                    {{-- Hidden Inputs dari Filter --}}
+                    <input type="hidden" name="id_kelas" value="{{ $request->id_kelas }}">
+                    <input type="hidden" name="semester" value="{{ $request->semester }}">
+                    <input type="hidden" name="tahun_ajaran" value="{{ $request->tahun_ajaran }}">
                 </div>
-                <div class="modal-footer bg-gray-100">
-                    <button type="button" class="btn btn-sm btn-white mb-0" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm bg-gradient-success mb-0 btn-proses-import">Upload & Proses</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn bg-gradient-success btn-proses-import">Upload & Proses</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- SCRIPT AJAX CHECK & INTERACTION --}}
+{{-- MODAL DOWNLOAD TEMPLATE --}}
+<div class="modal fade" id="downloadTemplateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-normal"><i class="fas fa-file-excel me-2 text-success"></i>Download Template</h5>
+                <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            {{-- Route Template --}}
+            <form action="{{ route('walikelas.catatan.template') }}" method="GET">
+                <div class="modal-body">
+                    <p class="text-sm text-secondary">Download template Excel untuk pengisian massal.</p>
+                    {{-- Hidden Inputs dari Filter --}}
+                    <input type="hidden" name="id_kelas" value="{{ $request->id_kelas }}">
+                    <input type="hidden" name="semester" value="{{ $request->semester }}">
+                    <input type="hidden" name="tahun_ajaran" value="{{ $request->tahun_ajaran }}">
+                    
+                    @if(!$request->id_kelas)
+                        <div class="alert alert-warning text-white text-xs">Silakan pilih kelas terlebih dahulu di halaman utama.</div>
+                    @endif
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link text-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn bg-gradient-info" {{ !$request->id_kelas ? 'disabled' : '' }}>Download</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-primary-soft { background-color: #e3f2fd !important; }
+    .cursor-pointer { cursor: pointer; }
+    /* Agar tabel scroll rapi */
+    .table-responsive::-webkit-scrollbar { width: 6px; height: 6px; }
+    .table-responsive::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 4px; }
+</style>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -332,11 +429,11 @@
 
         // 2. AJAX Prerequisite Check
         function checkCatatanPrerequisite() {
-            // Note: Catatan check only needs semester/TA to verify season status
             let semester = $('#input_semester').val();
             let tahunAjaran = $('#input_tahun_ajaran').val();
 
             if(semester && tahunAjaran) {
+                // Route Check Prerequisite
                 $.ajax({
                     url: "{{ route('walikelas.catatan.check_prerequisite') }}",
                     method: "GET",

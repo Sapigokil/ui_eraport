@@ -19,23 +19,35 @@
         <div class="row">
             <div class="col-12">
                 
-                {{-- HEADER UTAMA --}}
+                {{-- HEADER UTAMA (Gaya Baru) --}}
                 <div class="card my-4 border shadow-sm">
                     <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                        <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 d-flex justify-content-between align-items-center">
-                            <h6 class="text-white text-capitalize ps-3 mb-0">
-                                <i class="fas fa-shapes me-2"></i> Input Nilai Ekstrakurikuler
-                            </h6>
-                            
-                            {{-- Badge Status Pojok Kanan Atas --}}
-                            <div class="pe-4">
-                                @if($accessStatus == 'denied')
-                                    <span class="badge bg-white text-danger"><i class="fas fa-ban me-1"></i> Akses Ditolak</span>
-                                @elseif($accessStatus == 'read_only')
-                                    <span class="badge bg-white text-warning"><i class="fas fa-lock me-1"></i> Terkunci</span>
-                                @else
-                                    <span class="badge bg-white text-success"><i class="fas fa-lock-open me-1"></i> Terbuka</span>
-                                @endif
+                        <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 overflow-hidden position-relative">
+                            {{-- Dekorasi Icon Besar --}}
+                            <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3">
+                                <i class="fas fa-shapes text-white" style="font-size: 8rem;"></i>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center position-relative z-index-1 px-3">
+                                <div>
+                                    <h6 class="text-white text-capitalize mb-0">
+                                        <i class="fas fa-shapes me-2"></i> Input Nilai Ekstrakurikuler
+                                    </h6>
+                                    <p class="text-white text-xs opacity-8 mb-0 ms-4 ps-1">
+                                        Kelola penilaian aktivitas siswa
+                                    </p>
+                                </div>
+                                
+                                {{-- Badge Status Pojok Kanan Atas --}}
+                                <div class="pe-3">
+                                    @if($accessStatus == 'denied')
+                                        <span class="badge bg-white text-danger"><i class="fas fa-ban me-1"></i> Akses Ditolak</span>
+                                    @elseif($accessStatus == 'read_only')
+                                        <span class="badge bg-white text-warning"><i class="fas fa-lock me-1"></i> Terkunci</span>
+                                    @else
+                                        <span class="badge bg-white text-success"><i class="fas fa-lock-open me-1"></i> Terbuka</span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -49,7 +61,7 @@
                         @endif
 
                         {{-- FILTER SECTION (POSISI KANAN) --}}
-                        <div class="px-4 py-3">
+                        <div class="px-4 py-3 border-bottom">
                             <form action="{{ route('ekskul.nilai.index') }}" method="GET" class="d-flex justify-content-end align-items-center gap-3">
                                 
                                 <div class="d-flex flex-column">
@@ -76,8 +88,8 @@
 
                         {{-- INFO SEASON BAR (GAYA REFERENSI) --}}
                         @if($activeSeason)
-                        <div class="px-4 mb-3">
-                            <div class="bg-gray-200 border-radius-lg p-3 d-flex align-items-center flex-wrap shadow-none">
+                        <div class="px-4 my-3">
+                            <div class="bg-gray-100 border-radius-lg p-3 d-flex align-items-center flex-wrap shadow-none border">
                                 <span class="text-xs font-weight-bolder text-uppercase text-secondary me-3">DETAIL SEASON:</span>
                                 
                                 {{-- Badge Hitam untuk Info Season Aktif --}}
@@ -192,13 +204,13 @@
                 </div>
             </div>
         </div>
-        <x-app.footer />
     </div>
+    <x-app.footer />
 </main>
 
 <style>
     /* Styling khusus agar mirip referensi */
-    .bg-gray-200 { background-color: #e5e7eb !important; }
+    .bg-gray-100 { background-color: #f3f4f6 !important; }
     
     /* Soft Red Alert */
     .bg-danger-soft { background-color: #fee2e2 !important; color: #b91c1c !important; }

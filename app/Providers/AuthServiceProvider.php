@@ -24,9 +24,9 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        Gate::define('rapor.cetak', fn ($user) => true);
-        Gate::define('ledger.view', fn ($user) => true);
-        Gate::define('cetak-print-ledger', fn ($user) => true);
+        // Gate::define('rapor.cetak', fn ($user) => true);
+        // Gate::define('ledger.view', fn ($user) => true);
+        // Gate::define('cetak-print-ledger', fn ($user) => true);
 
     Gate::define('input-nilai', function ($user) {
         return Season::currentOpen() !== null;

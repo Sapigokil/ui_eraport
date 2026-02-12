@@ -16,12 +16,18 @@
                             {{-- 2. CARD LOGIN (Dibuat Pop-up dengan Shadow) --}}
                             <div class="card shadow-lg mt-5 border-0 rounded-3">
                                 <div class="card-header pb-0 text-center bg-white border-0 pt-4">
-                                    {{-- Ikon atau Logo Kecil (Opsional) --}}
-                                    <div class="mb-3">
-                                        <i class="fas fa-school fa-3x text-dark"></i>
+                                    {{-- Judul & Versi --}}
+                                    <div class="position-relative d-inline-block">
+                                        <h4 class="font-weight-bolder text-primary text-gradient mb-1">E-Rapor SMK</h4>
+                                        {{-- Badge Versi diletakkan di pojok atas judul --}}
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary text-xxs" 
+                                            style="font-size: 0.55rem; padding: 4px 6px; transform: translate(0, -50%) !important;">
+                                            v{{ config('app_history.current_version') }}
+                                        </span>
                                     </div>
-                                    <h4 class="font-weight-bold text-dark">E-Rapor SMK</h4>
-                                    <p class="mb-0 text-secondary text-sm">Masuk untuk melanjutkan</p>
+
+                                    {{-- Subjudul --}}
+                                    <p class="mb-0 text-secondary text-sm font-weight-bold opacity-7">Masuk untuk melanjutkan</p>
                                 </div>
 
                                 <div class="card-body">
@@ -65,7 +71,7 @@
 
                                         {{-- Tombol Login --}}
                                         <div class="text-center">
-                                            <button type="submit" class="btn btn-dark btn-lg w-100 mt-4 mb-0">Masuk Aplikasi</button>
+                                            <button type="submit" class="btn bg-gradient-primary w-100 mt-4 mb-0">Masuk Aplikasi</button>
                                         </div>
                                     </form>
                                 </div>

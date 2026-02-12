@@ -5,15 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Kelas;
 use App\Models\Siswa;
-use App\Models\Ekskul;
 use App\Models\NilaiAkhir;
 use App\Models\SetKokurikuler;
 use App\Models\Season;
+use App\Models\NilaiEkskul; 
 use App\Exports\CatatanTemplateExport; 
 use App\Imports\CatatanImport;         
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
-// use App\Http\Controllers\RaporController;
 
 class CatatanController extends Controller
 {
@@ -43,7 +42,6 @@ class CatatanController extends Controller
      * ==========================================
      * 1. AJAX PREREQUISITE CHECK (Lock Season)
      * ==========================================
-     * Digunakan oleh JavaScript untuk memvalidasi akses secara real-time
      */
     public function checkPrerequisite(Request $request)
     {
@@ -129,36 +127,46 @@ class CatatanController extends Controller
      */
     public function inputCatatan(Request $request)
     {
-        $kelas = Kelas::all();
+        $kelas = Kelas::orderBy('nama_kelas')->get();
         
-        // Inisialisasi variabel
+        // Inisialisasi variabel view
         $set_kokurikuler = collect(); 
         $siswa = collect();
         $rapor = null;
-        $ekskul = Ekskul::all(); 
         $siswaTerpilih = null;
-        $dataEkskulTersimpan = []; 
         $templateKokurikuler = '';
+        $dataEkskulTersimpan = []; 
 
-        // Load siswa untuk dropdown jika kelas dipilih
+        $semesterInt = $this->mapSemesterToInt($request->semester);
+
+        // 1. Load List Siswa (Untuk Sidebar Monitoring)
         if ($request->id_kelas) {
-            $siswa = Siswa::where('id_kelas', $request->id_kelas)->orderBy('nama_siswa')->get();
+            $siswa = Siswa::where('id_kelas', $request->id_kelas)
+                ->orderBy('nama_siswa');
+            
+            // Jika ada filter tahun/semester, load relasi untuk cek status sudah diisi/belum
+            if($request->tahun_ajaran && $semesterInt) {
+                $siswa->with(['catatan' => function($q) use ($semesterInt, $request) {
+                    $q->where('semester', $semesterInt)
+                      ->where('tahun_ajaran', $request->tahun_ajaran);
+                }]);
+            }
+            $siswa = $siswa->get();
         }
 
-        // Jika Filter Lengkap -> Load Data Utama
-        if ($request->id_kelas && $request->id_siswa && $request->tahun_ajaran && $request->semester) {
+        // 2. Jika Siswa Dipilih -> Load Data Detail untuk Form Input
+        if ($request->id_kelas && $request->id_siswa && $request->tahun_ajaran && $semesterInt) {
+            
             $siswaTerpilih = Siswa::with('kelas')->find($request->id_siswa);
             $kelasTerpilih = Kelas::find($request->id_kelas);
             
-            // Ambil Template Kokurikuler Sesuai Tingkat
+            // A. Ambil Template Kokurikuler Sesuai Tingkat Kelas
             if ($siswaTerpilih && $siswaTerpilih->kelas) {
                 $set_kokurikuler = SetKokurikuler::where('tingkat', $siswaTerpilih->kelas->tingkat)
                                                  ->where('aktif', 1)->get();
             }
 
-            $semesterInt = $this->mapSemesterToInt($request->semester);
-
-            // Ambil Nilai Akhir untuk Penentuan Template Otomatis
+            // B. Logic Template Otomatis berdasarkan Rata-rata Nilai Akhir
             $dataNilai = NilaiAkhir::where('id_siswa', $request->id_siswa)
                 ->where('semester', $semesterInt)
                 ->where('tahun_ajaran', $request->tahun_ajaran)
@@ -172,41 +180,47 @@ class CatatanController extends Controller
                 $templateKokurikuler = config("catatan.template_kokurikuler.$kelasLevel.$kategori") ?? '';
             }    
 
-            // Ambil Data Catatan yang sudah tersimpan
-            $rapor = \DB::table('catatan')
+            // C. Ambil Data Catatan yang sudah tersimpan (Absensi & Narasi)
+            $rapor = DB::table('catatan')
                 ->where('id_kelas', $request->id_kelas)
                 ->where('id_siswa', $request->id_siswa)
                 ->where('tahun_ajaran', $request->tahun_ajaran)
                 ->where('semester', $semesterInt)
                 ->first();
 
-            // Parsing Data Ekskul (Array)
-            if ($rapor && !empty($rapor->ekskul)) {
-                $ids = explode(',', $rapor->ekskul);
-                $preds = explode(',', $rapor->predikat ?? ''); 
-                $kets = explode(' | ', $rapor->keterangan ?? ''); 
-
-                foreach ($ids as $index => $id) {
-                    if (!empty(trim($id))) {
-                        $dataEkskulTersimpan[] = [
-                            'id_ekskul' => trim($id),
-                            'predikat'  => $preds[$index] ?? '',
-                            'keterangan' => $kets[$index] ?? '', 
-                        ];
-                    }
-                }
-            }
+            // D. Ambil Data Ekskul (READ ONLY dari nilai_ekskul)
+            // Mengambil data yang diinput oleh Guru Ekskul
+            $dataEkskulTersimpan = DB::table('nilai_ekskul')
+                ->join('ekskul', 'nilai_ekskul.id_ekskul', '=', 'ekskul.id_ekskul')
+                ->where('nilai_ekskul.id_siswa', $request->id_siswa)
+                ->where('nilai_ekskul.semester', $semesterInt)
+                ->where('nilai_ekskul.tahun_ajaran', $request->tahun_ajaran)
+                ->select('ekskul.nama_ekskul', 'nilai_ekskul.predikat', 'nilai_ekskul.keterangan')
+                ->get()
+                ->map(function($item) {
+                    return [
+                        'nama_ekskul' => $item->nama_ekskul,
+                        'predikat'    => $item->predikat,
+                        'keterangan'  => $item->keterangan
+                    ];
+                })
+                ->toArray();
         } 
 
+        // Kembali ke view asli 'nilai.catatan'
         return view('nilai.catatan', compact(
-            'kelas', 'siswa', 'rapor', 'ekskul', 
-            'siswaTerpilih', 'dataEkskulTersimpan', 
-            'templateKokurikuler', 'set_kokurikuler'
+            'kelas', 
+            'siswa', 
+            'rapor', 
+            'siswaTerpilih', 
+            'dataEkskulTersimpan',
+            'templateKokurikuler', 
+            'set_kokurikuler'
         ));
     }
 
     /**
-     * AJAX Helper: Get Siswa
+     * AJAX Helper: Get Siswa (Opsional jika masih dipakai ajax select)
      */
     public function getSiswa($id_kelas)
     {
@@ -215,36 +229,21 @@ class CatatanController extends Controller
 
     /**
      * ==========================================
-     * 3. SIMPAN CATATAN (SERVER-SIDE LOCK)
+     * 3. SIMPAN CATATAN (MURNI ABSENSI & NARASI)
      * ==========================================
      */
     public function simpanCatatan(Request $request)
     {
         // 🔒 VALIDASI SEASON KETAT (Backend Guard)
-        // Mencegah bypass form via inspect element
         if (!Season::currentOpen()) {
             return back()->with('error', '⛔ Gagal Simpan: Season Input Data Sedang Ditutup atau Tidak Sesuai.');
         }
 
         $semesterInt = $this->mapSemesterToInt($request->semester);
         
-        // Proses Data Ekskul
-        $validIds = [];
-        $validPredikats = [];
-        $validKets = [];
-
-        if ($request->has('ekskul')) {
-            foreach ($request->ekskul as $item) {
-                if (!empty($item['id_ekskul'])) {
-                    $validIds[] = $item['id_ekskul'];
-                    $validPredikats[] = $item['predikat'] ?? '-';
-                    $validKets[] = $item['keterangan'] ?? '-';
-                }
-            }
-        }
-
-        // Simpan ke DB
-        \DB::table('catatan')->updateOrInsert(
+        // Simpan ke DB (Tabel 'catatan')
+        // Hanya update/insert kolom Absensi, Kokurikuler, dan Catatan Wali Kelas.
+        DB::table('catatan')->updateOrInsert(
             [
                 'id_siswa'     => $request->id_siswa,
                 'id_kelas'     => $request->id_kelas,
@@ -252,9 +251,6 @@ class CatatanController extends Controller
                 'semester'     => $semesterInt,
             ],
             [
-                'ekskul'             => !empty($validIds) ? implode(',', $validIds) : null,
-                'predikat'           => !empty($validPredikats) ? implode(',', $validPredikats) : null,
-                'keterangan'         => !empty($validKets) ? implode(' | ', $validKets) : null,
                 'kokurikuler'        => $request->kokurikuler,
                 'sakit'              => $request->sakit ?? 0,
                 'ijin'               => $request->ijin ?? 0,
@@ -264,14 +260,7 @@ class CatatanController extends Controller
             ]
         );
 
-        // // Update Status Rapor (Generate/Lock status)
-        // app(RaporController::class)->perbaruiStatusRapor(
-        //     $request->id_siswa, 
-        //     $request->semester, 
-        //     $request->tahun_ajaran
-        // );
-
-        return back()->with('success', 'Data catatan berhasil disimpan!');
+        return back()->with('success', 'Data catatan dan absensi berhasil disimpan!');
     }
 
     /**
@@ -281,7 +270,7 @@ class CatatanController extends Controller
      */
     public function indexProgressCatatan(Request $request)
     {
-        $kelasList = Kelas::all(); 
+        $kelasList = Kelas::orderBy('nama_kelas')->get();
         
         $query = DB::table('catatan')->select([
             'id_kelas', 
@@ -375,7 +364,11 @@ class CatatanController extends Controller
         try {
             Excel::import(new CatatanImport($filters), $request->file('file_excel'));
 
-            return redirect()->route('master.catatan.input', $request->query())
+            // Redirect kembali ke route yang benar (master.catatan.input)
+            // Sesuai kode asli Anda di bagian view: route('walikelas.catatan.input') atau master.catatan.input
+            // Pastikan nama route ini sesuai dengan web.php Anda. 
+            // Defaultnya saya pakai 'master.catatan.input' mengikuti return view('nilai.catatan')
+            return redirect()->route('walikelas.catatan.input', $request->query())
                              ->with('success', 'Import Catatan Wali Kelas berhasil diproses!');
 
         } catch (\Exception $e) {

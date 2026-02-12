@@ -1,6 +1,6 @@
 @extends('layouts.app') 
 
-@section('page-title', 'Rekap Finalisasi Nilai')
+@section('page-title', 'Rekap Finalisasi Nilai Guru')
 
 {{-- CSS KHUSUS: CLEAN & READABLE --}}
 <style>
@@ -62,7 +62,7 @@
 
     <div class="container-fluid py-4 px-5">
         
-        {{-- CARD FILTER --}}
+        {{-- 1. CARD FILTER --}}
         <div class="card shadow-sm border mb-4">
             <div class="card-body p-3">
                 <form action="{{ route('master.rekap.index') }}" method="GET" class="row g-3 align-items-end">
@@ -105,7 +105,55 @@
         </div>
 
         @if(!empty($dataSiswa))
-            {{-- AREA AKSI / TRIGGER (GATEKEEPER STYLE) --}}
+            
+            {{-- 2. HEADER BANNER (Updated Style) --}}
+            @php
+                // Logika View untuk mengambil Nama Kelas & Mapel serta Hitung Progres
+                $selectedKelas = $kelas->firstWhere('id_kelas', $id_kelas);
+                $selectedMapel = collect($mapelList)->firstWhere('id_mapel', $id_mapel);
+                
+                $totalSiswa = count($dataSiswa);
+                $sudahSimpan = collect($dataSiswa)->where('is_saved', 1)->count();
+                $persenSimpan = $totalSiswa > 0 ? round(($sudahSimpan / $totalSiswa) * 100) : 0;
+            @endphp
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm border-0 bg-gradient-primary overflow-hidden position-relative">
+                        <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3">
+                            <i class="fas fa-file-signature text-white" style="font-size: 10rem;"></i>
+                        </div>
+                        <div class="card-body p-4 position-relative z-index-1">
+                            <div class="row align-items-center text-white">
+                                <div class="col-md-8">
+                                    <h3 class="text-white font-weight-bold mb-1">{{ $selectedKelas->nama_kelas ?? 'Kelas Tidak Dikenal' }}</h3>
+                                    <p class="text-white opacity-8 mb-2">
+                                        <i class="fas fa-book-open me-2"></i> {{ $selectedMapel->nama_mapel ?? 'Mapel Tidak Dikenal' }}
+                                    </p>
+                                    
+                                    <span class="badge border border-white text-white fw-bold bg-transparent">
+                                        Semester {{ $semesterRaw }} - {{ $tahun_ajaran }}
+                                    </span>
+                                </div>
+                                <div class="col-md-4 text-end mt-4 mt-md-0">
+                                    <div class="d-flex justify-content-md-end justify-content-between gap-4">
+                                        <div class="text-center">
+                                            <span class="text-xs text-uppercase font-weight-bold d-block opacity-8 mb-1">Status Finalisasi</span>
+                                            <h4 class="text-white mb-0">{{ $sudahSimpan }} <span class="text-sm fw-normal opacity-8">/ {{ $totalSiswa }} Siswa</span></h4>
+                                            <div class="progress mt-2 mx-auto" style="height: 4px; width: 120px; background: rgba(255,255,255,0.3);">
+                                                <div class="progress-bar bg-white" role="progressbar" style="width: {{ $persenSimpan }}%"></div>
+                                            </div>
+                                            <small class="text-white opacity-8 text-xxs mt-1">{{ $persenSimpan }}% Tersimpan</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- 3. AREA AKSI / TRIGGER (GATEKEEPER STYLE) --}}
             <div class="row mb-4">
                 <div class="col-12">
                     @php
@@ -116,11 +164,11 @@
                         <div class="card-body d-flex justify-content-between align-items-center p-3">
                             <div class="pe-4">
                                 <h5 class="mb-1 text-dark font-weight-bold">
-                                    <i class="fas fa-file-signature me-2 text-{{ $gateColor }}"></i> Finalisasi Nilai Akhir
+                                    <i class="fas fa-check-circle me-2 text-{{ $gateColor }}"></i> Aksi Finalisasi
                                 </h5>
                                 @if($seasonOpen)
                                     <p class="text-sm text-success font-weight-bold mb-0">
-                                        <i class="{{ $gateIcon }} me-1"></i> Sistem siap melakukan kalkulasi dan simpan snapshot.
+                                        <i class="{{ $gateIcon }} me-1"></i> Sistem siap melakukan kalkulasi dan simpan snapshot nilai akhir.
                                     </p>
                                 @else
                                     <p class="text-sm text-danger font-weight-bold mb-0">
@@ -144,7 +192,7 @@
                 </div>
             </div>
 
-            {{-- TABEL REKAP --}}
+            {{-- 4. TABEL REKAP --}}
             <div class="row">
                 <div class="col-12">
                     <div class="card shadow-sm border">
@@ -247,7 +295,7 @@
     <x-app.footer />
 </main>
 
-{{-- OVERLAY LOADING (MENGGUNAKAN STYLE YANG SUDAH TERBUKTI JALAN) --}}
+{{-- OVERLAY LOADING --}}
 <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 999999;">
     <div class="d-flex flex-column align-items-center">
         <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status"></div> 

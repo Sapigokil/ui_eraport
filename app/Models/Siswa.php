@@ -42,7 +42,12 @@ class Siswa extends Model
     {
         return $this->hasMany(NilaiEkskul::class, 'id_siswa', 'id_siswa');
     }
-
+    
+    public function catatan()
+    {
+        // Parameter: Model Tujuan, Foreign Key di tabel tujuan, Primary Key di tabel siswa
+        return $this->hasMany(Catatan::class, 'id_siswa', 'id_siswa');
+    }
 
 }
 

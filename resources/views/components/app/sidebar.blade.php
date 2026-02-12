@@ -142,6 +142,8 @@
             </li>
             @endcan
 
+            <hr class="horizontal light my-2">
+
             {{-- ========================================================= --}}
             {{-- 3. INPUT NILAI (Guru & Admin) --}}
             {{-- ========================================================= --}}
@@ -280,14 +282,16 @@
             </li>
             @endcanany
 
+            <hr class="horizontal light my-2">
+
             {{-- ========================================================= --}}
             {{-- 6. LAPORAN & RAPOR (Guru & Admin) --}}
             {{-- ========================================================= --}}
             {{-- Tambahkan 'nilai.view' di permission check agar menu ini muncul untuk guru --}}
-            @canany(['rapor.view', 'ledger.view',])
+            @canany(['rapor.view', 'ledger.view'])
             @php
                 // Tambahkan route nilaiakhir ke grup ini
-                $raporRoutes = ['rapornilai.*', 'ledger.*', 'master.nilaiakhir.*'];
+                $raporRoutes = ['rapornilai.*', 'ledger.*'];
                 $isRaporActive = request()->routeIs($raporRoutes);
             @endphp
 

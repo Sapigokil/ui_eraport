@@ -47,26 +47,46 @@
             <div class="row">
                 <div class="col-12">
                     <div class="card my-4 shadow-xs border">
+                        
+                        {{-- 1. HEADER BANNER (Updated Style) --}}
                         <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                            <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 d-flex justify-content-between align-items-center">
-                                <h6 class="text-white text-capitalize ps-3 mb-0">
-                                    <i class="fas fa-edit me-2"></i> Input Nilai Sumatif {{ $sumatifId }}
-                                </h6>
-                                <div class="pe-3">
-                                    <button class="btn bg-gradient-light text-dark btn-sm mb-0 me-2" data-bs-toggle="modal" data-bs-target="#downloadTemplateModal">
-                                        <i class="fas fa-file-excel me-1"></i> Download Template
-                                    </button>
-                                    <button class="btn bg-gradient-success btn-sm mb-0" data-bs-toggle="modal" data-bs-target="#importModal">
-                                        <i class="fas fa-file-import me-1"></i> Import
-                                    </button>
+                            <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 overflow-hidden position-relative">
+                                {{-- Dekorasi Icon Besar --}}
+                                <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3">
+                                    <i class="fas fa-edit text-white" style="font-size: 8rem;"></i>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center position-relative z-index-1 px-3">
+                                    <div>
+                                        <h6 class="text-white text-capitalize mb-0">
+                                            <i class="fas fa-pen-nib me-2"></i> Input Nilai Sumatif {{ $sumatifId }}
+                                        </h6>
+                                        <p class="text-white text-xs opacity-8 mb-0 ms-4 ps-1">
+                                            @if(request('id_mapel'))
+                                                @php $headerMapel = \App\Models\MataPelajaran::find(request('id_mapel')); @endphp
+                                                Kelola Nilai <strong>{{ $headerMapel->nama_mapel ?? 'Mapel Tidak Dikenal' }}</strong>
+                                            @else
+                                                Kelola Nilai Harian / Sumatif Lingkup Materi
+                                            @endif
+                                        </p>
+                                    </div>
+                                    <div class="pe-3">
+                                        <button class="btn btn-outline-white btn-sm mb-0 me-2" data-bs-toggle="modal" data-bs-target="#downloadTemplateModal">
+                                            <i class="fas fa-file-excel me-1"></i> Template
+                                        </button>
+                                        <button class="btn bg-white text-primary btn-sm mb-0" data-bs-toggle="modal" data-bs-target="#importModal">
+                                            <i class="fas fa-file-import me-1"></i> Import
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="card-body px-0 pb-2">
-                            {{-- FORM FILTER UTAMA --}}
+                            
+                            {{-- 2. FORM FILTER --}}
                             <div class="p-4 border-bottom">
-                                <form action="{{ route('master.sumatif.s' . $sumatifId) }}" method="GET" class="row align-items-end">
+                                <form action="{{ route('master.sumatif.s' . $sumatifId) }}" method="GET" class="row align-items-end mb-0">
                                     <input type="hidden" name="sumatif" id="input_sumatif" value="{{ $sumatifId }}">
 
                                     <div class="col-md-3 mb-3">
@@ -119,7 +139,7 @@
                                 </form>
                             </div>
 
-                            {{-- ALERT SYSTEM --}}
+                            {{-- 3. ALERT SYSTEM --}}
                             <div class="px-4 mt-3">
                                 @if (session('success'))
                                     <div class="alert bg-gradient-success alert-dismissible text-white fade show" role="alert">
@@ -152,7 +172,7 @@
                                 @endif
                             </div>
 
-                            {{-- BOX INFO SEASON --}}
+                            {{-- 4. BOX INFO SEASON --}}
                             <div id="season-info-box" class="mx-4 mt-3" style="display: none;">
                                 <div class="d-flex align-items-center bg-light border-radius-lg p-3 border shadow-xs">
                                     <div class="d-flex align-items-center flex-wrap">
@@ -173,7 +193,7 @@
                                 </div>
                             </div>
 
-                            {{-- ALERT PREREQUISITE --}}
+                            {{-- 5. ALERT PREREQUISITE --}}
                             <div id="prerequisite-alert" class="mx-4 mt-3" style="display: none;">
                                 <div class="alert d-flex align-items-start border-radius-lg shadow-sm" id="alert-box-container" role="alert">
                                     <i id="alert-icon" class="fas fa-lock me-3 mt-1"></i>
@@ -184,16 +204,13 @@
                                 </div>
                             </div>
 
-                            {{-- CONTAINER UTAMA --}}
+                            {{-- 6. CONTAINER TABEL UTAMA --}}
                             <div id="input-form-container" class="p-4 pt-0">
                                 @if(!request('id_kelas') || !request('id_mapel'))
                                     <p class="text-secondary mt-3 p-3 text-center border rounded">Pilih filter untuk menginput nilai Sumatif {{ $sumatifId }}.</p>
                                 @elseif($siswa->isEmpty())
                                     <p class="text-danger mt-3 p-3 text-center border rounded">Data siswa tidak ditemukan.</p>
                                 @else
-                                    @if(!$seasonOpen)
-                                        <div class="alert alert-warning text-sm mb-3">🔒 Input nilai dikunci karena season tidak aktif.</div>
-                                    @endif
                                     
                                     <form action="{{ route('master.sumatif.store') }}" method="POST">
                                         @csrf
@@ -203,7 +220,7 @@
                                         <input type="hidden" name="semester" value="{{ request('semester') }}">
                                         <input type="hidden" name="id_mapel" value="{{ request('id_mapel') }}">
 
-                                        <div class="table-responsive p-0">
+                                        <div class="table-responsive p-0 mt-3">
                                             <table class="table align-items-center mb-0">
                                                 <thead class="bg-light">
                                                     <tr>
@@ -214,40 +231,43 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                @foreach ($siswa as $i => $s)
-                                                    @php
-                                                        $raporItem = $rapor->get($s->id_siswa);
-                                                        $nilaiLama = optional($raporItem);
-                                                    @endphp
-                                                    <tr>
-                                                        <td class="text-center text-sm font-weight-bold">{{ $i+1 }}</td>
-                                                        <td class="text-sm font-weight-bold">
-                                                            {{ $s->nama_siswa }}
-                                                            <input type="hidden" name="id_siswa[]" value="{{ $s->id_siswa }}">
-                                                        </td>
-                                                        <td>
-                                                            <div class="input-group input-group-outline">
-                                                                <input type="number" name="nilai[]" min="0" max="100" 
-                                                                       class="form-control text-center" 
-                                                                       value="{{ $nilaiLama->nilai }}" 
-                                                                       {{ !$seasonOpen ? 'disabled' : '' }}>
-                                                            </div>
-                                                        </td>
-                                                        <td>
-                                                            <div class="input-group input-group-outline">
-                                                                <textarea name="tujuan_pembelajaran[]" rows="2" 
-                                                                          class="form-control text-sm" 
-                                                                          {{ !$seasonOpen ? 'disabled' : '' }}>{{ $nilaiLama->tujuan_pembelajaran }}</textarea>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
+                                                    @foreach ($siswa as $i => $s)
+                                                        @php
+                                                            $raporItem = $rapor->get($s->id_siswa);
+                                                            $nilaiLama = optional($raporItem);
+                                                        @endphp
+                                                        <tr>
+                                                            <td class="text-center text-sm font-weight-bold">{{ $i+1 }}</td>
+                                                            <td class="text-sm font-weight-bold">
+                                                                {{ $s->nama_siswa }}
+                                                                <input type="hidden" name="id_siswa[]" value="{{ $s->id_siswa }}">
+                                                            </td>
+                                                            <td>
+                                                                <div class="input-group input-group-outline">
+                                                                    <input type="number" name="nilai[]" min="0" max="100" 
+                                                                           class="form-control text-center" 
+                                                                           value="{{ $nilaiLama->nilai }}" 
+                                                                           {{ !$seasonOpen ? 'disabled' : '' }}>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <div class="input-group input-group-outline">
+                                                                    <textarea name="tujuan_pembelajaran[]" rows="2" 
+                                                                              class="form-control text-sm" 
+                                                                              {{ !$seasonOpen ? 'disabled' : '' }}>{{ $nilaiLama->tujuan_pembelajaran }}</textarea>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
                                                 </tbody>
                                             </table>
                                         </div>
+                                        
                                         <div class="text-end mt-4">
                                             @if($seasonOpen)
                                                 <button type="submit" class="btn bg-gradient-success"><i class="fas fa-save me-2"></i> Simpan Nilai Sumatif {{ $sumatifId }}</button>
+                                            @else
+                                                <button type="button" class="btn btn-secondary cursor-not-allowed" disabled><i class="fas fa-lock me-2"></i> Input Terkunci</button>
                                             @endif
                                         </div>
                                     </form>
