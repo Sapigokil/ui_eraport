@@ -102,8 +102,8 @@ class RolePermissionSeeder extends Seeder
             // Full Akses Penilaian
             'nilai.view', 'nilai.input',
             // Full Akses Rapor & Ledger
-            'rapor.view', 'rapor.cetak',
-            'ledger.view', 'ledger.cetak',
+            // 'rapor.view', 'rapor.cetak',
+            // 'ledger.view', 'ledger.cetak',
             'ekskul.view', 'ekskul.edit',
         ]);
 
@@ -119,7 +119,7 @@ class RolePermissionSeeder extends Seeder
         $roleGuru->givePermissionTo([
             'dashboard.view',
             'nilai.view', 'nilai.input',
-            'rapor.view', 'ledger.view', // Mungkin guru biasa view saja, cetak urusan admin? (Opsional)
+            // 'rapor.view', 'ledger.view', // Mungkin guru biasa view saja, cetak urusan admin? (Opsional)
             'ekskul.view', 'ekskul.edit',
         ]);
 

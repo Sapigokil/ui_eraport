@@ -266,7 +266,7 @@
                         {{-- 2. Cek Rapor --}}
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('walikelas.monitoring.wali') ? 'active' : 'text-white' }}" href="{{ route('walikelas.monitoring.wali') }}">
-                                <span class="sidenav-mini-icon">C</span><span class="sidenav-normal">Cek Rapor</span>
+                                <span class="sidenav-mini-icon">C</span><span class="sidenav-normal">Finalisasi Nilai</span>
                             </a>
                         </li>
                         
@@ -277,6 +277,13 @@
                                 <span class="sidenav-normal text-warning font-weight-bold">Monitoring Kesiapan</span>
                             </a>
                         </li> --}}
+
+                        {{-- 3. Set Template --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('walikelas.cakok.index') ? 'active' : 'text-white' }}" href="{{ route('walikelas.cakok.index') }}">
+                                <span class="sidenav-mini-icon">C</span><span class="sidenav-normal">Set Template</span>
+                            </a>
+                        </li>
                     </ul>
                 </div> 
             </li>
@@ -422,6 +429,20 @@
                         <i class="fas fa-user text-white"></i>
                     </div>
                     <span class="nav-link-text ms-1">Profil Saya</span>
+                </a>
+            </li>
+
+            <li class="nav-item mt-3">
+                <h6 class="ps-4 ms-2 text-uppercase text-xs text-white font-weight-bolder opacity-8">Informasi</h6>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link text-white {{ Request::routeIs('changelog.index') ? 'active bg-gradient-primary' : '' }}" 
+                href="{{ route('changelog.index') }}">
+                    <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-history"></i>
+                    </div>
+                    <span class="nav-link-text ms-1">ChangeLog</span>
                 </a>
             </li>
 

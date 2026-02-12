@@ -21,6 +21,7 @@ class SetKokurikuler extends Model
         'judul',
         'deskripsi',
         'aktif',
+        'id_guru',
         'user',
     ];
 

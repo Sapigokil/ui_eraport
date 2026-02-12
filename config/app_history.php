@@ -20,7 +20,11 @@ return [
             'version' => '1.0.7',
             'date'    => '2026-02-10',
             'notes'   => [
+                'Memisahkan menu input ekstrakurikuler dan input wali kelas untuk memudahkan pengelolaan nilai',
                 'Halaman Input Nilai Ekstrakurikuler diperbarui',
+                'Halaman Input Walikelas diperbarui menyesuaiakan dengan perubahan data Ekstrakurikuler',
+                'Penataan beberapa tampilan halaman',
+                'Merombak beberapa fungsi untuk meningkatkan performa aplikasi',
             ],
         ],
         [

@@ -162,8 +162,14 @@ class CatatanController extends Controller
             
             // A. Ambil Template Kokurikuler Sesuai Tingkat Kelas
             if ($siswaTerpilih && $siswaTerpilih->kelas) {
+                $id_guru_login = auth()->user()->guru->id_guru ?? -1;
                 $set_kokurikuler = SetKokurikuler::where('tingkat', $siswaTerpilih->kelas->tingkat)
-                                                 ->where('aktif', 1)->get();
+                    ->where('aktif', 1)
+                    ->where(function($query) use ($id_guru_login) {
+                        $query->where('id_guru', 0)                 // Ambil punya Admin (Global)
+                              ->orWhere('id_guru', $id_guru_login); // Ambil punya Guru yang login
+                    })
+                    ->get();
             }
 
             // B. Logic Template Otomatis berdasarkan Rata-rata Nilai Akhir

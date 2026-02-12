@@ -57,7 +57,7 @@ class MonitoringWaliController extends Controller
     }
 
     /**
-     * AKSI GENERATE RAPOR (FIXED NIPD TABLE REFERENCE)
+     * AKSI GENERATE RAPOR (UPDATE LOGIC EKSKUL)
      */
     public function generateRaporWalikelas(Request $request)
     {
@@ -97,7 +97,6 @@ class MonitoringWaliController extends Controller
         $faseSnapshot = ($tingkatSnapshot >= 11) ? 'F' : 'E';
 
         // 4. AMBIL DATA SISWA 
-        // PERBAIKAN: nipd dan nisn diambil dari tabel siswa, agama dari detail_siswa
         $siswaList = Siswa::leftJoin('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
             ->where('siswa.id_kelas', $id_kelas)
             ->select(
@@ -125,6 +124,7 @@ class MonitoringWaliController extends Controller
 
                 // ==========================================================
                 // TAHAP A: SIMPAN 'nilai_akhir' (LEVEL MAPEL)
+                // (Bagian ini TIDAK BERUBAH dari kode Anda sebelumnya)
                 // ==========================================================
                 foreach ($listPembelajaran as $pemb) {
                     if (!$pemb->mapel) continue;
@@ -200,26 +200,34 @@ class MonitoringWaliController extends Controller
                 // ==========================================================
                 // TAHAP B: SIMPAN 'nilai_akhir_rapor' (LEVEL HEADER)
                 // ==========================================================
+                
+                // 1. Ambil Data Catatan (Hanya untuk Absensi & Narasi Wali)
                 $catatan = DB::table('catatan')->where([
-                    'id_siswa' => $siswa->id_siswa, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
+                    'id_siswa' => $siswa->id_siswa, 
+                    'semester' => $semesterInt, 
+                    'tahun_ajaran' => $tahun_ajaran
                 ])->first();
 
+                // 2. Ambil Data Ekskul (LANGSUNG DARI TABEL nilai_ekskul)
+                //    Ini akan mengambil semua ekskul yg diikuti siswa tersebut di semester ini
+                $listEkskulSiswa = DB::table('nilai_ekskul')
+                    ->join('ekskul', 'nilai_ekskul.id_ekskul', '=', 'ekskul.id_ekskul')
+                    ->where('nilai_ekskul.id_siswa', $siswa->id_siswa)
+                    ->where('nilai_ekskul.semester', $semesterInt)
+                    ->where('nilai_ekskul.tahun_ajaran', $tahun_ajaran)
+                    ->select('ekskul.nama_ekskul', 'nilai_ekskul.predikat', 'nilai_ekskul.keterangan')
+                    ->get();
+
                 $ekskulSnapshot = [];
-                if ($catatan && !empty($catatan->ekskul)) {
-                    $ids = explode(',', $catatan->ekskul);
-                    $preds = explode(',', $catatan->predikat ?? '');
-                    $kets = explode('|', $catatan->keterangan ?? '');
-                    foreach($ids as $idx => $idEx) {
-                        if(trim($idEx) == "") continue;
-                        $namaEx = DB::table('ekskul')->where('id_ekskul', trim($idEx))->value('nama_ekskul');
-                        $ekskulSnapshot[] = [
-                            'nama' => $namaEx ?? '-', 
-                            'predikat' => $preds[$idx] ?? '-', 
-                            'keterangan' => $kets[$idx] ?? '-'
-                        ];
-                    }
+                foreach($listEkskulSiswa as $eks) {
+                    $ekskulSnapshot[] = [
+                        'nama'       => $eks->nama_ekskul, 
+                        'predikat'   => $eks->predikat ?? '-', 
+                        'keterangan' => $eks->keterangan ?? '-'
+                    ];
                 }
 
+                // 3. Simpan ke Header Rapor
                 DB::table('nilai_akhir_rapor')->updateOrInsert(
                     [
                         'id_siswa' => $siswa->id_siswa, 
@@ -229,12 +237,10 @@ class MonitoringWaliController extends Controller
                     [
                         'id_kelas' => $id_kelas,
                         
-                        // SNAPSHOT IDENTITAS SISWA (FIXED TABLE REFERENCE)
+                        // SNAPSHOT IDENTITAS
                         'nama_siswa_snapshot' => $siswa->nama_siswa,
                         'nisn_snapshot'       => $siswa->nisn ?? '-',
                         'nipd_snapshot'       => $siswa->nipd ?? '-', 
-                        
-                        // SNAPSHOT IDENTITAS KELAS
                         'nama_kelas_snapshot' => $namaKelasSnapshot,
                         'tingkat'             => $tingkatSnapshot,
                         'fase'                => $faseSnapshot, 
@@ -243,15 +249,16 @@ class MonitoringWaliController extends Controller
                         'kepsek_snapshot'     => $kepsekName,
                         'nip_kepsek_snapshot' => $kepsekNip,
 
-                        'sakit'      => $catatan->sakit ?? 0, 
-                        'ijin'       => $catatan->ijin ?? 0, 
-                        'alpha'      => $catatan->alpha ?? 0,
-                        
-                        'kokurikuler'   => $catatan->kokurikuler ?? '-',
+                        // DATA WALI KELAS (DARI TABEL CATATAN)
+                        'sakit' => $catatan->sakit ?? 0, 
+                        'ijin'  => $catatan->ijin ?? 0, 
+                        'alpha' => $catatan->alpha ?? 0,
+                        'kokurikuler'        => $catatan->kokurikuler ?? '-',
                         'catatan_wali_kelas' => $catatan->catatan_wali_kelas ?? '-',
+                        'status_kenaikan'    => $catatan->status_kenaikan ?? 'proses',
                         
-                        'data_ekskul'     => json_encode($ekskulSnapshot),
-                        'status_kenaikan' => $catatan->status_kenaikan ?? 'proses',
+                        // DATA EKSKUL (DARI TABEL NILAI_EKSKUL)
+                        'data_ekskul'   => json_encode($ekskulSnapshot),
 
                         'tanggal_cetak' => now(),
                         'status_data'   => 'final',
@@ -268,7 +275,7 @@ class MonitoringWaliController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            dd($e);
+            // dd($e); // Debugging jika perlu
             return back()->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
         }
     }
@@ -424,8 +431,9 @@ class MonitoringWaliController extends Controller
         
         $smtInt = ($semester == 'Ganjil' || $semester == '1') ? 1 : 2;
 
-        $masterEkskul = DB::table('ekskul')->pluck('nama_ekskul', 'id_ekskul');
-        
+        // $masterEkskul tidak lagi dibutuhkan untuk mapping ID -> Nama, 
+        // karena kita akan join langsung ke tabel ekskul
+
         $monitoringData = [];
         $stats = [
             'total_rombel' => $listKelas->count(),
@@ -467,7 +475,7 @@ class MonitoringWaliController extends Controller
                 $targetSiswa = $totalSiswaKelas; 
                 $namaMapel = $m->nama_mapel;
                 
-                // Filter Agama (Logic Sinkron dengan Controller Generate)
+                // Filter Agama
                 $syaratAgama = $m->agama_khusus;
                 if (!empty($syaratAgama)) {
                     $targetSiswa = $siswaCollection->filter(function($s) use ($syaratAgama) {
@@ -477,7 +485,7 @@ class MonitoringWaliController extends Controller
 
                 if ($targetSiswa == 0) continue; 
 
-                // Cek RAW DATA (Sumatif & Project)
+                // Cek RAW DATA
                 $rawSumatif = DB::table('sumatif')
                     ->where('id_kelas', $k->id_kelas)->where('id_mapel', $m->id_mapel)
                     ->where('semester', $smtInt)->where('tahun_ajaran', $tahun_ajaran)
@@ -495,7 +503,7 @@ class MonitoringWaliController extends Controller
                 $countRaw = max($rawSumatif->total, $rawProject->total);
                 $lastRawUpdate = max($rawSumatif->last_update, $rawProject->last_update);
 
-                // Cek FINAL DATA (nilai_akhir)
+                // Cek FINAL DATA
                 $finalData = DB::table('nilai_akhir')
                     ->where('id_kelas', $k->id_kelas)->where('id_mapel', $m->id_mapel)
                     ->where('semester', $smtInt)->where('tahun_ajaran', $tahun_ajaran)
@@ -505,7 +513,7 @@ class MonitoringWaliController extends Controller
                 $countFinal = $finalData->total;
                 $lastFinalUpdate = $finalData->last_update;
 
-                // Status Logic Mapel
+                // Status Logic
                 $status = 'kosong';
                 if ($countRaw == 0) {
                     $status = 'kosong';
@@ -515,7 +523,6 @@ class MonitoringWaliController extends Controller
                     if ($countFinal < $targetSiswa) {
                         $status = 'ready'; 
                     } else {
-                        // Gunakan toleransi 1 detik untuk perbandingan waktu database
                         if (strtotime($lastRawUpdate) > strtotime($lastFinalUpdate)) {
                             $status = 'update'; 
                         } else {
@@ -544,7 +551,8 @@ class MonitoringWaliController extends Controller
                 $stats['mapel_total']++;
             }
 
-            // C. CATATAN WALI & ABSENSI
+            // C. CATATAN WALI, EKSKUL & ABSENSI
+            // 1. Ambil Catatan (Absensi & Narasi)
             $catatanList = DB::table('catatan')
                 ->whereIn('id_siswa', $siswaCollection->pluck('id_siswa'))
                 ->where('semester', $smtInt)
@@ -552,6 +560,22 @@ class MonitoringWaliController extends Controller
                 ->get()
                 ->keyBy('id_siswa');
 
+            // 2. Ambil Nilai Ekskul (REVISI: Dari tabel nilai_ekskul)
+            // Kita ambil sekaligus untuk semua siswa di kelas ini agar efisien (tidak query dalam loop)
+            $allEkskulValues = DB::table('nilai_ekskul')
+                ->join('ekskul', 'nilai_ekskul.id_ekskul', '=', 'ekskul.id_ekskul')
+                ->whereIn('nilai_ekskul.id_siswa', $siswaCollection->pluck('id_siswa'))
+                ->where('nilai_ekskul.semester', $smtInt)
+                ->where('nilai_ekskul.tahun_ajaran', $tahun_ajaran)
+                ->select(
+                    'nilai_ekskul.id_siswa',
+                    'ekskul.nama_ekskul',
+                    'nilai_ekskul.predikat'
+                )
+                ->get()
+                ->groupBy('id_siswa');
+
+            // 3. Ambil Final Rapor
             $finalRaporList = DB::table('nilai_akhir_rapor')
                 ->whereIn('id_siswa', $siswaCollection->pluck('id_siswa'))
                 ->where('semester', $smtInt)
@@ -565,20 +589,21 @@ class MonitoringWaliController extends Controller
             foreach ($siswaCollection as $s) {
                 $c = $catatanList->get($s->id_siswa);
                 $f = $finalRaporList->get($s->id_siswa);
+                $ekskulSiswa = $allEkskulValues->get($s->id_siswa); // Collection ekskul siswa ini
 
+                // Validasi kelengkapan input wali (hanya absensi & catatan, ekskul urusan guru ekskul)
                 $isiCatatan = $c->catatan_wali_kelas ?? null;
+                // Di sini kita cek apakah Absensi atau Catatan sudah diisi
                 $rawExists = !empty($isiCatatan) && trim((string)$isiCatatan) !== '' && trim((string)$isiCatatan) !== '-';
 
-                // Ekskul Formatter
+                // REVISI LOGIC FORMATTER EKSKUL (Untuk Tampilan Monitoring)
                 $ekskulFormatted = [];
-                if ($c && !empty($c->ekskul)) {
-                    $ids = explode(',', $c->ekskul);
-                    $preds = explode(',', $c->predikat ?? '');
-                    foreach ($ids as $idx => $idEx) {
-                        if (empty(trim($idEx))) continue;
-                        $namaEx = $masterEkskul[trim($idEx)] ?? 'ID:'.$idEx;
-                        $ekskulFormatted[] = "• <b>$namaEx</b> (".($preds[$idx]??'-').")";
+                if ($ekskulSiswa && $ekskulSiswa->isNotEmpty()) {
+                    foreach ($ekskulSiswa as $ex) {
+                        $ekskulFormatted[] = "• <b>{$ex->nama_ekskul}</b> ({$ex->predikat})";
                     }
+                } else {
+                    $ekskulFormatted[] = "<span class='text-muted text-xs'>- Tidak ada ekskul -</span>";
                 }
 
                 $statusCatatan = 'kosong';
@@ -588,11 +613,8 @@ class MonitoringWaliController extends Controller
                 } elseif (!$f) {
                     $statusCatatan = 'ready';
                 } else {
-                    // --- PERBAIKAN PEMBANDING (Agar tidak stuck di UPDATE) ---
-                    // 1. Samakan tipe data ke integer (Absensi)
-                    // 2. Samakan format string (Catatan)
-                    // 3. Pastikan kolom yang dibanding sinkron dengan kolom saat Generate
-                    
+                    // Validasi Perubahan (Update Logic)
+                    // Cek Absensi & Catatan
                     $isDifferent = (
                         (int)($c->sakit ?? 0) !== (int)($f->sakit ?? 0) ||
                         (int)($c->ijin ?? 0)  !== (int)($f->ijin ?? 0)  || 
@@ -601,16 +623,19 @@ class MonitoringWaliController extends Controller
                         trim((string)($c->kokurikuler ?? '-'))    !== trim((string)($f->kokurikuler ?? '-'))
                     );
                     
+                    // Optional: Jika ingin status berubah jadi 'update' saat guru ekskul merubah nilai
+                    // Kita harus membandingkan JSON ekskul di tabel final vs data mentah ekskul
+                    // Tapi biasanya untuk performa, trigger update dari sisi wali kelas saja sudah cukup.
+                    
                     $statusCatatan = $isDifferent ? 'update' : 'final';
                 }
 
                 $detailCatatan[] = [
                     'nama_siswa' => $s->nama_siswa,
                     'nisn'       => $s->nisn,
-                    // 'kokurikuler'=> $c->kokurikuler ?? '-', 
                     'kokurikuler_short'=> \Illuminate\Support\Str::limit($c->kokurikuler ?? '-', 30), 
                     'kokurikuler_full' => $c->kokurikuler ?? '-',
-                    'ekskul_html'=> empty($ekskulFormatted) ? '-' : implode('<br>', $ekskulFormatted), 
+                    'ekskul_html'=> implode('<br>', $ekskulFormatted), // HTML hasil loop baru
                     'sakit'      => $c->sakit ?? 0, 
                     'ijin'       => $c->ijin ?? 0, 
                     'alpha'      => $c->alpha ?? 0, 

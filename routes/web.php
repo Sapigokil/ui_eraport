@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 // 1. IMPORT CONTROLLERS
 // ==============================================================================
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ChangelogController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\NilaiAkhirController;
 use App\Http\Controllers\CatatanController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\MonitoringWaliController;
+use App\Http\Controllers\CatatanKokurikulerController;
 use App\Http\Controllers\RaporController;
 use App\Http\Controllers\LedgerController;
 
@@ -82,6 +84,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('can:dashboard.view');
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/changelog', [ChangelogController::class, 'index'])->name('changelog.index');
     
     // Event Dashboard (Store/Update)
     Route::post('/dashboard/event/store', [DashboardController::class, 'storeEvent'])->name('dashboard.event.store');
@@ -240,6 +243,15 @@ Route::middleware(['auth'])->group(function () {
     // ==========================================================================
     Route::group(['prefix' => 'walikelas', 'as' => 'walikelas.', 'middleware' => ['can:nilai.view']], function () {
         
+        // 1. Custom Kokurikuler By Guru Wali Kelas
+        Route::controller(CatatanKokurikulerController::class)->prefix('kokurikuler')->name('cakok.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');                   
+            Route::put('/{id}', 'update')->name('update');
+            Route::delete('/{id}', 'destroy')->name('destroy');
+            Route::patch('/{id}/toggle', 'toggleStatus')->name('toggle');
+        });
+    
         // 1. Catatan Wali Kelas
         Route::group(['prefix' => 'catatan', 'as' => 'catatan.', 'controller' => CatatanController::class], function () {
             Route::get('/input', 'inputCatatan')->name('input');

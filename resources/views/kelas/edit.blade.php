@@ -75,19 +75,21 @@
 
                                     {{-- Wali Kelas (Dropdown dari Guru) --}}
                                     <div class="col-md-6 mb-3">
-                                        <label for="id_guru_select" class="form-label">Wali Kelas <span class="text-danger">*</span></label>
-                                        <select class="form-select" id="id_guru_select" required>
+                                        <label for="id_guru" class="form-label">Wali Kelas <span class="text-danger">*</span></label>
+                                        
+                                        {{-- PERBAIKAN: Tambahkan name="id_guru" dan value gunakan ID --}}
+                                        <select class="form-select" name="id_guru" id="id_guru" required>
                                             <option value="">-- Pilih Wali Kelas --</option>
                                             @foreach ($guru as $g)
-                                                <option value="{{ $g->nama_guru }}" 
-                                                        {{ old('wali_kelas', $kelas->wali_kelas) == $g->nama_guru ? 'selected' : '' }}>
+                                                <option value="{{ $g->id_guru }}" 
+                                                    {{-- Logic untuk Edit (jika ada data kelas) atau Old Input (jika validasi gagal) --}}
+                                                    {{ (old('id_guru') == $g->id_guru) || (isset($kelas) && $kelas->id_guru == $g->id_guru) ? 'selected' : '' }}>
                                                     {{ $g->nama_guru }}
                                                 </option>
                                             @endforeach
                                         </select>
-                                        {{-- Input hidden yang akan mengirim nilai string nama guru ke kolom 'wali_kelas' --}}
-                                        <input type="hidden" id="wali_kelas_text" name="wali_kelas" value="{{ old('wali_kelas', $kelas->wali_kelas) }}">
-                                        {{-- Catatan: id_guru tidak dikirim karena DB Anda hanya butuh wali_kelas (string) --}}
+
+                                        {{-- Input hidden 'wali_kelas' DIHAPUS saja, karena Controller sudah otomatis mengisi nama --}}
                                     </div>
                                 </div>
                                 
