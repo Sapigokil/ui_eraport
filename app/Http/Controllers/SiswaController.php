@@ -26,28 +26,48 @@ class SiswaController extends Controller
      */
     public function index(Request $request)
     {
+        // 0. Ambil List Kelas untuk Dropdown
+        // Kita kirim variabel $listKelas ke view
+        $listKelas = \App\Models\Kelas::orderBy('nama_kelas')->get();
+
+        // 1. Inisialisasi Query
         $query = Siswa::with('kelas', 'ekskul');
-        // Eager load relasi kelas dan ekskul untuk tampilan index
-        $siswas = Siswa::with('kelas', 'ekskul')->paginate(20); 
+
+        // 2. Filter Status
+        $statusFilter = $request->get('status', 'aktif');
+        if ($statusFilter !== 'semua') {
+            $query->where('status', $statusFilter);
+        }
+
+        // 3. Filter Kelas (BARU)
+        // Default 'all' (Semua Kelas) -> Tidak perlu where
+        if ($request->has('id_kelas')) {
+            $filterKelas = $request->id_kelas;
+
+            if ($filterKelas == 'no_class') {
+                // Tampilkan siswa yang kolom id_kelas-nya NULL
+                $query->whereNull('id_kelas');
+            } elseif ($filterKelas != 'all' && $filterKelas != '') {
+                // Tampilkan siswa di kelas spesifik
+                $query->where('id_kelas', $filterKelas);
+            }
+        }
+
+        // 4. Pencarian
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
-            
-            // Mencari nama siswa yang mengandung string pencarian (case-insensitive)
-            // $query->where('nama_siswa', 'like', '%' . $search . '%');
-            
-            // Opsi: Anda juga bisa menambahkan pencarian berdasarkan NISN atau NIPD
-            
             $query->where(function ($q) use ($search) {
                 $q->where('nama_siswa', 'like', '%' . $search . '%')
                   ->orWhere('nisn', 'like', '%' . $search . '%')
                   ->orWhere('nipd', 'like', '%' . $search . '%');
             });
-            
         }
         
-        // 2. Terapkan Pagination dan ambil hasil
+        $query->orderBy('nama_siswa', 'asc');
         $siswas = $query->paginate(20)->withQueryString();
-        return view('siswa.index', compact('siswas'));
+
+        // Jangan lupa compact 'listKelas'
+        return view('siswa.index', compact('siswas', 'listKelas'));
     }
 
     /**

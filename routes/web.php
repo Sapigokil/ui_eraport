@@ -23,6 +23,12 @@ use App\Http\Controllers\PembelajaranController;
 use App\Http\Controllers\MasterEkskulController;
 use App\Http\Controllers\PesertaEkskulController;
 
+// Mutasi Siswa
+use App\Http\Controllers\MutasiKeluarController;
+// use App\Http\Controllers\MutasiPindahController;
+// use App\Http\Controllers\MutasiKenaikanController;
+// use App\Http\Controllers\MutasiKelulusanController;
+
 // Nilai & Rapor
 use App\Http\Controllers\SumatifController;
 use App\Http\Controllers\ProjectController;
@@ -163,6 +169,15 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+    // ==========================================================================
+    // MODULE: MUTASI SISWA
+    // Permission: mutasi.view (Admin Erapor)
+    // ==========================================================================
+    Route::group(['prefix' => 'mutasi', 'as' => 'mutasi.'], function () {
+        Route::get('/keluar', [MutasiKeluarController::class, 'index'])->name('keluar.index');
+        Route::post('/keluar', [MutasiKeluarController::class, 'store'])->name('keluar.store');
+        Route::delete('/keluar/{id}', [MutasiKeluarController::class, 'destroy'])->name('keluar.destroy');
+    });
 
     // ==========================================================================
     // MODULE: PENILAIAN / INPUT NILAI

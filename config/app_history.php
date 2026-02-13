@@ -17,6 +17,15 @@ return [
 
     'changelog' => [
         [
+            'version' => '1.0.8.beta - On Development',
+            'date'    => '2026-02-13',
+            'notes'   => [
+                'Menambahkan Fitur Mutasi Siswa Keluar, Pindah, Kenaikan, dan Kelulusan',
+                'Menambahkan Hak Akses untuk fitur mutasi siswa',
+
+            ],
+        ],
+        [
             'version' => '1.0.7',
             'date'    => '2026-02-10',
             'notes'   => [

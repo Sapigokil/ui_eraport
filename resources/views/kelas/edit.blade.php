@@ -113,7 +113,7 @@
                                         <i class="fas fa-save me-1"></i> Perbarui Data Kelas
                                     </button>
                                     <a href="{{ route('master.kelas.index') }}" class="btn btn-outline-secondary me-2">
-                                        Batal
+                                        Kembali
                                     </a>
                                     <a href="{{ route('master.kelas.show', $kelas->id_kelas) }}" class="btn btn-outline-info">
                                         Lihat Detail

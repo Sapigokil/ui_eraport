@@ -15,7 +15,7 @@ class Siswa extends Model
 
     protected $fillable = [
         'nipd', 'nisn', 'nama_siswa', 
-        'jenis_kelamin', 'tingkat', 'id_kelas', 'id_ekskul'
+        'jenis_kelamin', 'tingkat', 'id_kelas', 'id_ekskul', 'status'
     ];
 
     public function detail()

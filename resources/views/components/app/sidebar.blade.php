@@ -145,6 +145,70 @@
             <hr class="horizontal light my-2">
 
             {{-- ========================================================= --}}
+            {{-- 3. Mutasi dan Kenaikan Siswa (Admin Only) --}}
+            {{-- ========================================================= --}}
+            {{-- @can('mutasi.view') --}}
+            @php
+                // Tambahkan 'rekap.*' ke dalam daftar aktif
+                $nilaiRoutes = ['mutasi.keluar.*', 'mutasi.pindah.*', 'mutasi.kenaikan.*', 'mutasi.kelulusan.*'];
+                $isNilaiActive = request()->routeIs($nilaiRoutes); 
+            @endphp
+            
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#menuMutasi" class="nav-link text-white collapsed" aria-controls="menuMutasi" role="button" aria-expanded="false">
+                    <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-exchange-alt"></i> {{-- Icon Panah Bolak Balik --}}
+                    </div>
+                    <span class="nav-link-text ms-1">Mutasi & Kenaikan</span>
+                </a>
+                
+                <div class="collapse" id="menuMutasi">
+                    <ul class="nav ms-4">
+                        
+                        {{-- 1. SISWA KELUAR --}}
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ Request::routeIs('mutasi.keluar.*') ? 'active bg-gradient-primary' : '' }}" 
+                            href="{{ route('mutasi.keluar.index') }}"> {{-- Ganti route --}}
+                                <span class="sidenav-mini-icon"> MK </span>
+                                <span class="sidenav-normal ms-2 ps-1"> Mutasi Keluar </span>
+                            </a>
+                        </li>
+
+                        {{-- 2. PINDAH KELAS (ROMBEL) --}}
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ Request::routeIs('mutasi.pindah.*') ? 'active bg-gradient-primary' : '' }}" 
+                            href="#"> {{-- Ganti route --}}
+                                <span class="sidenav-mini-icon"> PK </span>
+                                <span class="sidenav-normal ms-2 ps-1"> Pindah Kelas </span>
+                            </a>
+                        </li>
+
+                        {{-- 3. KENAIKAN KELAS --}}
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ Request::routeIs('mutasi.kenaikan.*') ? 'active bg-gradient-primary' : '' }}" 
+                            href="#"> {{-- Ganti route --}}
+                                <span class="sidenav-mini-icon"> KK </span>
+                                <span class="sidenav-normal ms-2 ps-1"> Kenaikan Kelas </span>
+                            </a>
+                        </li>
+
+                        {{-- 4. KELULUSAN --}}
+                        <li class="nav-item">
+                            <a class="nav-link text-white {{ Request::routeIs('mutasi.kelulusan.*') ? 'active bg-gradient-primary' : '' }}" 
+                            href="#"> {{-- Ganti route --}}
+                                <span class="sidenav-mini-icon"> L </span>
+                                <span class="sidenav-normal ms-2 ps-1"> Kelulusan </span>
+                            </a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            {{-- @endcan --}}
+            <hr class="horizontal light my-2">
+
+
+            {{-- ========================================================= --}}
             {{-- 3. INPUT NILAI (Guru & Admin) --}}
             {{-- ========================================================= --}}
             @can('nilai.view')
