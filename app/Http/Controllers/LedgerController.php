@@ -166,7 +166,7 @@ class LedgerController extends Controller
             ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
             ->where('semester', $semesterInt)
             ->where('tahun_ajaran', trim($tahun_ajaran))
-            ->select('id_siswa', 'sakit', 'izin', 'alpha') // Pastikan kolom 'izin' menggunakan 'z' sesuai struktur table nilai_akhir_rapor
+            ->select('id_siswa', 'sakit', 'ijin', 'alpha') // Pastikan kolom 'izin' menggunakan 'z' sesuai struktur table nilai_akhir_rapor
             ->get();
         
         $mapAbsen = [];

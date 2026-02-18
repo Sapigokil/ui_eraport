@@ -177,7 +177,7 @@
                         {{-- 2. PINDAH KELAS (ROMBEL) --}}
                         <li class="nav-item">
                             <a class="nav-link text-white {{ Request::routeIs('mutasi.pindah.*') ? 'active bg-gradient-primary' : '' }}" 
-                            href="#"> {{-- Ganti route --}}
+                            href="{{ route('mutasi.pindah.index') }}"> {{-- Ganti route --}}
                                 <span class="sidenav-mini-icon"> PK </span>
                                 <span class="sidenav-normal ms-2 ps-1"> Pindah Kelas </span>
                             </a>

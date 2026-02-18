@@ -59,17 +59,15 @@ class RaporController extends Controller
     }
 
     /**
-     * Halaman Dashboard Cetak Rapor (REVISI DETAIL DATA)
-     */
-    /**
      * Halaman Dashboard Cetak Rapor (REVISI: DETAIL TEXT, EKSKUL, SORTING)
      */
     public function cetakIndex(Request $request)
     {
+        // 1. Setup Filter Dasar
         $kelas = Kelas::orderBy('nama_kelas', 'asc')->get();
         $id_kelas = $request->id_kelas;
         
-        // --- LOGIKA PERIODE ---
+        // Default Periode
         $tahunSekarang = date('Y');
         $bulanSekarang = date('n');
         if ($bulanSekarang < 7) {
@@ -79,156 +77,87 @@ class RaporController extends Controller
             $defaultTA = $tahunSekarang . '/' . ($tahunSekarang + 1);
             $defaultSemester = 'Ganjil';
         }
+        
         $semesterRaw = $request->semester ?? $defaultSemester;
         $tahun_ajaran = $request->tahun_ajaran ?? $defaultTA;
         $semesterInt = (strtoupper($semesterRaw) == 'GANJIL' || $semesterRaw == '1') ? 1 : 2;
 
-        $siswaList = [];
+        $finalSiswaList = collect([]); // Collection kosong default
         $kelasAktif = null;
-        $stats = ['raw_count' => 0, 'final_count' => 0, 'total_siswa' => 0, 'persen_raw' => 0, 'persen_final' => 0];
 
         if ($id_kelas) {
             $kelasAktif = Kelas::find($id_kelas);
 
-            // A. REFERENSI MAPEL
-            $pembelajaranAll = Pembelajaran::join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
-                ->leftJoin('guru', 'pembelajaran.id_guru', '=', 'guru.id_guru')
-                ->where('pembelajaran.id_kelas', $id_kelas)
-                ->select('pembelajaran.id_mapel', 'mata_pelajaran.nama_mapel', 'mata_pelajaran.kategori', 'mata_pelajaran.agama_khusus', 'mata_pelajaran.is_active', 'guru.nama_guru')
-                ->orderBy('mata_pelajaran.kategori', 'asc')
-                ->orderBy('mata_pelajaran.urutan', 'asc')
-                ->get();
+            // ==========================================
+            // LOGIC HYBRID: MASTER VS SNAPSHOT
+            // ==========================================
 
-            // B. AMBIL SISWA
-            $siswaList = Siswa::leftJoin('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
-                ->where('siswa.id_kelas', $id_kelas)
-                ->select('siswa.*', 'detail_siswa.agama')
-                ->orderBy('siswa.nama_siswa', 'asc')
-                ->get();
+            // A. Ambil Data MASTER (Siswa Aktif di Kelas Ini Sekarang)
+            // Ini untuk menangkap siswa yang "Belum Digenerate"
+            $masterSiswa = Siswa::where('id_kelas', $id_kelas)
+                ->where('status', 'aktif') // Hanya yang aktif
+                ->select('id_siswa', 'nama_siswa', 'nisn', 'nipd')
+                ->get()
+                ->keyBy('id_siswa');
 
-            $stats['total_siswa'] = $siswaList->count();
+            // B. Ambil Data SNAPSHOT (Rapor yang Sudah Ada)
+            // Ini untuk menangkap siswa yang "Sudah Selesai" ATAU "Sudah Pindah tapi punya rapor"
+            $snapshotRapor = DB::table('nilai_akhir_rapor')
+                ->where('id_kelas', $id_kelas)
+                ->where('tahun_ajaran', $tahun_ajaran)
+                ->where('semester', $semesterInt)
+                ->select('id_siswa', 'status_data', 'updated_at', 'nama_siswa_snapshot', 'nisn_snapshot')
+                ->get()
+                ->keyBy('id_siswa');
 
-            // C. EAGER LOAD DATA
-            $allNilai = DB::table('nilai_akhir')->where('id_kelas', $id_kelas)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->get();
-            
-            // Data Raw (Untuk Cek Status Centang/Silang Saja)
-            $allSumatif = DB::table('sumatif')->whereIn('id_siswa', $siswaList->pluck('id_siswa'))->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->whereNotNull('nilai')->select('id_siswa', 'id_mapel')->distinct()->get()->groupBy('id_siswa');
-            $allProject = DB::table('project')->whereIn('id_siswa', $siswaList->pluck('id_siswa'))->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->whereNotNull('nilai')->select('id_siswa', 'id_mapel')->distinct()->get()->groupBy('id_siswa');
-            $allCatatanRaw = DB::table('catatan')->whereIn('id_siswa', $siswaList->pluck('id_siswa'))->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->get()->keyBy('id_siswa');
-            
-            // Data Snapshot (SUMBER UTAMA TAMPILAN)
-            $allSnapshotHeader = DB::table('nilai_akhir_rapor')->where('id_kelas', $id_kelas)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->get()->keyBy('id_siswa');
+            // C. MERGE DATA (Gabungkan ID dari kedua sumber)
+            $allSiswaIDs = $masterSiswa->keys()->merge($snapshotRapor->keys())->unique();
 
-            // D. ANALISA PER SISWA
-            foreach ($siswaList as $s) {
-                $detailMapel = [];
-                $rawLengkapCount = 0;
-                $targetMapelCount = 0;
-                $agamaSiswa = strtolower(trim($s->agama ?? ''));
+            // D. MAPPING FINAL LIST
+            $finalSiswaList = $allSiswaIDs->map(function($id) use ($masterSiswa, $snapshotRapor) {
+                
+                $master = $masterSiswa->get($id);
+                $snap   = $snapshotRapor->get($id);
 
-                $mySumatif = $allSumatif->get($s->id_siswa);
-                $myProject = $allProject->get($s->id_siswa);
+                // Tentukan Data Tampilan (Prioritas Snapshot jika ada, kalau tidak Master)
+                $nama = $snap->nama_siswa_snapshot ?? $master->nama_siswa ?? 'Data Siswa Terhapus';
+                $nisn = $snap->nisn_snapshot ?? $master->nisn ?? '-';
+                
+                // Tentukan Status Rapor
+                $statusRapor = 'belum_generate';
+                $tanggalGenerate = null;
 
-                // --- 1. Detail Mapel ---
-                foreach ($pembelajaranAll as $p) {
-                    if (!$p->is_active) continue;
-
-                    // Filter Agama
-                    $syaratAgama = strtolower(trim($p->agama_khusus ?? ''));
-                    if (!empty($syaratAgama)) {
-                        $isMatch = false;
-                        if (str_contains($syaratAgama, 'islam') && $agamaSiswa == 'islam') $isMatch = true;
-                        elseif (str_contains($syaratAgama, 'kristen') && in_array($agamaSiswa, ['kristen', 'protestan'])) $isMatch = true;
-                        elseif (str_contains($syaratAgama, 'katolik') && in_array($agamaSiswa, ['katolik', 'katholik'])) $isMatch = true;
-                        elseif (str_contains($syaratAgama, 'hindu') && $agamaSiswa == 'hindu') $isMatch = true;
-                        elseif (str_contains($syaratAgama, 'buddha') && in_array($agamaSiswa, ['buddha', 'budha'])) $isMatch = true;
-                        elseif (str_contains($syaratAgama, 'khong') && str_contains($agamaSiswa, 'khong')) $isMatch = true;
-                        if (!$isMatch && $syaratAgama !== $agamaSiswa) continue; 
-                    }
-
-                    $targetMapelCount++;
-                    $nilaiItem = $allNilai->where('id_siswa', $s->id_siswa)->where('id_mapel', $p->id_mapel)->first();
-                    
-                    $existSumatif = $mySumatif ? $mySumatif->where('id_mapel', $p->id_mapel)->isNotEmpty() : false;
-                    $existProject = $myProject ? $myProject->where('id_mapel', $p->id_mapel)->isNotEmpty() : false;
-                    
-                    $hasRawData = ($existSumatif || $existProject);
-                    $hasSnap    = $nilaiItem && $nilaiItem->status_data === 'final';
-
-                    if ($hasRawData) $rawLengkapCount++;
-
-                    $detailMapel[] = [
-                        'mapel'       => $p->nama_mapel,
-                        'nilai_score' => ($nilaiItem && !is_null($nilaiItem->nilai_akhir)) ? (int)$nilaiItem->nilai_akhir : '-', 
-                        'ada_nilai'   => $hasRawData,
-                        'ada_rekap'   => $hasSnap, 
-                    ];
+                if ($snap) {
+                    $statusRapor = $snap->status_data; // draft, final, cetak
+                    $tanggalGenerate = $snap->updated_at;
                 }
 
-                // --- 2. Detail Non-Akademik (REVISI: STRICTLY FROM SNAPSHOT) ---
-                $catRaw = $allCatatanRaw->get($s->id_siswa); // Hanya utk cek "Ada Raw"
-                $snapHeader = $allSnapshotHeader->get($s->id_siswa); // Sumber Utama
-
-                $hasRawNonAkademik = ($catRaw !== null);
-                $statusSnapshot = $snapHeader ? $snapHeader->status_data : 'kosong';
-                $hasSnapHeader = ($snapHeader !== null); // Ada row di tabel rapor (entah draft/final)
-
-                // AMBIL DATA TEXT (HANYA DARI SNAPSHOT)
-                $txtKokurikuler = $snapHeader->kokurikuler ?? '-';
-                $txtCatatanWali = $snapHeader->catatan_wali_kelas ?? '-';
-                $valSakit       = $snapHeader->sakit ?? '-';
-                $valIjin        = $snapHeader->ijin ?? $snapHeader->izin ?? '-';
-                $valAlpha       = $snapHeader->alpha ?? '-';
-
-                // AMBIL DATA EKSKUL (HANYA DARI SNAPSHOT JSON)
-                $ekskulDisplay = [];
-                if ($snapHeader && !empty($snapHeader->data_ekskul)) {
-                    $jsonEks = json_decode($snapHeader->data_ekskul);
-                    if (is_array($jsonEks)) { 
-                        foreach ($jsonEks as $e) { 
-                            $ekskulDisplay[] = ($e->nama ?? '-') . " (" . ($e->predikat ?? '-') . ")"; 
-                        } 
-                    }
+                // Tentukan Status Siswa (Label Tambahan)
+                $statusSiswa = 'aktif';
+                if (!$master && $snap) {
+                    // Ada di rapor, tapi tidak ada di kelas master saat ini (berarti sudah pindah/keluar)
+                    $statusSiswa = 'history_moved'; 
                 }
-                if (empty($ekskulDisplay)) $ekskulDisplay[] = "-";
 
-                $isRawLengkap = ($rawLengkapCount >= $targetMapelCount) && $hasRawNonAkademik;
-                if ($isRawLengkap) $stats['raw_count']++;
-                if (in_array($statusSnapshot, ['final', 'cetak'])) $stats['final_count']++;
-
-                $s->detail_mapel = $detailMapel;
-                $s->raw_status = $isRawLengkap ? 'lengkap' : 'belum';
-                $s->snapshot_status = $statusSnapshot;
-                $s->tanggal_cetak = $snapHeader->tanggal_cetak ?? null;
-                $s->last_update = $snapHeader->updated_at ?? null;
-
-                $s->detail_non_akademik = [
-                    'raw'   => $hasRawNonAkademik, // Badge Status Raw
-                    'snap'  => $hasSnapHeader,     // Badge Status Rekap
-                    
-                    // Value Display (Strictly from Snapshot)
-                    'sakit' => $valSakit,
-                    'izin'  => $valIjin,
-                    'alpha' => $valAlpha,
-                    'kokurikuler_short' => Str::limit($txtKokurikuler, 30),
-                    'kokurikuler_full'  => $txtKokurikuler,
-                    'catatan_short'     => Str::limit($txtCatatanWali, 30),
-                    'catatan_full'      => $txtCatatanWali,
-                    'ekskul_list'       => $ekskulDisplay
+                return (object) [
+                    'id_siswa'   => $id,
+                    'nama_siswa' => $nama,
+                    'nisn'       => $nisn,
+                    'status_rapor' => $statusRapor, // 'belum_generate', 'draft', 'final', 'cetak'
+                    'status_siswa' => $statusSiswa, // 'aktif', 'history_moved'
+                    'last_update'  => $tanggalGenerate,
+                    'is_ready_print' => in_array($statusRapor, ['final', 'cetak'])
                 ];
+            });
 
-                $s->can_print_unlock = in_array($statusSnapshot, ['final', 'cetak']);
-                $s->can_generate = ($isRawLengkap && (!$snapHeader || $statusSnapshot == 'draft'));
-                $s->is_draft = ($statusSnapshot == 'draft');
-            }
-
-            if ($stats['total_siswa'] > 0) {
-                $stats['persen_raw'] = round(($stats['raw_count'] / $stats['total_siswa']) * 100);
-                $stats['persen_final'] = round(($stats['final_count'] / $stats['total_siswa']) * 100);
-            }
+            // E. SORTING (Berdasarkan Nama)
+            $finalSiswaList = $finalSiswaList->sortBy('nama_siswa')->values();
         }
 
-        return view('rapor.cetak_rapor', compact('kelas', 'siswaList', 'id_kelas', 'semesterRaw', 'tahun_ajaran', 'kelasAktif', 'stats'));
+        return view('rapor.cetak_rapor', compact(
+            'kelas', 'id_kelas', 'semesterRaw', 'tahun_ajaran', 
+            'kelasAktif', 'finalSiswaList'
+        ));
     }
 
     /**

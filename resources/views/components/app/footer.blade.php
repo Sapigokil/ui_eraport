@@ -8,33 +8,32 @@
                     document.write(new Date().getFullYear())
                 </script>
                 made with <i class="fa fa-heart"></i> by
-                <a href="https://www.campus-data.com" class="text-secondary text-bold" target="_blank">Campus Data</a>
-                <a href="https://www.media.com" class="text-secondary text-bold" target="_blank">Media</a>
+                <a href="https://www.campus.web.id" class="text-secondary text-bold" target="_blank">Campus Creatif</a>
                 for a better web.
             </div>
         </div>
         <div class="col-lg-6">
             <ul class="nav nav-footer justify-content-center justify-content-lg-end">
                 <li class="nav-item">
-                    <a href="https://www.campus-data.com" class="nav-link text-m text-muted" target="_blank">Campus
-                        Data</a>
+                    <a href="https://www.campus.web.id" class="nav-link text-m text-muted" target="_blank">Campus
+                        Creatif</a>
                 </li>
-                <li class="nav-item">
+                {{-- <li class="nav-item">
                     <a href="https://www.media.com" class="nav-link text-m text-muted"
                         target="_blank">Media</a>
-                </li>
+                </li> --}}
                 <li class="nav-item">
-                    <a href="https://www.creative-tim.com/presentation" class="nav-link text-m text-muted"
+                    <a href="https://campus.web.id/tentang/" class="nav-link text-m text-muted"
                         target="_blank">About Us</a>
                 </li>
-                <li class="nav-item">
+                {{-- <li class="nav-item">
                     <a href="https://www.creative-tim.com/blog" class="nav-link text-m text-muted"
                         target="_blank">Blog</a>
                 </li>
                 <li class="nav-item">
                     <a href="https://www.creative-tim.com/license" class="nav-link text-m pe-0 text-muted"
                         target="_blank">License</a>
-                </li>
+                </li> --}}
             </ul>
         </div>
     </div>

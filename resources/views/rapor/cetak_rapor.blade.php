@@ -5,6 +5,7 @@
 @section('content')
 
 @php
+    // --- 1. LOGIKA PERIODE (TETAP) ---
     $tahunSekarang = date('Y');
     $bulanSekarang = date('n');
     if ($bulanSekarang < 7) {
@@ -21,6 +22,18 @@
         $tahunAjaranList[] = $tahun . '/' . ($tahun + 1);
     }
     $semesterList = ['Ganjil', 'Genap']; 
+
+    // --- 2. HITUNG STATISTIK DI VIEW ---
+    $totalSiswa = isset($finalSiswaList) ? count($finalSiswaList) : 0;
+    
+    // Hitung yang statusnya 'final' atau 'cetak'
+    $finalCount = isset($finalSiswaList) ? $finalSiswaList->whereIn('status_rapor', ['final', 'cetak'])->count() : 0;
+    
+    // Hitung yang sudah ada datanya (draft/final/cetak) - selain belum_generate
+    $rawCount   = isset($finalSiswaList) ? $finalSiswaList->where('status_rapor', '!=', 'belum_generate')->count() : 0;
+
+    $persenFinal = $totalSiswa > 0 ? round(($finalCount / $totalSiswa) * 100) : 0;
+    $persenRaw   = $totalSiswa > 0 ? round(($rawCount / $totalSiswa) * 100) : 0;
 @endphp
 
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -31,6 +44,7 @@
         {{-- CARD FILTER --}}
         <div class="card shadow-sm border mb-4">
             <div class="card-body p-3">
+                {{-- FIX ROUTE: rapornilai.cetak --}}
                 <form action="{{ route('rapornilai.cetak') }}" method="GET" class="row g-3 align-items-end">
                     <div class="col-md-4">
                         <label class="form-label fw-bold text-xs text-uppercase text-secondary">Pilih Kelas</label>
@@ -68,7 +82,7 @@
 
         @if($id_kelas && $kelasAktif)
         
-        {{-- HEADER BANNER (HASIL COPY DARI MONITORING WALI) --}}
+        {{-- HEADER BANNER --}}
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card shadow-sm border-0 bg-gradient-primary overflow-hidden position-relative">
@@ -82,27 +96,27 @@
                                 <p class="text-white opacity-8 mb-2"><i class="fas fa-user-tie me-2"></i> Wali Kelas: {{ $kelasAktif->wali_kelas }}</p>
                                 
                                 <span class="badge border border-white text-white fw-bold bg-transparent">
-                                    Semester {{ $semesterRaw }} - {{ $tahun_ajaran }}
+                                    Semester {{ $selectedSemester }} - {{ $selectedTA }}
                                 </span>
                             </div>
                             <div class="col-md-5 text-end mt-4 mt-md-0">
                                 <div class="d-flex justify-content-md-end justify-content-between gap-4">
                                     
-                                    {{-- STAT 1: INPUTAN GURU (RAW) --}}
+                                    {{-- STAT 1: DATA MASUK --}}
                                     <div class="text-center">
-                                        <span class="text-xs text-uppercase font-weight-bold d-block opacity-8 mb-1">Data Lengkap (Raw)</span>
-                                        <h4 class="text-white mb-0">{{ $stats['raw_count'] }} <span class="text-sm fw-normal opacity-8">/ {{ $stats['total_siswa'] }} Siswa</span></h4>
+                                        <span class="text-xs text-uppercase font-weight-bold d-block opacity-8 mb-1">Data Masuk</span>
+                                        <h4 class="text-white mb-0">{{ $rawCount }} <span class="text-sm fw-normal opacity-8">/ {{ $totalSiswa }} Siswa</span></h4>
                                         <div class="progress mt-2 mx-auto" style="height: 4px; width: 100px; background: rgba(255,255,255,0.3);">
-                                            <div class="progress-bar bg-white" role="progressbar" style="width: {{ $stats['persen_raw'] }}%"></div>
+                                            <div class="progress-bar bg-white" role="progressbar" style="width: {{ $persenRaw }}%"></div>
                                         </div>
                                     </div>
 
-                                    {{-- STAT 2: SIAP CETAK (SNAPSHOT) --}}
+                                    {{-- STAT 2: SIAP CETAK --}}
                                     <div class="text-center">
-                                        <span class="text-xs text-uppercase font-weight-bold d-block opacity-8 mb-1">Siap Cetak (Final)</span>
-                                        <h4 class="text-white mb-0">{{ $stats['final_count'] }} <span class="text-sm fw-normal opacity-8">/ {{ $stats['total_siswa'] }} Siswa</span></h4>
+                                        <span class="text-xs text-uppercase font-weight-bold d-block opacity-8 mb-1">Siap Cetak</span>
+                                        <h4 class="text-white mb-0">{{ $finalCount }} <span class="text-sm fw-normal opacity-8">/ {{ $totalSiswa }} Siswa</span></h4>
                                         <div class="progress mt-2 mx-auto" style="height: 4px; width: 100px; background: rgba(255,255,255,0.3);">
-                                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $stats['persen_final'] }}%"></div>
+                                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ $persenFinal }}%"></div>
                                         </div>
                                     </div>
 
@@ -122,12 +136,9 @@
                         <div class="d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 text-dark font-weight-bold"><i class="fas fa-list-ul me-2"></i> Daftar Siswa</h6>
                             
-                            {{-- TOMBOL DOWNLOAD MASSAL (MUNCUL JIKA ADA DATA FINAL) --}}
-                            @if($stats['final_count'] > 0)
-                            {{-- <a href="{{ route('rapornilai.download_massal_pdf') }}?id_kelas={{ $id_kelas }}&semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
-                               class="btn btn-sm btn-outline-primary mb-0" target="_blank">
-                                <i class="fas fa-file-pdf me-2"></i> Download Semua PDF
-                            </a> --}}
+                            {{-- TOMBOL DOWNLOAD MASSAL --}}
+                            @if($finalCount > 0)
+                            {{-- FIX ROUTE: rapornilai.download_massal_merge --}}
                             <a href="{{ route('rapornilai.download_massal_merge') }}?id_kelas={{ $id_kelas }}&semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
                                class="btn btn-sm btn-outline-primary mb-0" target="_blank">
                                 <i class="fas fa-file-pdf me-2"></i> Download & Merge PDF
@@ -142,206 +153,98 @@
                                 <thead class="bg-light">
                                     <tr>
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 5%">No</th>
-                                        <th class="ps-3 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 25%">Nama Siswa</th>
-                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Kelengkapan Data</th>
-                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Tanggal Cetak</th>
-                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status Rapor</th>
+                                        <th class="ps-3 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 30%">Nama Siswa</th>
+                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status Data</th>
+                                        <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Terakhir Update</th>
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse($siswaList as $idx => $s)
+                                    @forelse($finalSiswaList as $idx => $s)
                                     <tr>
                                         <td class="text-center text-sm text-secondary">{{ $idx + 1 }}</td>
                                         <td class="ps-3">
                                             <div class="d-flex flex-column justify-content-center">
                                                 <h6 class="mb-0 text-sm font-weight-bold text-dark">{{ $s->nama_siswa }}</h6>
-                                                <p class="text-xs text-secondary mb-0">{{ $s->nisn ?? $s->nipd }}</p>
-                                                {{-- LINK DETAIL --}}
-                                                <a class="text-xs text-primary font-weight-bold cursor-pointer mt-1" 
-                                                   data-bs-toggle="collapse" href="#detail-{{ $s->id_siswa }}">
-                                                    <i class="fas fa-chevron-down me-1"></i> Detail
-                                                </a>
+                                                <p class="text-xs text-secondary mb-0">{{ $s->nisn }}</p>
+                                                
+                                                @if($s->status_siswa == 'history_moved')
+                                                    <span class="badge badge-xxs bg-gradient-secondary mt-1 w-auto" style="width: fit-content;">
+                                                        <i class="fas fa-history me-1"></i> Data Arsip (Mutasi/Alumni)
+                                                    </span>
+                                                @endif
                                             </div>
                                         </td>
 
-                                        {{-- KOLOM KELENGKAPAN --}}
+                                        {{-- STATUS DATA --}}
                                         <td class="text-center align-middle">
-                                            @if($s->snapshot_status != 'kosong')
-                                                <span class="badge badge-sm bg-gradient-success">LENGKAP</span>
-                                            @elseif($s->raw_status == 'lengkap')
-                                                <span class="badge badge-sm bg-gradient-warning text-dark">BELUM REKAP</span>
-                                            @else
-                                                <span class="badge badge-sm bg-gradient-danger">BELUM ADA</span>
+                                            @if($s->status_rapor == 'belum_generate')
+                                                <span class="badge badge-sm bg-gradient-light text-secondary border">BELUM ADA</span>
+                                            @elseif($s->status_rapor == 'draft')
+                                                <span class="badge badge-sm bg-gradient-info">DRAFT</span>
+                                            @elseif($s->status_rapor == 'final')
+                                                <span class="badge badge-sm bg-gradient-success">SIAP CETAK</span>
+                                            @elseif($s->status_rapor == 'cetak')
+                                                <span class="badge badge-sm bg-gradient-dark">SUDAH DICETAK</span>
                                             @endif
                                         </td>
 
-                                        {{-- KOLOM TANGGAL CETAK --}}
+                                        {{-- TANGGAL UPDATE --}}
                                         <td class="text-center align-middle">
-                                            @if($s->snapshot_status == 'cetak' && $s->tanggal_cetak)
-                                                <span class="text-xs font-weight-bold d-block">{{ \Carbon\Carbon::parse($s->tanggal_cetak)->format('d M Y') }}</span>
-                                                {{-- <span class="text-xxs text-secondary">{{ \Carbon\Carbon::parse($s->tanggal_cetak)->format('H:i') }} WIB</span> --}}
+                                            @if($s->last_update)
+                                                <span class="text-xs font-weight-bold d-block">{{ \Carbon\Carbon::parse($s->last_update)->format('d M Y') }}</span>
+                                                <span class="text-xxs text-secondary">{{ \Carbon\Carbon::parse($s->last_update)->format('H:i') }} WIB</span>
                                             @else
                                                 <span class="text-xs text-secondary">-</span>
                                             @endif
                                         </td>
 
-                                        {{-- KOLOM STATUS --}}
-                                        <td class="text-center align-middle">
-                                            @if($s->snapshot_status == 'cetak')
-                                                <span class="badge badge-sm bg-gradient-dark">SUDAH DICETAK</span>
-                                            @elseif($s->snapshot_status == 'final')
-                                                <span class="badge badge-sm bg-gradient-primary">SIAP CETAK</span>
-                                            @elseif($s->snapshot_status == 'draft')
-                                                <span class="badge badge-sm bg-gradient-secondary">DRAFT</span>
-                                            @else
-                                                <span class="badge badge-sm bg-gradient-light text-secondary border">BELUM GENERATE</span>
-                                            @endif
-                                        </td>
-
-                                        {{-- KOLOM AKSI --}}
+                                        {{-- AKSI --}}
                                         <td class="text-center align-middle">
                                             <div class="d-flex justify-content-center gap-2">
-                                                @if($s->can_print_unlock)
-                                                    {{-- CETAK --}}
+                                                
+                                                @if($s->is_ready_print)
+                                                    {{-- FIX ROUTE: rapornilai.cetak_proses --}}
                                                     <a href="{{ route('rapornilai.cetak_proses', $s->id_siswa) }}?semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
-                                                       target="_blank" class="btn btn-xs bg-gradient-info mb-0 px-3" data-bs-toggle="tooltip" title="Cetak PDF">
-                                                        <i class="fas fa-print"></i>
+                                                       target="_blank" class="btn btn-xs bg-gradient-primary mb-0 px-3" data-bs-toggle="tooltip" title="Cetak PDF">
+                                                        <i class="fas fa-print me-1"></i> Cetak
                                                     </a>
-                                                    {{-- UNLOCK --}}
+                                                    
                                                     <button onclick="unlockRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
-                                                            class="btn btn-xs btn-outline-danger mb-0 px-3" data-bs-toggle="tooltip" title="Buka Kunci">
+                                                            class="btn btn-xs btn-outline-danger mb-0 px-3" data-bs-toggle="tooltip" title="Buka Kunci (Kembali ke Draft)">
                                                         <i class="fas fa-lock-open"></i>
                                                     </button>
-                                                @elseif($s->is_draft)
-                                                    {{-- FINALISASI --}}
+
+                                                    <button onclick="regenerateRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
+                                                            class="btn btn-link text-warning text-xs mb-0 px-2" data-bs-toggle="tooltip" title="Update Nilai Terbaru">
+                                                        <i class="fas fa-sync-alt"></i>
+                                                    </button>
+
+                                                @elseif($s->status_rapor == 'draft')
+                                                    
                                                     <button onclick="finalisasiRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
-                                                            class="btn btn-xs bg-gradient-primary mb-0 px-3">
+                                                            class="btn btn-xs bg-gradient-info mb-0 px-3">
                                                         <i class="fas fa-check-circle me-1"></i> Finalisasi
                                                     </button>
-                                                @elseif($s->can_generate)
-                                                    {{-- GENERATE ADMIN --}}
-                                                    <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
-                                                            class="btn btn-xs bg-gradient-warning mb-0 px-3">
-                                                        <i class="fas fa-bolt me-1"></i> Generate
-                                                    </button>
+
                                                 @else
-                                                    <span class="text-xs text-secondary fst-italic">Tunggu Wali Kelas</span>
+                                                    
+                                                    <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
+                                                            class="btn btn-xs bg-gradient-secondary mb-0 px-3">
+                                                        <i class="fas fa-cog me-1"></i> Generate
+                                                    </button>
                                                 @endif
-                                            </div>
-                                        </td>
-                                    </tr>
 
-                                    {{-- ROW DETAIL (COLLAPSE) --}}
-                                    <tr>
-                                        <td colspan="6" class="p-0 border-0">
-                                            <div class="collapse bg-gray-50" id="detail-{{ $s->id_siswa }}">
-                                                <div class="row p-3">
-                                                    {{-- DETAIL MAPEL --}}
-                                                    <div class="col-md-7 border-end">
-                                                        <h6 class="text-xs font-weight-bold text-uppercase text-secondary mb-2 ms-2">Detail Mapel ({{ count($s->detail_mapel) }})</h6>
-                                                        <div class="table-responsive bg-white border-radius-md shadow-xs mx-2" style="max-height: 300px; overflow-y: auto;">
-                                                            <table class="table table-sm mb-0 align-middle">
-                                                                <thead class="bg-light sticky-top">
-                                                                    <tr>
-                                                                        <th class="text-xs ps-3 text-secondary font-weight-bold">Mapel</th>
-                                                                        <th class="text-center text-xs text-secondary font-weight-bold">Angka</th>
-                                                                        <th class="text-center text-xs text-secondary font-weight-bold">Nilai</th>
-                                                                        <th class="text-center text-xs text-secondary font-weight-bold">Rekap</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    @foreach($s->detail_mapel as $dm)
-                                                                    <tr>
-                                                                        {{-- Nama Mapel --}}
-                                                                        <td class="text-xs ps-3 text-dark">{{ $dm['mapel'] }}</td>
-                                                                        
-                                                                        {{-- Nilai (Angka Bulat) --}}
-                                                                        <td class="text-center text-xs font-weight-bold text-dark">
-                                                                            {{ $dm['nilai_score'] }}
-                                                                        </td>
-
-                                                                        {{-- Status Nilai (Raw) --}}
-                                                                        <td class="text-center">
-                                                                            @if($dm['ada_nilai']) 
-                                                                                <span class="badge badge-xxs bg-success"><i class="fas fa-check"></i></span> 
-                                                                            @else 
-                                                                                <span class="badge badge-xxs bg-danger"><i class="fas fa-times"></i></span> 
-                                                                            @endif
-                                                                        </td>
-
-                                                                        {{-- Status Rekap (Snap) --}}
-                                                                        <td class="text-center">
-                                                                            @if($dm['ada_rekap']) 
-                                                                                <span class="badge badge-xxs bg-success"><i class="fas fa-check"></i></span> 
-                                                                            @else 
-                                                                                <span class="badge badge-xxs bg-secondary"><i class="fas fa-minus"></i></span> 
-                                                                            @endif
-                                                                        </td>
-                                                                    </tr>
-                                                                    @endforeach
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-
-                                                    {{-- DETAIL NON AKADEMIK --}}
-                                                    <div class="col-md-5">
-                                                        <h6 class="text-xs font-weight-bold text-uppercase text-secondary mb-2 ms-2">Info Non-Akademik</h6>
-                                                        <div class="card card-body p-3 bg-white shadow-xs mx-2">
-                                                            
-                                                            {{-- Status Data --}}
-                                                            <div class="d-flex justify-content-between mb-2 pb-2 border-bottom">
-                                                                <span class="text-xs font-weight-bold text-secondary">Status Data:</span>
-                                                                <div>
-                                                                    <span class="badge badge-xxs {{ $s->detail_non_akademik['raw'] ? 'bg-success' : 'bg-danger' }}">Nilai</span>
-                                                                    <span class="badge badge-xxs {{ $s->detail_non_akademik['snap'] ? 'bg-success' : 'bg-secondary' }}">Rekap</span>
-                                                                </div>
-                                                            </div>
-
-                                                            {{-- Kokurikuler --}}
-                                                            <div class="mb-2">
-                                                                <span class="text-xs text-secondary d-block">Kokurikuler:</span>
-                                                                <span class="text-xs text-dark font-weight-bold" 
-                                                                      data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $s->detail_non_akademik['kokurikuler_full'] }}" style="cursor: pointer;">
-                                                                    {{ $s->detail_non_akademik['kokurikuler_short'] }}
-                                                                </span>
-                                                            </div>
-
-                                                            {{-- Ekstrakurikuler --}}
-                                                            <div class="mb-2">
-                                                                <span class="text-xs text-secondary d-block">Ekstrakurikuler:</span>
-                                                                <ul class="mb-0 ps-3 text-xs text-dark font-weight-bold">
-                                                                    @foreach($s->detail_non_akademik['ekskul_list'] as $eks)
-                                                                        <li>{{ $eks }}</li>
-                                                                    @endforeach
-                                                                </ul>
-                                                            </div>
-
-                                                            {{-- Catatan Wali --}}
-                                                            <div class="mb-2">
-                                                                <span class="text-xs text-secondary d-block">Catatan Wali Kelas:</span>
-                                                                <span class="text-xs text-dark font-weight-bold" 
-                                                                      data-bs-toggle="tooltip" data-bs-placement="top" title="{{ $s->detail_non_akademik['catatan_full'] }}" style="cursor: pointer;">
-                                                                    {{ $s->detail_non_akademik['catatan_short'] }}
-                                                                </span>
-                                                            </div>
-
-                                                            {{-- Absensi --}}
-                                                            <div class="mt-2 pt-2 border-top text-center">
-                                                                <span class="text-xs text-secondary">Sakit: <b class="text-dark">{{ $s->detail_non_akademik['sakit'] }}</b></span> | 
-                                                                <span class="text-xs text-secondary">Ijin: <b class="text-dark">{{ $s->detail_non_akademik['izin'] }}</b></span> | 
-                                                                <span class="text-xs text-secondary">Alpha: <b class="text-danger">{{ $s->detail_non_akademik['alpha'] }}</b></span>
-                                                            </div>
-
-                                                        </div>
-                                                    </div>
-                                                </div>
                                             </div>
                                         </td>
                                     </tr>
                                     @empty
-                                    <tr><td colspan="6" class="text-center py-5">Tidak ada data siswa.</td></tr>
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 text-secondary">
+                                            <i class="fas fa-folder-open fa-2x mb-3 opacity-5"></i><br>
+                                            Tidak ada data siswa ditemukan untuk periode ini.
+                                        </td>
+                                    </tr>
                                     @endforelse
                                 </tbody>
                             </table>
@@ -356,6 +259,7 @@
                 <i class="fas fa-search fa-lg opacity-10" aria-hidden="true"></i>
             </div>
             <h5 class="mt-2">Pilih Kelas Terlebih Dahulu</h5>
+            <p class="text-sm text-secondary">Silakan gunakan filter di atas untuk menampilkan daftar siswa.</p>
         </div>
         @endif
 
@@ -387,35 +291,44 @@
                 Swal.fire('Berhasil!', res.message || 'Sukses.', 'success').then(() => { location.reload(); });
             },
             error: function(xhr) {
-                Swal.fire('Gagal!', 'Terjadi kesalahan.', 'error');
+                Swal.fire('Gagal!', 'Terjadi kesalahan sistem.', 'error');
             }
         });
     }
 
-    // 1. GENERATE ADMIN
+    // 1. GENERATE ADMIN (FIX ROUTE: rapornilai.generate_rapor)
     function generateRaporAdmin(idSiswa, namaSiswa) {
         Swal.fire({
-            title: 'Generate Admin?',
-            text: `Anda akan mengambil alih generate rapor untuk ${namaSiswa}.`,
-            icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Generate!', confirmButtonColor: '#fb8c00'
+            title: 'Generate Rapor?',
+            text: `Sistem akan menarik data nilai terbaru untuk ${namaSiswa}.`,
+            icon: 'info', showCancelButton: true, confirmButtonText: 'Ya, Generate!', confirmButtonColor: '#344767'
         }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.generate_rapor') }}", idSiswa); });
     }
 
-    // 2. UNLOCK RAPOR
+    // 2. RE-GENERATE (FIX ROUTE: rapornilai.generate_rapor)
+    function regenerateRapor(idSiswa, namaSiswa) {
+        Swal.fire({
+            title: 'Update Nilai?',
+            text: `Rapor ${namaSiswa} sudah Final. Update nilai akan menimpa data rapor yang ada. Lanjutkan?`,
+            icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Update!', confirmButtonColor: '#fb8c00'
+        }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.generate_rapor') }}", idSiswa); });
+    }
+
+    // 3. UNLOCK RAPOR (FIX ROUTE: rapornilai.unlock_rapor)
     function unlockRapor(idSiswa, namaSiswa) {
         Swal.fire({
             title: 'Buka Kunci?',
-            text: `Rapor ${namaSiswa} akan kembali ke DRAFT.`,
-            icon: 'question', showCancelButton: true, confirmButtonText: 'Ya, Buka!', confirmButtonColor: '#d33'
+            text: `Status rapor ${namaSiswa} akan dikembalikan ke DRAFT agar bisa diedit kembali.`,
+            icon: 'question', showCancelButton: true, confirmButtonText: 'Ya, Buka Kunci!', confirmButtonColor: '#ea0606'
         }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.unlock_rapor') }}", idSiswa); });
     }
 
-    // 3. FINALISASI RAPOR
+    // 4. FINALISASI RAPOR (FIX ROUTE: rapornilai.generate_rapor)
     function finalisasiRapor(idSiswa, namaSiswa) {
         Swal.fire({
-            title: 'Finalisasi?',
-            text: `Ubah status ${namaSiswa} menjadi FINAL (Siap Cetak).`,
-            icon: 'info', showCancelButton: true, confirmButtonText: 'Ya, Finalisasi!'
+            title: 'Finalisasi Rapor?',
+            text: `Pastikan nilai sudah benar. Status ${namaSiswa} akan diubah menjadi SIAP CETAK.`,
+            icon: 'success', showCancelButton: true, confirmButtonText: 'Ya, Finalisasi!', confirmButtonColor: '#17ad37'
         }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.generate_rapor') }}", idSiswa); });
     }
 </script>

@@ -25,7 +25,7 @@ use App\Http\Controllers\PesertaEkskulController;
 
 // Mutasi Siswa
 use App\Http\Controllers\MutasiKeluarController;
-// use App\Http\Controllers\MutasiPindahController;
+use App\Http\Controllers\MutasiPindahController;
 // use App\Http\Controllers\MutasiKenaikanController;
 // use App\Http\Controllers\MutasiKelulusanController;
 
@@ -177,6 +177,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/keluar', [MutasiKeluarController::class, 'index'])->name('keluar.index');
         Route::post('/keluar', [MutasiKeluarController::class, 'store'])->name('keluar.store');
         Route::delete('/keluar/{id}', [MutasiKeluarController::class, 'destroy'])->name('keluar.destroy');
+        Route::get('/pindah', [MutasiPindahController::class, 'index'])->name('pindah.index');
+        Route::post('/pindah', [MutasiPindahController::class, 'store'])->name('pindah.store');
     });
 
     // ==========================================================================
