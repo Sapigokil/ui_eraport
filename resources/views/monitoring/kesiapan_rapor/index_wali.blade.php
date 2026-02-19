@@ -89,6 +89,32 @@
                 </div>
             </div>
         </div>
+
+        {{-- INFO BOBOT NILAI --}}
+        @if(isset($bobotInfo) && $bobotInfo)
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm border border-light bg-gray-50">
+                    <div class="card-body p-3 d-flex align-items-center">
+                        <div class="icon icon-shape bg-gradient-info shadow-info text-center border-radius-md me-3">
+                            <i class="fas fa-balance-scale text-white text-lg opacity-10"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-sm font-weight-bold text-dark">Informasi Bobot Penilaian (Semester {{ $semester }})</h6>
+                            <p class="text-xs text-secondary mb-0">
+                                Hitungan Nilai Akhir (NA) saat proses Take-Over akan dikalkulasi berdasarkan: 
+                                <b>{{ $bobotInfo->bobot_sumatif }}%</b> Rata-rata Sumatif Harian <i class="fas fa-plus mx-1 text-muted text-xxs"></i> 
+                                <b>{{ $bobotInfo->bobot_project }}%</b> Nilai Akhir Semester (Sumatif Akhir).
+                                <span class="d-block mt-1 text-info font-weight-bold">
+                                    <i class="fas fa-info-circle me-1"></i> Syarat minimal Nilai Sumatif Harian yang wajib diinput oleh Guru adalah <b>{{ $bobotInfo->jumlah_sumatif }} Nilai</b>.
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
         
         {{-- AREA AKSI / TRIGGER --}}
         <div class="row mb-4">
@@ -171,11 +197,19 @@
                                                     <span class="text-xxs text-secondary">({{ $m['progress'] }} / {{ $m['total'] }} Siswa)</span>
                                                 </td>
                                                 <td class="align-middle text-center">
-                                                    @if($m['status'] == 'final') <span class="badge badge-sm bg-gradient-success">FINAL</span>
-                                                    @elseif($m['status'] == 'update') <span class="badge badge-sm bg-gradient-warning text-dark">UPDATE</span>
-                                                    @elseif($m['status'] == 'ready') <span class="badge badge-sm bg-gradient-info">SIAP</span>
-                                                    @elseif($m['status'] == 'proses') <span class="badge badge-sm bg-gradient-secondary">PROSES</span>
-                                                    @else <span class="badge badge-sm bg-gradient-danger">KOSONG</span> @endif
+                                                    @if($m['status'] == 'cetak') 
+                                                        <span class="badge badge-sm bg-dark text-white"><i class="fas fa-lock me-1"></i> TERCETAK</span>
+                                                    @elseif($m['status'] == 'final') 
+                                                        <span class="badge badge-sm bg-gradient-success"><i class="fas fa-check me-1"></i> FINAL</span>
+                                                    @elseif($m['status'] == 'update') 
+                                                        <span class="badge badge-sm bg-gradient-warning text-dark"><i class="fas fa-exclamation-triangle me-1"></i> UPDATE</span>
+                                                    @elseif($m['status'] == 'ready') 
+                                                        <span class="badge badge-sm bg-gradient-info"><i class="fas fa-paper-plane me-1"></i> SIAP (DRAFT)</span>
+                                                    @elseif($m['status'] == 'proses') 
+                                                        <span class="badge badge-sm bg-gradient-secondary"><i class="fas fa-spinner fa-spin me-1"></i> PROSES</span>
+                                                    @else 
+                                                        <span class="badge badge-sm bg-gradient-danger"><i class="fas fa-times me-1"></i> KOSONG</span> 
+                                                    @endif
                                                 </td>
                                                 <td class="align-middle text-center">
                                                     <a href="{{ route('master.rekap.index', ['id_kelas' => $dataKelas->kelas->id_kelas, 'id_mapel' => $m['id_mapel'], 'semester' => $semester, 'tahun_ajaran' => $tahun_ajaran]) }}" target="_blank" class="btn btn-xs btn-outline-primary mb-0" title="Lihat Detail"><i class="fas fa-search"></i></a>
@@ -217,11 +251,19 @@
                                                 </td>
                                                 <td class="align-top py-3"><span class="text-xs text-secondary text-wrap d-block" style="max-width: 200px;" data-bs-toggle="tooltip" title="{{ $cat['catatan_full'] }}">{{ $cat['catatan_short'] }}</span></td>
                                                 <td class="align-middle text-center align-top py-3">
-                                                    @if($cat['status'] == 'final') <span class="badge badge-sm bg-gradient-success">FINAL</span>
-                                                    @elseif($cat['status'] == 'update') <span class="badge badge-sm bg-gradient-warning text-dark">UPDATE</span>
-                                                    @elseif($cat['status'] == 'ready') <span class="badge badge-sm bg-gradient-info">SIAP</span>
-                                                    @elseif($cat['status'] == 'proses') <span class="badge badge-sm bg-gradient-secondary">PROSES</span>
-                                                    @else <span class="badge badge-sm bg-gradient-danger">KOSONG</span> @endif
+                                                    @if($cat['status'] == 'cetak') 
+                                                        <span class="badge badge-sm bg-dark text-white"><i class="fas fa-lock me-1"></i> TERCETAK</span>
+                                                    @elseif($cat['status'] == 'final') 
+                                                        <span class="badge badge-sm bg-gradient-success"><i class="fas fa-check me-1"></i> FINAL</span>
+                                                    @elseif($cat['status'] == 'update') 
+                                                        <span class="badge badge-sm bg-gradient-warning text-dark"><i class="fas fa-exclamation-triangle me-1"></i> UPDATE</span>
+                                                    @elseif($cat['status'] == 'ready') 
+                                                        <span class="badge badge-sm bg-gradient-info"><i class="fas fa-paper-plane me-1"></i> SIAP (DRAFT)</span>
+                                                    @elseif($cat['status'] == 'proses') 
+                                                        <span class="badge badge-sm bg-gradient-secondary"><i class="fas fa-spinner fa-spin me-1"></i> PROSES</span>
+                                                    @else 
+                                                        <span class="badge badge-sm bg-gradient-danger"><i class="fas fa-times me-1"></i> KOSONG</span> 
+                                                    @endif
                                                 </td>
                                             </tr>
                                             @endforeach

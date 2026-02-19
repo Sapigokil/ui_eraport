@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Siswa;
 use App\Models\Kelas;
 use App\Models\Pembelajaran;
+use App\Models\RiwayatPindahKelas;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,7 +17,7 @@ class MutasiPindahController extends Controller
         $kelas = Kelas::orderBy('nama_kelas')->get();
         $siswaAktif = collect();
 
-        // Load siswa jika ada filter kelas
+        // 1. FILTER SISWA AKTIF (Bagian Atas)
         if ($request->has('id_kelas_asal') && $request->id_kelas_asal != '') {
             $siswaAktif = Siswa::where('status', 'aktif')
                         ->where('id_kelas', $request->id_kelas_asal)
@@ -24,7 +25,49 @@ class MutasiPindahController extends Controller
                         ->get();
         }
 
-        return view('mutasi.pindah_index', compact('kelas', 'siswaAktif'));
+        // 2. GENERATE LIST TAHUN AJARAN (Untuk Dropdown Filter History)
+        $tahunSekarang = date('Y');
+        $tahunAjaranList = [];
+        for ($tahun = $tahunSekarang + 1; $tahun >= $tahunSekarang - 3; $tahun--) {
+            $tahunAjaranList[] = $tahun . '/' . ($tahun + 1);
+        }
+
+        // 3. FILTER RIWAYAT (Bagian Bawah)
+        $queryRiwayat = RiwayatPindahKelas::with(['siswa', 'kelasLama', 'kelasBaru']);
+
+        // Filter by Nama
+        if ($request->filled('h_nama')) {
+            $queryRiwayat->whereHas('siswa', function($q) use ($request) {
+                $q->where('nama_siswa', 'like', '%' . $request->h_nama . '%');
+            });
+        }
+
+        // Filter by Kelas (Bisa Kelas Lama atau Kelas Baru)
+        if ($request->filled('h_kelas')) {
+            $h_kelas = $request->h_kelas;
+            $queryRiwayat->where(function($q) use ($h_kelas) {
+                $q->where('id_kelas_lama', $h_kelas)
+                  ->orWhere('id_kelas_baru', $h_kelas);
+            });
+        }
+
+        // Filter by Tahun Ajaran (Konversi Tahun Ajaran ke Range Tanggal)
+        // Misal: 2025/2026 -> 1 Juli 2025 s/d 30 Juni 2026
+        if ($request->filled('h_ta')) {
+            $ta = explode('/', $request->h_ta);
+            if (count($ta) == 2) {
+                $start_date = $ta[0] . '-07-01';
+                $end_date   = $ta[1] . '-06-30';
+                $queryRiwayat->whereBetween('tgl_pindah', [$start_date, $end_date]);
+            }
+        }
+
+        // Gunakan pagination agar tidak berat jika data ribuan
+        $riwayat = $queryRiwayat->orderBy('tgl_pindah', 'desc')
+                                ->paginate(10)
+                                ->appends($request->query()); // appends menjaga filter tetap aktif saat pindah halaman
+
+        return view('mutasi.pindah_index', compact('kelas', 'siswaAktif', 'riwayat', 'tahunAjaranList'));
     }
 
     public function store(Request $request)
@@ -83,35 +126,37 @@ class MutasiPindahController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                // B. Migrasi Nilai Berjalan (Hanya Mapel yang Sama)
+                // B. Migrasi Nilai Berjalan                
+                // 1. Update Sumatif & Project (Terikat dengan Mata Pelajaran)
                 if (!empty($mapelSama)) {
                     // Update Sumatif
                     DB::table('sumatif')
                         ->where('id_siswa', $idSiswa)
-                        ->where('id_kelas', $request->id_kelas_asal) // Pastikan hanya data kelas lama
+                        ->where('id_kelas', $request->id_kelas_asal)
                         ->where('semester', $semester)
                         ->where('tahun_ajaran', $tahunAjaran)
-                        ->whereIn('id_mapel', $mapelSama) // FILTER MAPEL SAMA
+                        ->whereIn('id_mapel', $mapelSama) // Hanya mapel yang match
                         ->update(['id_kelas' => $request->id_kelas_tujuan]);
 
-                    // Update Project (P5) - Jika logic mapel P5 sama
+                    // Update Project
                     DB::table('project')
                         ->where('id_siswa', $idSiswa)
                         ->where('id_kelas', $request->id_kelas_asal)
                         ->where('semester', $semester)
                         ->where('tahun_ajaran', $tahunAjaran)
-                        ->whereIn('id_mapel', $mapelSama)
-                        ->update(['id_kelas' => $request->id_kelas_tujuan]);
-                    
-                    // Update Catatan (Jika catatan terikat Mapel)
-                    DB::table('catatan')
-                        ->where('id_siswa', $idSiswa)
-                        ->where('id_kelas', $request->id_kelas_asal)
-                        ->where('semester', $semester)
-                        ->where('tahun_ajaran', $tahunAjaran)
-                        ->whereIn('id_mapel', $mapelSama)
+                        ->whereIn('id_mapel', $mapelSama) // Hanya mapel yang match
                         ->update(['id_kelas' => $request->id_kelas_tujuan]);
                 }
+
+                // 2. Update Catatan Non-Akademik (Absensi, Ekskul, Wali Kelas)
+                // Karena ini terikat pada Siswa & Kelas (Bukan Mapel), maka langsung dipindahkan saja
+                DB::table('catatan')
+                    ->where('id_siswa', $idSiswa)
+                    ->where('id_kelas', $request->id_kelas_asal)
+                    ->where('semester', $semester)
+                    ->where('tahun_ajaran', $tahunAjaran)
+                    // HAPUS BARIS INI: ->whereIn('id_mapel', $mapelSama) 
+                    ->update(['id_kelas' => $request->id_kelas_tujuan]);
 
                 // C. Pindahkan Siswa (Master Data)
                 $siswa->update(['id_kelas' => $request->id_kelas_tujuan]);

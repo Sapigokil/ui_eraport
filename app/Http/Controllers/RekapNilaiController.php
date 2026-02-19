@@ -116,7 +116,7 @@ class RekapNilaiController extends Controller
                 ])->first();
 
                 // Gunakan nilai dari DB jika sudah ada, jika belum gunakan hitungan rumus
-                $nilaiFinal = $saved ? (int) $saved->nilai_akhir : $hasil['nilai_akhir'];
+                $nilaiFinal = $hasil['nilai_akhir'];
                 $deskripsi = $saved ? $saved->capaian_akhir : $this->generateDeskripsi($s->id_siswa, $id_mapel, $semesterInt, $tahun_ajaran);
 
                 $dataSiswa[] = (object)[
@@ -147,10 +147,22 @@ class RekapNilaiController extends Controller
         }
         $semesterList = ['Ganjil', 'Genap'];
 
+        $isLocked = false;
+        if ($id_kelas && $id_mapel) {
+            $isLocked = DB::table('nilai_akhir')
+                ->where('id_kelas', $id_kelas)
+                ->where('id_mapel', $id_mapel)
+                ->where('semester', $semesterInt)
+                ->where('tahun_ajaran', $tahun_ajaran)
+                ->where('status_data', '!=', 'draft')
+                ->exists();
+        }
+
         return view('nilai.rekap_nilai.index', compact(
             'kelas', 'mapelList', 'dataSiswa', 'bobotInfo', 
             'id_kelas', 'id_mapel', 'semesterRaw', 'tahun_ajaran', 
-            'semesterList', 'tahunAjaranList', 'seasonOpen', 'seasonMessage', 'seasonDetail'
+            'semesterList', 'tahunAjaranList', 'seasonOpen', 'seasonMessage', 'seasonDetail',
+            'isLocked'
         ));
     }
 
@@ -176,6 +188,21 @@ class RekapNilaiController extends Controller
         $seasonCheck = $this->checkSeason($tahun_ajaran, $semesterInt);
         if (!$seasonCheck['is_open']) {
             return redirect()->back()->with('error', 'Gagal Simpan: ' . $seasonCheck['message']);
+        }
+
+        // =========================================================================
+        // 2. NEW: Gatekeeper Status (Mencegah update jika data sudah Final/Cetak)
+        // =========================================================================
+        $isLocked = DB::table('nilai_akhir')
+            ->where('id_kelas', $id_kelas)
+            ->where('id_mapel', $id_mapel)
+            ->where('semester', $semesterInt)
+            ->where('tahun_ajaran', $tahun_ajaran)
+            ->where('status_data', '!=', 'draft') // Cek apakah ada yang selain draft
+            ->exists();
+
+        if ($isLocked) {
+            return redirect()->back()->with('error', 'Gagal Simpan: Data nilai sudah dikunci (Status Final/Cetak). Silakan hubungi Wali Kelas/Admin jika ingin melakukan perubahan data.');
         }
 
         // Data Snapshot Identitas
@@ -230,7 +257,7 @@ class RekapNilaiController extends Controller
                     ? (int) $val['nilai_akhir'] 
                     : $hasil['nilai_akhir'];
 
-                $deskripsiFix = $val['deskripsi'] ?? '-';
+                $deskripsiFix = $this->generateDeskripsi($id_siswa, $id_mapel, $semesterInt, $tahun_ajaran);
 
                 DB::table('nilai_akhir')->updateOrInsert(
                     [
@@ -253,7 +280,7 @@ class RekapNilaiController extends Controller
                         'nama_kelas_snapshot'     => $namaKelasSnapshot,
                         'tingkat'                 => $tingkatSnapshot,
                         'fase'                    => $faseSnapshot,
-                        'status_data' => 'final',
+                        'status_data' => 'draft',
                         'updated_at'  => now(),
                         'created_at'  => DB::raw('IFNULL(created_at, NOW())') 
                     ])

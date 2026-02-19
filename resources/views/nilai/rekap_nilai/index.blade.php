@@ -106,9 +106,8 @@
 
         @if(!empty($dataSiswa))
             
-            {{-- 2. HEADER BANNER (Updated Style) --}}
+            {{-- 2. HEADER BANNER --}}
             @php
-                // Logika View untuk mengambil Nama Kelas & Mapel serta Hitung Progres
                 $selectedKelas = $kelas->firstWhere('id_kelas', $id_kelas);
                 $selectedMapel = collect($mapelList)->firstWhere('id_mapel', $id_mapel);
                 
@@ -153,37 +152,74 @@
                 </div>
             </div>
 
-            {{-- 3. AREA AKSI / TRIGGER (GATEKEEPER STYLE) --}}
+            {{-- NEW: INFO BOBOT NILAI --}}
+            @if($bobotInfo)
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card shadow-sm border border-light bg-gray-50">
+                        <div class="card-body p-3 d-flex align-items-center">
+                            <div class="icon icon-shape bg-gradient-info shadow-info text-center border-radius-md me-3">
+                                <i class="fas fa-balance-scale text-white text-lg opacity-10"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 text-sm font-weight-bold text-dark">Informasi Bobot Penilaian (Semester {{ $semesterRaw }})</h6>
+                                <p class="text-xs text-secondary mb-0">
+                                    Hitungan Nilai Akhir (NA) otomatis dikalkulasi berdasarkan: 
+                                    <b>{{ $bobotInfo->bobot_sumatif }}%</b> Rata-rata Sumatif Harian <i class="fas fa-plus mx-1 text-muted text-xxs"></i> 
+                                    <b>{{ $bobotInfo->bobot_project }}%</b> Nilai Akhir Semester (Sumatif Akhir).
+                                    <span class="d-block mt-1 text-info font-weight-bold">
+                                        <i class="fas fa-info-circle me-1"></i> Anda wajib menginput minimal <b>{{ $bobotInfo->jumlah_sumatif }} Nilai Sumatif Harian</b> (S1, S2, dst).
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            {{-- 3. AREA AKSI / TRIGGER (GATEKEEPER STYLE BERLAPIS) --}}
             <div class="row mb-4">
                 <div class="col-12">
                     @php
-                        $gateColor = $seasonOpen ? 'primary' : 'danger';
-                        $gateIcon = $seasonOpen ? 'fas fa-door-open' : 'fas fa-lock';
+                        // Logika Hierarki Status
+                        $isLocked = $isLocked ?? false;
+                        $canSave  = false;
+
+                        if (!$seasonOpen) {
+                            $gateColor = 'danger';
+                            $gateIcon = 'fas fa-door-closed';
+                            $statusMessage = $seasonMessage; // Dari Controller (Jadwal Ditutup)
+                        } elseif ($isLocked) {
+                            $gateColor = 'warning';
+                            $gateIcon = 'fas fa-lock';
+                            $statusMessage = 'Data telah dikunci (Status: Final/Cetak). Hubungi Wali Kelas jika ada revisi nilai.';
+                        } else {
+                            $canSave = true; // Hanya true jika season open DAN tidak dilock
+                            $gateColor = 'primary';
+                            $gateIcon = 'fas fa-door-open';
+                            $statusMessage = 'Sistem siap melakukan kalkulasi dan simpan snapshot nilai akhir.';
+                        }
                     @endphp
+
                     <div class="card shadow-sm border border-start-5 border-{{ $gateColor }}">
-                        <div class="card-body d-flex justify-content-between align-items-center p-3">
-                            <div class="pe-4">
+                        <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-center p-3">
+                            <div class="pe-md-4 mb-3 mb-md-0">
                                 <h5 class="mb-1 text-dark font-weight-bold">
                                     <i class="fas fa-check-circle me-2 text-{{ $gateColor }}"></i> Aksi Finalisasi
                                 </h5>
-                                @if($seasonOpen)
-                                    <p class="text-sm text-success font-weight-bold mb-0">
-                                        <i class="{{ $gateIcon }} me-1"></i> Sistem siap melakukan kalkulasi dan simpan snapshot nilai akhir.
-                                    </p>
-                                @else
-                                    <p class="text-sm text-danger font-weight-bold mb-0">
-                                        <i class="{{ $gateIcon }} me-1"></i> {{ $seasonMessage }}
-                                    </p>
-                                @endif
+                                <p class="text-sm text-{{ $gateColor }} font-weight-bold mb-0">
+                                    <i class="{{ $gateIcon }} me-1"></i> {{ $statusMessage }}
+                                </p>
                             </div>
                             <div>
-                                @if($seasonOpen)
-                                    <button type="button" onclick="confirmSimpan()" class="btn btn-primary bg-gradient-primary btn-lg mb-0 shadow-sm">
+                                @if($canSave)
+                                    <button type="button" onclick="confirmSimpan()" class="btn btn-primary bg-gradient-primary btn-lg mb-0 shadow-sm w-100">
                                         <i class="fas fa-save me-2"></i> SIMPAN FINALISASI
                                     </button>
                                 @else
-                                    <button type="button" class="btn btn-secondary btn-lg mb-0 cursor-not-allowed" disabled>
-                                        <i class="fas fa-lock me-2"></i> SIMPAN TERKUNCI
+                                    <button type="button" class="btn btn-secondary btn-lg mb-0 cursor-not-allowed w-100 opacity-6" disabled>
+                                        <i class="{{ $gateIcon }} me-2"></i> TERKUNCI
                                     </button>
                                 @endif
                             </div>

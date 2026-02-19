@@ -218,7 +218,11 @@ class RaporController extends Controller
         // Update status 'cetak'
         DB::table('nilai_akhir_rapor')
             ->where('id_siswa', $id_siswa)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)
-            ->update(['status_data' => 'cetak']); 
+            ->update(['status_data' => 'cetak']);
+        
+        DB::table('nilai_akhir')
+                ->where('id_siswa', $id_siswa)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)
+                ->update(['status_data' => 'cetak']);
 
         $pdf = Pdf::loadView('rapor.pdf1_template', $data)
                 ->setPaper('a4', 'portrait')

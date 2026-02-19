@@ -204,34 +204,46 @@
                                             <div class="d-flex justify-content-center gap-2">
                                                 
                                                 @if($s->is_ready_print)
-                                                    {{-- FIX ROUTE: rapornilai.cetak_proses --}}
+                                                    {{-- ============================================== --}}
+                                                    {{-- JIKA DATA FINAL/CETAK (TERKUNCI / LOCKED)      --}}
+                                                    {{-- ============================================== --}}
                                                     <a href="{{ route('rapornilai.cetak_proses', $s->id_siswa) }}?semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
                                                        target="_blank" class="btn btn-xs bg-gradient-primary mb-0 px-3" data-bs-toggle="tooltip" title="Cetak PDF">
                                                         <i class="fas fa-print me-1"></i> Cetak
                                                     </a>
                                                     
+                                                    {{-- TOMBOL UNLOCK --}}
                                                     <button onclick="unlockRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
-                                                            class="btn btn-xs btn-outline-danger mb-0 px-3" data-bs-toggle="tooltip" title="Buka Kunci (Kembali ke Draft)">
-                                                        <i class="fas fa-lock-open"></i>
+                                                            class="btn btn-xs btn-outline-danger mb-0 px-3" data-bs-toggle="tooltip" title="Buka Kunci untuk Edit/Update">
+                                                        <i class="fas fa-lock"></i> Buka Kunci
                                                     </button>
-
-                                                    <button onclick="regenerateRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
-                                                            class="btn btn-link text-warning text-xs mb-0 px-2" data-bs-toggle="tooltip" title="Update Nilai Terbaru">
-                                                        <i class="fas fa-sync-alt"></i>
-                                                    </button>
+                                                    
+                                                    {{-- Tombol Update/Regenerate sengaja DIHILANGKAN dari sini demi keamanan data --}}
 
                                                 @elseif($s->status_rapor == 'draft')
+                                                    {{-- ============================================== --}}
+                                                    {{-- JIKA DATA DRAFT (TERBUKA / UNLOCKED)           --}}
+                                                    {{-- ============================================== --}}
                                                     
+                                                    {{-- TOMBOL RE-GENERATE (DIPINDAH KE SINI) --}}
+                                                    <button onclick="regenerateRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
+                                                            class="btn btn-xs bg-gradient-warning mb-0 px-3" data-bs-toggle="tooltip" title="Tarik data nilai terbaru dari Guru">
+                                                        <i class="fas fa-sync-alt me-1"></i> Perbarui Data
+                                                    </button>
+
+                                                    {{-- FINALISASI --}}
                                                     <button onclick="finalisasiRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
                                                             class="btn btn-xs bg-gradient-info mb-0 px-3">
                                                         <i class="fas fa-check-circle me-1"></i> Finalisasi
                                                     </button>
 
                                                 @else
-                                                    
+                                                    {{-- ============================================== --}}
+                                                    {{-- JIKA DATA BELUM ADA SAMA SEKALI                --}}
+                                                    {{-- ============================================== --}}
                                                     <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
                                                             class="btn btn-xs bg-gradient-secondary mb-0 px-3">
-                                                        <i class="fas fa-cog me-1"></i> Generate
+                                                        <i class="fas fa-cog me-1"></i> Generate Awal
                                                     </button>
                                                 @endif
 

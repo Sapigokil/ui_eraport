@@ -37,6 +37,17 @@ class MonitoringWaliController extends Controller
              return redirect()->back()->with('error', 'Data Kelas Kosong. Silakan hubungi admin.');
         }
 
+        // --- TAMBAHAN BARU: AMBIL INFO BOBOT ---
+        $semesterRaw = $periode['semester'];
+        $tahun_ajaran = $periode['tahun_ajaran'];
+        $semesterInt = (strtoupper($semesterRaw) == 'GENAP' || $semesterRaw == '2') ? 2 : 1;
+        $bobotInfo = BobotNilai::where('tahun_ajaran', $tahun_ajaran)
+            ->where(function($query) use ($semesterRaw, $semesterInt) {
+                $query->where('semester', strtoupper($semesterRaw))
+                      ->orWhere('semester', $semesterInt)
+                      ->orWhere('semester', ucfirst($semesterRaw));
+            })->first();
+
         // 2. Hitung Data (Logic Internal Wali)
         $result = $this->hitungMonitoringData(collect([$kelasTarget]), $periode);
         $singleData = $result['monitoringData'][0] ?? null;
@@ -49,7 +60,8 @@ class MonitoringWaliController extends Controller
                 'dataKelas' => $singleData,
                 'kelasList' => $kelasList, 
                 'selected_kelas_id' => $kelasTarget->id_kelas,
-                'gate' => $gate
+                'gate' => $gate,
+                'bobotInfo' => $bobotInfo // Kirim info bobot ke view
             ], 
             $periode,
             ['stats' => $result['stats']]
@@ -57,7 +69,7 @@ class MonitoringWaliController extends Controller
     }
 
     /**
-     * AKSI GENERATE RAPOR (UPDATE LOGIC EKSKUL)
+     * AKSI GENERATE RAPOR (UPDATE LOGIC EKSKUL & TAKE OVER)
      */
     public function generateRaporWalikelas(Request $request)
     {
@@ -72,6 +84,19 @@ class MonitoringWaliController extends Controller
         $tahun_ajaran = $request->tahun_ajaran;
         $semesterRaw = $request->semester;
         $semesterInt = (strtoupper($semesterRaw) == 'GENAP' || $semesterRaw == '2') ? 2 : 1;
+
+        // --- TAMBAHAN BARU: GATEKEEPER STATUS CETAK ---
+        // Cegah proses jika Wali Kelas iseng klik saat rapor sudah dicetak/dikunci.
+        $isLocked = DB::table('nilai_akhir_rapor')
+            ->where('id_kelas', $id_kelas)
+            ->where('semester', $semesterInt)
+            ->where('tahun_ajaran', $tahun_ajaran)
+            ->where('status_data', 'cetak') // Asumsi admin pakai status 'cetak'
+            ->exists();
+
+        if ($isLocked) {
+            return back()->with('error', 'Akses Ditolak: Rapor kelas ini sudah masuk tahap CETAK dan terkunci. Tidak bisa di-generate ulang.');
+        }
 
         // 2. CEK PENGATURAN BOBOT NILAI
         $bobot = BobotNilai::where('tahun_ajaran', $tahun_ajaran)
@@ -123,78 +148,82 @@ class MonitoringWaliController extends Controller
                 $agamaSiswa = strtolower(trim($siswa->agama ?? ''));
 
                 // ==========================================================
-                // TAHAP A: SIMPAN 'nilai_akhir' (LEVEL MAPEL)
-                // (Bagian ini TIDAK BERUBAH dari kode Anda sebelumnya)
+                // TAHAP A: SIMPAN 'nilai_akhir' (LEVEL MAPEL) - REVISI TAKE-OVER
                 // ==========================================================
                 foreach ($listPembelajaran as $pemb) {
                     if (!$pemb->mapel) continue;
 
                     $syaratAgama = $pemb->mapel->agama_khusus; 
                     if (!empty($syaratAgama)) {
-                        if (strtolower(trim($syaratAgama)) != $agamaSiswa) {
-                            continue; 
-                        }
+                        if (strtolower(trim($syaratAgama)) != $agamaSiswa) continue; 
                     }
 
-                    $namaMapelSnapshot = $pemb->mapel->nama_mapel;
-                    $kodeMapelSnapshot = $pemb->mapel->nama_singkat ?? '-';
-                    $namaGuruSnapshot  = ($pemb->guru) ? $pemb->guru->nama_guru : 'Guru Belum Ditentukan';
-                    
-                    $kategoriLabel = 'Mata Pelajaran Umum';
-                    if (isset($pemb->mapel->kategori)) {
-                        $mapKategori = [1 => 'Mata Pelajaran Umum', 2 => 'Mata Pelajaran Kejuruan', 3 => 'Mata Pelajaran Pilihan', 4 => 'Muatan Lokal'];
-                        $kategoriLabel = $mapKategori[$pemb->mapel->kategori] ?? $pemb->mapel->kategori;
-                    }
-
-                    $sumatifData = DB::table('sumatif')->where([
-                        'id_siswa' => $siswa->id_siswa, 'id_mapel' => $pemb->id_mapel,
-                        'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
-                    ])->get();
-
-                    $projectRow = DB::table('project')->where([
-                        'id_siswa' => $siswa->id_siswa, 'id_mapel' => $pemb->id_mapel,
-                        'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
-                    ])->first();
-                    $nilaiProject = $projectRow ? $projectRow->nilai : 0;
-
-                    $hasil = \App\Helpers\NilaiCalculator::process($sumatifData, $nilaiProject, $bobot);
-
+                    // Cek apakah guru sudah input nilai (draft/final)
                     $existingNilai = DB::table('nilai_akhir')->where([
                         'id_siswa' => $siswa->id_siswa, 'id_mapel' => $pemb->id_mapel,
                         'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
                     ])->first();
 
-                    $deskripsi = $existingNilai->capaian_akhir ?? null;
-                    if (empty($deskripsi) || trim($deskripsi) == '') {
-                        $deskripsi = $this->generateDeskripsiOtomatis($siswa->id_siswa, $pemb->id_mapel, $semesterInt, $tahun_ajaran);
-                    }
+                    if ($existingNilai) {
+                        // KONDISI 1: Guru sudah input -> Kita hanya perlu melegalkan/mengubah statusnya jadi FINAL
+                        // Ini memastikan nilai yang mungkin diedit manual oleh guru TIDAK TERTEMPA.
+                        DB::table('nilai_akhir')->where('id', $existingNilai->id)->update([
+                            'status_data' => 'final',
+                            'updated_at'  => now()
+                        ]);
+                    } else {
+                        // KONDISI 2: Guru BELUM input sama sekali (Take Over) -> Hitung dan Insert
+                        $namaMapelSnapshot = $pemb->mapel->nama_mapel;
+                        $kodeMapelSnapshot = $pemb->mapel->nama_singkat ?? '-';
+                        $namaGuruSnapshot  = ($pemb->guru) ? $pemb->guru->nama_guru : 'Guru Belum Ditentukan';
+                        
+                        $kategoriLabel = 'Mata Pelajaran Umum';
+                        if (isset($pemb->mapel->kategori)) {
+                            $mapKategori = [1 => 'Mata Pelajaran Umum', 2 => 'Mata Pelajaran Kejuruan', 3 => 'Mata Pelajaran Pilihan', 4 => 'Muatan Lokal'];
+                            $kategoriLabel = $mapKategori[$pemb->mapel->kategori] ?? $pemb->mapel->kategori;
+                        }
 
-                    DB::table('nilai_akhir')->updateOrInsert(
-                        [
+                        $sumatifData = DB::table('sumatif')->where([
                             'id_siswa' => $siswa->id_siswa, 'id_mapel' => $pemb->id_mapel,
                             'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
-                        ],
-                        array_merge($hasil['s_vals'], [
-                            'id_kelas' => $id_kelas,
-                            'rata_sumatif'  => $hasil['rata_sumatif'],
-                            'bobot_sumatif' => $hasil['bobot_sumatif'],
-                            'nilai_project' => $hasil['nilai_project'],
-                            'rata_project'  => $hasil['rata_project'],
-                            'bobot_project' => $hasil['bobot_project'],
-                            'nilai_akhir'   => $hasil['nilai_akhir'],
-                            'capaian_akhir' => $deskripsi,
-                            'nama_mapel_snapshot'     => $namaMapelSnapshot,
-                            'kode_mapel_snapshot'     => $kodeMapelSnapshot,
-                            'kategori_mapel_snapshot' => $kategoriLabel,
-                            'nama_guru_snapshot'      => $namaGuruSnapshot,
-                            'nama_kelas_snapshot'     => $namaKelasSnapshot,
-                            'tingkat'                 => $tingkatSnapshot,
-                            'fase'                    => $faseSnapshot,
-                            'status_data' => 'final',
-                            'updated_at'  => now(),
-                            'created_at'  => DB::raw('IFNULL(created_at, NOW())')
-                        ])
-                    );
+                        ])->get();
+
+                        $projectRow = DB::table('project')->where([
+                            'id_siswa' => $siswa->id_siswa, 'id_mapel' => $pemb->id_mapel,
+                            'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
+                        ])->first();
+                        $nilaiProject = $projectRow ? $projectRow->nilai : 0;
+
+                        $hasil = \App\Helpers\NilaiCalculator::process($sumatifData, $nilaiProject, $bobot);
+                        $deskripsi = $this->generateDeskripsiOtomatis($siswa->id_siswa, $pemb->id_mapel, $semesterInt, $tahun_ajaran);
+
+                        DB::table('nilai_akhir')->insert(
+                            array_merge($hasil['s_vals'], [
+                                'id_siswa' => $siswa->id_siswa,
+                                'id_mapel' => $pemb->id_mapel,
+                                'semester' => $semesterInt,
+                                'tahun_ajaran' => $tahun_ajaran,
+                                'id_kelas' => $id_kelas,
+                                'rata_sumatif'  => $hasil['rata_sumatif'],
+                                'bobot_sumatif' => $hasil['bobot_sumatif'],
+                                'nilai_project' => $hasil['nilai_project'],
+                                'rata_project'  => $hasil['rata_project'],
+                                'bobot_project' => $hasil['bobot_project'],
+                                'nilai_akhir'   => $hasil['nilai_akhir'],
+                                'capaian_akhir' => $deskripsi,
+                                'nama_mapel_snapshot'     => $namaMapelSnapshot,
+                                'kode_mapel_snapshot'     => $kodeMapelSnapshot,
+                                'kategori_mapel_snapshot' => $kategoriLabel,
+                                'nama_guru_snapshot'      => $namaGuruSnapshot,
+                                'nama_kelas_snapshot'     => $namaKelasSnapshot,
+                                'tingkat'                 => $tingkatSnapshot,
+                                'fase'                    => $faseSnapshot,
+                                'status_data' => 'final', // Langsung final karena di-take over wali kelas
+                                'updated_at'  => now(),
+                                'created_at'  => now()
+                            ])
+                        );
+                    }
                 }
 
                 // ==========================================================
@@ -208,8 +237,7 @@ class MonitoringWaliController extends Controller
                     'tahun_ajaran' => $tahun_ajaran
                 ])->first();
 
-                // 2. Ambil Data Ekskul (LANGSUNG DARI TABEL nilai_ekskul)
-                //    Ini akan mengambil semua ekskul yg diikuti siswa tersebut di semester ini
+                // 2. Ambil Data Ekskul
                 $listEkskulSiswa = DB::table('nilai_ekskul')
                     ->join('ekskul', 'nilai_ekskul.id_ekskul', '=', 'ekskul.id_ekskul')
                     ->where('nilai_ekskul.id_siswa', $siswa->id_siswa)
@@ -275,7 +303,6 @@ class MonitoringWaliController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            // dd($e); // Debugging jika perlu
             return back()->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
         }
     }
@@ -291,40 +318,20 @@ class MonitoringWaliController extends Controller
         $activeSeason = Season::where('is_active', 1)->first();
         
         if (!$activeSeason) {
-            return [
-                'allowed' => false, 
-                'message' => 'Season belum diatur oleh Admin.', 
-                'icon' => 'fas fa-ban', 
-                'color' => 'danger'
-            ];
+            return ['allowed' => false, 'message' => 'Season belum diatur oleh Admin.', 'icon' => 'fas fa-ban', 'color' => 'danger'];
         }
         
         if ($activeSeason->is_open == 0) {
-            return [
-                'allowed' => false, 
-                'message' => 'Akses Generate Rapor sedang DITUTUP oleh Admin.', 
-                'icon' => 'fas fa-lock', 
-                'color' => 'danger'
-            ];
+            return ['allowed' => false, 'message' => 'Akses Generate Rapor sedang DITUTUP oleh Admin.', 'icon' => 'fas fa-lock', 'color' => 'danger'];
         }
         
         $today = Carbon::today();
         if ($today->lt($activeSeason->start_date)) {
-            return [
-                'allowed' => false, 
-                'message' => 'Periode Generate Rapor BELUM DIMULAI.', 
-                'icon' => 'fas fa-clock', 
-                'color' => 'danger'
-            ];
+            return ['allowed' => false, 'message' => 'Periode Generate Rapor BELUM DIMULAI.', 'icon' => 'fas fa-clock', 'color' => 'danger'];
         }
         
         if ($today->gt($activeSeason->end_date)) {
-            return [
-                'allowed' => false, 
-                'message' => 'Periode Generate Rapor TELAH BERAKHIR.', 
-                'icon' => 'fas fa-history', 
-                'color' => 'danger'
-            ];
+            return ['allowed' => false, 'message' => 'Periode Generate Rapor TELAH BERAKHIR.', 'icon' => 'fas fa-history', 'color' => 'danger'];
         }
 
         $filterTahun = $periode['tahun_ajaran'];
@@ -332,26 +339,32 @@ class MonitoringWaliController extends Controller
         $filterSemInt = ($filterSemStr == 'Ganjil' || $filterSemStr == '1') ? 1 : 2;
 
         if ($filterTahun != $activeSeason->tahun_ajaran || $filterSemInt != $activeSeason->semester) {
-            return [
-                'allowed' => false, 
-                'message' => 'Generate Rapor hanya bisa dilakukan pada Tahun & Semester yang aktif.', 
-                'icon' => 'fas fa-calendar-times', 
-                'color' => 'danger'
-            ];
+            return ['allowed' => false, 'message' => 'Generate Rapor hanya bisa dilakukan pada Tahun & Semester yang aktif.', 'icon' => 'fas fa-calendar-times', 'color' => 'danger'];
         }
 
         if (!$dataKelas) {
+            return ['allowed' => false, 'message' => 'Data kelas tidak terbaca.', 'icon' => 'fas fa-exclamation-triangle', 'color' => 'danger'];
+        }
+
+        // ==========================================================
+        // 2. CEK STATUS CETAK (BLOKIR JIKA SUDAH TERCETAK)
+        // ==========================================================
+        // Jika ada satu saja item (mapel atau catatan) yang berstatus 'cetak', KUNCI tombol!
+        $hasCetak = collect($dataKelas->detail)->merge($dataKelas->detail_catatan)
+            ->contains(function($item) {
+                return $item['status'] == 'cetak';
+            });
+
+        if ($hasCetak) {
             return [
                 'allowed' => false, 
-                'message' => 'Data kelas tidak terbaca.', 
-                'icon' => 'fas fa-exclamation-triangle', 
-                'color' => 'danger'
+                'message' => 'Akses Terkunci: Rapor kelas ini sudah masuk tahap CETAK.', 
+                'icon' => 'fas fa-lock', 
+                'color' => 'dark' // Menggunakan warna gelap untuk memberi kesan TERKUNCI MUTLAK
             ];
         }
 
-        // 2. VALIDASI KELENGKAPAN DATA (Versi Detail)
-        // Hitung item yang statusnya masih 'kosong' atau 'proses'
-        
+        // 3. VALIDASI KELENGKAPAN DATA (Versi Detail)
         $mapelBelumSiap = collect($dataKelas->detail)->filter(function($m){
             return in_array($m['status'], ['kosong', 'proses']);
         })->count();
@@ -361,24 +374,14 @@ class MonitoringWaliController extends Controller
         })->count();
 
         if ($mapelBelumSiap > 0) {
-            return [
-                'allowed' => false, 
-                'message' => "Terdapat $mapelBelumSiap Mapel yang nilainya belum lengkap dari Guru.", 
-                'icon' => 'fas fa-exclamation-circle', 
-                'color' => 'warning'
-            ];
+            return ['allowed' => false, 'message' => "Terdapat $mapelBelumSiap Mapel yang nilainya belum lengkap dari Guru.", 'icon' => 'fas fa-exclamation-circle', 'color' => 'warning'];
         }
 
         if ($catatanBelumSiap > 0) {
-            return [
-                'allowed' => false, 
-                'message' => "Terdapat $catatanBelumSiap Siswa yang belum memiliki Catatan/Absensi lengkap.", 
-                'icon' => 'fas fa-user-edit', 
-                'color' => 'warning'
-            ];
+            return ['allowed' => false, 'message' => "Terdapat $catatanBelumSiap Siswa yang belum memiliki Catatan/Absensi lengkap.", 'icon' => 'fas fa-user-edit', 'color' => 'warning'];
         }
 
-        // 3. CEK STATUS TOMBOL (Siap / Update / Final)
+        // 4. CEK STATUS TOMBOL (Siap / Update / Final)
         $needAction = collect($dataKelas->detail)->merge($dataKelas->detail_catatan)
             ->contains(fn($item) => in_array($item['status'], ['ready', 'update']));
 
@@ -391,11 +394,15 @@ class MonitoringWaliController extends Controller
             ];
         }
 
-        // Jika semua lolos dan tidak ada yg butuh update, berarti FINAL
+        // ==========================================================
+        // 5. JIKA SEMUA SUDAH 'FINAL' DAN TIDAK ADA 'UPDATE'
+        // ==========================================================
+        // Kita ubah allowed jadi FALSE agar Wali Kelas tidak perlu menekan 
+        // tombol generate berulang-ulang tanpa alasan yang jelas.
         return [
-            'allowed' => true, 
-            'message' => 'Semua data rapor sudah tersimpan dan final.', 
-            'icon' => 'fas fa-shield-alt', 
+            'allowed' => false, 
+            'message' => 'Semua data rapor sudah berstatus FINAL. Tidak ada perubahan yang perlu digenerate.', 
+            'icon' => 'fas fa-check-circle', 
             'color' => 'success'
         ];
     }
@@ -430,9 +437,6 @@ class MonitoringWaliController extends Controller
         $semester = $periode['semester'];
         
         $smtInt = ($semester == 'Ganjil' || $semester == '1') ? 1 : 2;
-
-        // $masterEkskul tidak lagi dibutuhkan untuk mapping ID -> Nama, 
-        // karena kita akan join langsung ke tabel ekskul
 
         $monitoringData = [];
         $stats = [
@@ -503,37 +507,48 @@ class MonitoringWaliController extends Controller
                 $countRaw = max($rawSumatif->total, $rawProject->total);
                 $lastRawUpdate = max($rawSumatif->last_update, $rawProject->last_update);
 
-                // Cek FINAL DATA
+                // Cek FINAL DATA (Sekarang kita ambil juga status_data-nya dari database)
                 $finalData = DB::table('nilai_akhir')
                     ->where('id_kelas', $k->id_kelas)->where('id_mapel', $m->id_mapel)
                     ->where('semester', $smtInt)->where('tahun_ajaran', $tahun_ajaran)
-                    ->select(DB::raw('count(*) as total'), DB::raw('max(updated_at) as last_update'))
+                    ->select(DB::raw('count(*) as total'), DB::raw('max(updated_at) as last_update'), DB::raw('MAX(status_data) as db_status'))
                     ->first();
 
                 $countFinal = $finalData->total;
                 $lastFinalUpdate = $finalData->last_update;
+                $dbStatus = $finalData->db_status; // Bisa null, 'draft', 'final', atau 'cetak'
 
-                // Status Logic
+                // =======================================================
+                // KOMBINASI STATUS LOGIC & DATABASE LOGIC (LEVEL MAPEL)
+                // =======================================================
                 $status = 'kosong';
                 if ($countRaw == 0) {
                     $status = 'kosong';
                 } elseif ($countRaw < $targetSiswa) {
                     $status = 'proses';
-                } else {
+                } else { // Jika nilai mentah sudah lengkap
                     if ($countFinal < $targetSiswa) {
-                        $status = 'ready'; 
+                        $status = 'ready'; // SIAP (Belum masuk ke tabel final)
                     } else {
+                        // Cek apakah data mentah berubah SETELAH difinalisasi
                         if (strtotime($lastRawUpdate) > strtotime($lastFinalUpdate)) {
-                            $status = 'update'; 
+                            $status = 'update'; // KUNING (Perlu Update)
                         } else {
-                            $status = 'final'; 
+                            // SINKRON, cek statusnya di Database
+                            if ($dbStatus == 'cetak') {
+                                $status = 'cetak';
+                            } elseif ($dbStatus == 'draft') {
+                                $status = 'ready'; // Draft kita anggap masuk kategori SIAP
+                            } else {
+                                $status = 'final';
+                            }
                         }
                     }
                 }
 
-                if (in_array($status, ['final', 'update', 'ready'])) {
+                if (in_array($status, ['final', 'update', 'ready', 'cetak'])) {
                     $kelasMapelSelesai++;
-                    if ($status == 'final') $stats['mapel_final']++;
+                    if (in_array($status, ['final', 'cetak'])) $stats['mapel_final']++;
                 }
 
                 $detailMapel[] = [
@@ -552,36 +567,22 @@ class MonitoringWaliController extends Controller
             }
 
             // C. CATATAN WALI, EKSKUL & ABSENSI
-            // 1. Ambil Catatan (Absensi & Narasi)
             $catatanList = DB::table('catatan')
                 ->whereIn('id_siswa', $siswaCollection->pluck('id_siswa'))
-                ->where('semester', $smtInt)
-                ->where('tahun_ajaran', $tahun_ajaran)
-                ->get()
-                ->keyBy('id_siswa');
+                ->where('semester', $smtInt)->where('tahun_ajaran', $tahun_ajaran)->get()->keyBy('id_siswa');
 
-            // 2. Ambil Nilai Ekskul (REVISI: Dari tabel nilai_ekskul)
-            // Kita ambil sekaligus untuk semua siswa di kelas ini agar efisien (tidak query dalam loop)
             $allEkskulValues = DB::table('nilai_ekskul')
                 ->join('ekskul', 'nilai_ekskul.id_ekskul', '=', 'ekskul.id_ekskul')
                 ->whereIn('nilai_ekskul.id_siswa', $siswaCollection->pluck('id_siswa'))
-                ->where('nilai_ekskul.semester', $smtInt)
-                ->where('nilai_ekskul.tahun_ajaran', $tahun_ajaran)
-                ->select(
-                    'nilai_ekskul.id_siswa',
-                    'ekskul.nama_ekskul',
-                    'nilai_ekskul.predikat'
-                )
-                ->get()
-                ->groupBy('id_siswa');
+                ->where('nilai_ekskul.semester', $smtInt)->where('nilai_ekskul.tahun_ajaran', $tahun_ajaran)
+                ->select('nilai_ekskul.id_siswa', 'ekskul.nama_ekskul', 'nilai_ekskul.predikat')
+                ->get()->groupBy('id_siswa');
 
-            // 3. Ambil Final Rapor
+            // Kita ambil data rapor final sekaligus status dari database-nya
             $finalRaporList = DB::table('nilai_akhir_rapor')
                 ->whereIn('id_siswa', $siswaCollection->pluck('id_siswa'))
-                ->where('semester', $smtInt)
-                ->where('tahun_ajaran', $tahun_ajaran)
-                ->get()
-                ->keyBy('id_siswa');
+                ->where('semester', $smtInt)->where('tahun_ajaran', $tahun_ajaran)
+                ->get()->keyBy('id_siswa');
 
             $detailCatatan = [];
             $siswaAdaCatatan = 0; 
@@ -589,14 +590,11 @@ class MonitoringWaliController extends Controller
             foreach ($siswaCollection as $s) {
                 $c = $catatanList->get($s->id_siswa);
                 $f = $finalRaporList->get($s->id_siswa);
-                $ekskulSiswa = $allEkskulValues->get($s->id_siswa); // Collection ekskul siswa ini
+                $ekskulSiswa = $allEkskulValues->get($s->id_siswa);
 
-                // Validasi kelengkapan input wali (hanya absensi & catatan, ekskul urusan guru ekskul)
                 $isiCatatan = $c->catatan_wali_kelas ?? null;
-                // Di sini kita cek apakah Absensi atau Catatan sudah diisi
                 $rawExists = !empty($isiCatatan) && trim((string)$isiCatatan) !== '' && trim((string)$isiCatatan) !== '-';
 
-                // REVISI LOGIC FORMATTER EKSKUL (Untuk Tampilan Monitoring)
                 $ekskulFormatted = [];
                 if ($ekskulSiswa && $ekskulSiswa->isNotEmpty()) {
                     foreach ($ekskulSiswa as $ex) {
@@ -606,15 +604,15 @@ class MonitoringWaliController extends Controller
                     $ekskulFormatted[] = "<span class='text-muted text-xs'>- Tidak ada ekskul -</span>";
                 }
 
+                // =======================================================
+                // KOMBINASI STATUS LOGIC & DATABASE LOGIC (LEVEL WALI)
+                // =======================================================
                 $statusCatatan = 'kosong';
-                
                 if (!$rawExists) {
                     $statusCatatan = 'kosong';
                 } elseif (!$f) {
-                    $statusCatatan = 'ready';
+                    $statusCatatan = 'ready'; // Baru disiapkan
                 } else {
-                    // Validasi Perubahan (Update Logic)
-                    // Cek Absensi & Catatan
                     $isDifferent = (
                         (int)($c->sakit ?? 0) !== (int)($f->sakit ?? 0) ||
                         (int)($c->ijin ?? 0)  !== (int)($f->ijin ?? 0)  || 
@@ -623,11 +621,18 @@ class MonitoringWaliController extends Controller
                         trim((string)($c->kokurikuler ?? '-'))    !== trim((string)($f->kokurikuler ?? '-'))
                     );
                     
-                    // Optional: Jika ingin status berubah jadi 'update' saat guru ekskul merubah nilai
-                    // Kita harus membandingkan JSON ekskul di tabel final vs data mentah ekskul
-                    // Tapi biasanya untuk performa, trigger update dari sisi wali kelas saja sudah cukup.
-                    
-                    $statusCatatan = $isDifferent ? 'update' : 'final';
+                    if ($isDifferent) {
+                        $statusCatatan = 'update'; // Wali merubah absensi/catatan
+                    } else {
+                        // Cek status aslinya di DB
+                        if ($f->status_data == 'cetak') {
+                            $statusCatatan = 'cetak';
+                        } elseif ($f->status_data == 'draft') {
+                            $statusCatatan = 'ready'; 
+                        } else {
+                            $statusCatatan = 'final';
+                        }
+                    }
                 }
 
                 $detailCatatan[] = [
@@ -635,7 +640,7 @@ class MonitoringWaliController extends Controller
                     'nisn'       => $s->nisn,
                     'kokurikuler_short'=> \Illuminate\Support\Str::limit($c->kokurikuler ?? '-', 30), 
                     'kokurikuler_full' => $c->kokurikuler ?? '-',
-                    'ekskul_html'=> implode('<br>', $ekskulFormatted), // HTML hasil loop baru
+                    'ekskul_html'=> implode('<br>', $ekskulFormatted), 
                     'sakit'      => $c->sakit ?? 0, 
                     'ijin'       => $c->ijin ?? 0, 
                     'alpha'      => $c->alpha ?? 0, 
@@ -647,7 +652,6 @@ class MonitoringWaliController extends Controller
                 if ($rawExists) $siswaAdaCatatan++;
             }
 
-            // Mini Stats Kelas
             $persenKelas = ($kelasMapelTotalHitung > 0) ? round(($kelasMapelSelesai / $kelasMapelTotalHitung) * 100) : 0;
             $persenCatatan = ($totalSiswaKelas > 0) ? round(($siswaAdaCatatan / $totalSiswaKelas) * 100) : 0;
 
