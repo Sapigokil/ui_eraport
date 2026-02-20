@@ -11,7 +11,7 @@ class MutasiDashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $debug = true;
+        $debug = false;
         // 1. Tentukan Tahun Ajaran (Bisa disesuaikan dengan helper/global setting Anda)
         $tahunSekarang = date('Y');
         $bulanSekarang = date('n');
