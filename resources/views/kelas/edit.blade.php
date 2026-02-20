@@ -22,7 +22,7 @@
                             
                             {{-- Notifikasi Error (jika ada) --}}
                             @if ($errors->any())
-                                <div class="alert alert-danger text-white">
+                                <div class="alert alert-danger text-dark">
                                     <ul class="mb-0">
                                         @foreach ($errors->all() as $error)
                                             <li>{{ $error }}</li>
@@ -33,7 +33,7 @@
                             
                             {{-- Notifikasi Success --}}
                             @if (session('success'))
-                                <div class="alert alert-success text-white mb-4">{{ session('success') }}</div>
+                                <div class="alert alert-success text-dark mb-4">{{ session('success') }}</div>
                             @endif
 
                             {{-- Form Update --}}

@@ -15,14 +15,14 @@
                                     
                                     {{-- Tampilkan Error Jika Login Gagal --}}
                                     @if($errors->any())
-                                        <div class="alert alert-danger text-white text-sm mb-3">
+                                        <div class="alert alert-danger text-dark text-sm mb-3">
                                             {{ $errors->first('message') ?: $errors->first() }}
                                         </div>
                                     @endif
 
                                     {{-- Tampilkan Sukses Jika Habis Daftar --}}
                                     @if(session('success'))
-                                        <div class="alert alert-success text-white text-sm mb-3">
+                                        <div class="alert alert-success text-dark text-sm mb-3">
                                             {{ session('success') }}
                                         </div>
                                     @endif

@@ -186,18 +186,18 @@
                         {{-- 3. KENAIKAN KELAS --}}
                         <li class="nav-item">
                             <a class="nav-link text-white {{ Request::routeIs('mutasi.kenaikan.*') ? 'active bg-gradient-primary' : '' }}" 
-                            href="#"> {{-- Ganti route --}}
+                            href="{{ route('mutasi.dashboard_akhir.index') }}">
                                 <span class="sidenav-mini-icon"> KK </span>
-                                <span class="sidenav-normal ms-2 ps-1"> Kenaikan Kelas </span>
+                                <span class="sidenav-normal ms-2 ps-1"> Kenaikan Kelulusan </span>
                             </a>
                         </li>
 
                         {{-- 4. KELULUSAN --}}
                         <li class="nav-item">
-                            <a class="nav-link text-white {{ Request::routeIs('mutasi.kelulusan.*') ? 'active bg-gradient-primary' : '' }}" 
-                            href="#"> {{-- Ganti route --}}
+                            <a class="nav-link text-white {{ Request::routeIs('mutasi.riwayat.*') ? 'active bg-gradient-primary' : '' }}" 
+                            href="{{ route('mutasi.riwayat.index') }}">
                                 <span class="sidenav-mini-icon"> L </span>
-                                <span class="sidenav-normal ms-2 ps-1"> Kelulusan </span>
+                                <span class="sidenav-normal ms-2 ps-1"> Riwayat Kenaikan </span>
                             </a>
                         </li>
 

@@ -46,7 +46,7 @@
         </div>
 
         @if(!$dataKelas)
-            <div class="alert alert-warning text-white font-weight-bold" role="alert"><i class="fas fa-exclamation-triangle me-2"></i> Data kelas tidak ditemukan.</div>
+            <div class="alert alert-warning text-dark font-weight-bold" role="alert"><i class="fas fa-exclamation-triangle me-2"></i> Data kelas tidak ditemukan.</div>
         @else
 
         {{-- HEADER BANNER --}}

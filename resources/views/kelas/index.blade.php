@@ -27,10 +27,10 @@
                             
                             {{-- Notifikasi --}}
                             @if (session('success'))
-                                <div class="alert alert-success text-white mb-4">{{ session('success') }}</div>
+                                <div class="alert alert-success text-dark mb-4">{{ session('success') }}</div>
                             @endif
                             @if (session('error'))
-                                <div class="alert alert-danger text-white mb-4">{{ session('error') }}</div>
+                                <div class="alert alert-danger text-dark mb-4">{{ session('error') }}</div>
                             @endif
 
                             {{-- Tombol Export --}}

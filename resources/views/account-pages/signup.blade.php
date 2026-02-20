@@ -22,7 +22,7 @@
                         <div class="card-body">
                             {{-- Alert Error Global --}}
                             @if($errors->has('msg'))
-                                <div class="alert alert-warning text-white text-sm mb-3" role="alert">
+                                <div class="alert alert-warning text-dark text-sm mb-3" role="alert">
                                     <i class="fas fa-exclamation-triangle me-2"></i> {{ $errors->first('msg') }}
                                 </div>
                             @endif

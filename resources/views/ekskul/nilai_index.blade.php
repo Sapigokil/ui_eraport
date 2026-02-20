@@ -54,10 +54,10 @@
 
                     <div class="card-body px-0 pb-2">
                         @if (session('success'))
-                            <div class="alert bg-gradient-success mx-4 text-white">{{ session('success') }}</div>
+                            <div class="alert bg-gradient-success mx-4 text-dark">{{ session('success') }}</div>
                         @endif
                         @if (session('error'))
-                            <div class="alert bg-gradient-danger mx-4 text-white">{{ session('error') }}</div>
+                            <div class="alert bg-gradient-danger mx-4 text-dark">{{ session('error') }}</div>
                         @endif
 
                         {{-- FILTER SECTION (POSISI KANAN) --}}

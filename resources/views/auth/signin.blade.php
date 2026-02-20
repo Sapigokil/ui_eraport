@@ -33,12 +33,12 @@
                                 <div class="card-body">
                                     {{-- Alert Status / Error --}}
                                     @if (session('status'))
-                                        <div class="alert alert-success text-white text-sm p-2 mb-3" role="alert">
+                                        <div class="alert alert-success text-dark text-sm p-2 mb-3" role="alert">
                                             {{ session('status') }}
                                         </div>
                                     @endif
                                     @error('message')
-                                        <div class="alert alert-danger text-white text-sm p-2 mb-3" role="alert">
+                                        <div class="alert alert-danger text-dark text-sm p-2 mb-3" role="alert">
                                             {{ $message }}
                                         </div>
                                     @enderror

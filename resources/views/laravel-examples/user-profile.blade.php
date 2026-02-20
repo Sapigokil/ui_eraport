@@ -21,13 +21,13 @@
 
                         {{-- Notifikasi --}}
                         @if (session('success'))
-                            <div class="alert alert-success text-white">
+                            <div class="alert alert-success text-dark">
                                 {{ session('success') }}
                             </div>
                         @endif
 
                         @if (session('error'))
-                            <div class="alert alert-danger text-white">
+                            <div class="alert alert-danger text-dark">
                                 {{ session('error') }}
                             </div>
                         @endif

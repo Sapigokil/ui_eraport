@@ -225,7 +225,7 @@
             <form action="{{ route('mutasi.keluar.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
-                    <div class="alert alert-warning text-white text-xs mb-4">
+                    <div class="alert alert-warning text-dark text-xs mb-4">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
                             <div>

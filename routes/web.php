@@ -26,8 +26,10 @@ use App\Http\Controllers\PesertaEkskulController;
 // Mutasi Siswa
 use App\Http\Controllers\MutasiKeluarController;
 use App\Http\Controllers\MutasiPindahController;
-// use App\Http\Controllers\MutasiKenaikanController;
-// use App\Http\Controllers\MutasiKelulusanController;
+use App\Http\Controllers\MutasiDashboardController;
+use App\Http\Controllers\MutasiKenaikanController;
+use App\Http\Controllers\MutasiKelulusanController;
+use App\Http\Controllers\MutasiRiwayatController; // Import Controller Riwayat Kenaikan/Kelulusan
 
 // Nilai & Rapor
 use App\Http\Controllers\SumatifController;
@@ -179,6 +181,19 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/keluar/{id}', [MutasiKeluarController::class, 'destroy'])->name('keluar.destroy');
         Route::get('/pindah', [MutasiPindahController::class, 'index'])->name('pindah.index');
         Route::post('/pindah', [MutasiPindahController::class, 'store'])->name('pindah.store');
+        
+        // ---> ROUTE DASHBOARD PROSES AKHIR TAHUN <---
+        Route::get('/dashboard-akhir-tahun', [MutasiDashboardController::class, 'index'])->name('dashboard_akhir.index');
+
+        Route::get('/kenaikan', [MutasiKenaikanController::class, 'index'])->name('kenaikan.index');
+        Route::post('/kenaikan', [MutasiKenaikanController::class, 'store'])->name('kenaikan.store');
+
+        // Route Kelulusan
+        Route::get('/kelulusan', [MutasiKelulusanController::class, 'index'])->name('kelulusan.index');
+        Route::post('/kelulusan', [MutasiKelulusanController::class, 'store'])->name('kelulusan.store');
+
+        // ---> ROUTE RIWAYAT KENAIKAN / KELULUSAN <---
+        Route::get('/riwayat', [MutasiRiwayatController::class, 'index'])->name('riwayat.index');
     });
 
     // ==========================================================================

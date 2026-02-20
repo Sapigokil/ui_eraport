@@ -390,7 +390,7 @@
                     <input type="hidden" name="tahun_ajaran" value="{{ $request->tahun_ajaran }}">
                     
                     @if(!$request->id_kelas)
-                        <div class="alert alert-warning text-white text-xs">Silakan pilih kelas terlebih dahulu di halaman utama.</div>
+                        <div class="alert alert-warning text-dark text-xs">Silakan pilih kelas terlebih dahulu di halaman utama.</div>
                     @endif
                 </div>
                 <div class="modal-footer">

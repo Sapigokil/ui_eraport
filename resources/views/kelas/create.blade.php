@@ -22,7 +22,7 @@
                             
                             {{-- Notifikasi Error (jika ada) --}}
                             @if ($errors->any())
-                                <div class="alert alert-danger text-white">
+                                <div class="alert alert-danger text-dark">
                                     <ul class="mb-0">
                                         @foreach ($errors->all() as $error)
                                             <li>{{ $error }}</li>
