@@ -11,14 +11,14 @@ return [
     |
     */
 
-    'current_version' => '1.0.8.beta',
+    'current_version' => '1.0.8',
     
-    'last_updated' => '2026-02-10',
+    'last_updated' => '2026-02-21',
 
     'changelog' => [
         [
-            'version' => '1.0.8.beta - On Development',
-            'date'    => '2026-02-19',
+            'version' => '1.0.8',
+            'date'    => '2026-02-21',
             'notes'   => [
                 'Menambahkan Fitur Mutasi Siswa Keluar, Pindah, Kenaikan, dan Kelulusan',
                 'Menambahkan Hak Akses untuk fitur mutasi siswa',
