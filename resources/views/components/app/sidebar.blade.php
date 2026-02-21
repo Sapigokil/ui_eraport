@@ -104,12 +104,13 @@
             </li>
             @endcan
 
-            <hr class="horizontal light my-2">
+            
 
             {{-- ========================================================= --}}
             {{-- 2. MASTER DATA (Admin Only) --}}
             {{-- ========================================================= --}}
             @can('master.view') 
+            <hr class="horizontal light my-2">
             @php 
                 // Definisi route spesifik agar tidak bentrok dengan 'master.nilai'
                 $masterRoutes = [
@@ -142,12 +143,11 @@
             </li>
             @endcan
 
-            <hr class="horizontal light my-2">
-
             {{-- ========================================================= --}}
             {{-- 3. Mutasi dan Kenaikan Siswa (Admin Only) --}}
             {{-- ========================================================= --}}
-            {{-- @can('mutasi.view') --}}
+            @can('mutasi.view')
+            <hr class="horizontal light my-2">
             @php
                 // Tambahkan 'rekap.*' ke dalam daftar aktif
                 $nilaiRoutes = ['mutasi.keluar.*', 'mutasi.pindah.*', 'mutasi.kenaikan.*', 'mutasi.kelulusan.*'];
@@ -204,14 +204,14 @@
                     </ul>
                 </div>
             </li>
-            {{-- @endcan --}}
-            <hr class="horizontal light my-2">
-
+            @endcan
+            
 
             {{-- ========================================================= --}}
             {{-- 3. INPUT NILAI (Guru & Admin) --}}
             {{-- ========================================================= --}}
             @can('nilai.view')
+            <hr class="horizontal light my-2">
             @php
                 // Tambahkan 'rekap.*' ke dalam daftar aktif
                 $nilaiRoutes = ['master.sumatif.*', 'master.project.*', 'master.catatan.*', 'rekap.*'];
@@ -353,13 +353,14 @@
             </li>
             @endcanany
 
-            <hr class="horizontal light my-2">
+            
 
             {{-- ========================================================= --}}
             {{-- 6. LAPORAN & RAPOR (Guru & Admin) --}}
             {{-- ========================================================= --}}
             {{-- Tambahkan 'nilai.view' di permission check agar menu ini muncul untuk guru --}}
             @canany(['rapor.view', 'ledger.view'])
+            <hr class="horizontal light my-2">
             @php
                 // Tambahkan route nilaiakhir ke grup ini
                 $raporRoutes = ['rapornilai.*', 'ledger.*'];

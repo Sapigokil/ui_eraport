@@ -175,7 +175,7 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: MUTASI SISWA
     // Permission: mutasi.view (Admin Erapor)
     // ==========================================================================
-    Route::group(['prefix' => 'mutasi', 'as' => 'mutasi.'], function () {
+    Route::group(['prefix' => 'mutasi', 'as' => 'mutasi.', 'middleware' => ['can:mutasi.view']], function () {
         Route::get('/keluar', [MutasiKeluarController::class, 'index'])->name('keluar.index');
         Route::post('/keluar', [MutasiKeluarController::class, 'store'])->name('keluar.store');
         Route::delete('/keluar/{id}', [MutasiKeluarController::class, 'destroy'])->name('keluar.destroy');

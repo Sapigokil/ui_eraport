@@ -41,29 +41,41 @@ class RolePermissionSeeder extends Seeder
                 'master.view' => 'Melihat Data Sekolah',      // Lihat menu
                 'master.edit' => 'Mengelola Data Sekolah',    // Simpan/edit data sekolah
             ],
+
+            // C. MUTASI DATA (Admin Only)
+            '03. Mutasi Data (Admin Only)' => [
+                'mutasi.view' => 'Melihat Data Mutasi',      // Lihat menu
+                'mutasi.edit' => 'Mengelola Data Mutasi',    // Simpan/edit data mutasi
+            ],
             
-            // C. PENILAIAN (Guru & Admin)
-            '03. Penilaian (Guru & Admin)' => [
+            // D. PENILAIAN (Guru & Admin)
+            '04. Penilaian (Guru & Admin)' => [
                 'nilai.view' => 'Melihat Data Nilai',       // Akses menu input nilai
                 'nilai.input' => 'Mengelola Data Nilai',      // Hak simpan/edit nilai
             ],
 
-            // C2. EKSTRAKURIKULER (Guru & Admin)
-            '04. Ekstrakurikuler (Guru & Admin)' => [
-                'ekskul.view' => 'Melihat Data Ekstrakurikuler',      // Akses menu input nilai ekskul
-                'ekskul.edit' => 'Mengelola Ekstrakurikuler',     // Hak simpan/edit nilai ekskul
+            // E. EKSTRAKURIKULER (Pembina & Admin)
+            '05. Ekstrakurikuler (Pembina & Admin)' => [
+                'ekskul.view' => 'Melihat Nilai Ekstrakurikuler',      // Akses menu input nilai ekskul
+                'ekskul.edit' => 'Mengelola Nilai Ekstrakurikuler',     // Hak simpan/edit nilai ekskul
             ],
 
-            // D. LAPORAN & RAPOR (Guru & Admin)
-            '05. Laporan & Rapor (Guru & Admin)' => [
+            // E. EKSTRAKURIKULER (Walikelas & Admin)
+            '06. Walikelas Menu (Walikelas & Admin)' => [
+                'walikelas.view' => 'Melihat Nilai Walikelas',      // Akses menu input nilai ekskul
+                'walikelas.edit' => 'Mengelola Nilai Walikelas',     // Hak simpan/edit nilai ekskul
+            ],
+
+            // F. LAPORAN & RAPOR (Guru & Admin)
+            '07. Laporan & Rapor (Guru & Admin)' => [
                 'rapor.view' => 'Melihat Rapor Siswa',       // Akses menu cetak rapor
                 'rapor.cetak' => 'Mencetak Rapor Siswa',      // Hak print/download
                 'ledger.view' => 'Melihat Ledger Nilai',      // Akses menu ledger
                 'ledger.cetak' => 'Mencetak Legder Nilai',     // Hak download ledger
             ],
 
-            // E. SYSTEM SETTINGS (Admin Only)
-            '06. System Settings (Admin Only)' => [
+            // G. SYSTEM SETTINGS (Admin Only)
+            '08. System Settings (Admin Only)' => [
                 'users.read' => 'Melihat Menu Manajemen User', 
                 'users.edit' => 'Mengelola Data User',
                 'roles.menu' => 'Mengakses Menu Role & Permission',
@@ -175,7 +187,7 @@ class RolePermissionSeeder extends Seeder
         );
         $guruUser->assignRole($roleGuruErapor);
 
-         // USER 2b: GURU ERAPOR (BACKUP)
+         // USER 2b: GURU EKSKUL (BACKUP)
         $guruEkskulUser = User::firstOrCreate(
             ['username' => 'guru.ekskul'], 
             [
