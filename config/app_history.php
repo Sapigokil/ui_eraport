@@ -11,11 +11,21 @@ return [
     |
     */
 
-    'current_version' => '1.0.8',
+    'current_version' => '1.0.9beta',
     
-    'last_updated' => '2026-02-21',
+    'last_updated' => '2026-03-04',
 
     'changelog' => [
+        [
+            'version' => '1.0.9beta',
+            'date'    => '2026-03-04',
+            'notes'   => [
+                'Menambahkan Menu Daftar Tempat Prakerin / PKL / Magang',
+                'Merombak Ledger untuk mendukung pembacaan data history setelah mutasi siswa',
+                'Menambahkan Menu Guru Pembimbing PKL',
+                'Menambahkan Menu Penempatan PKL',
+            ],
+        ],
         [
             'version' => '1.0.8',
             'date'    => '2026-02-21',

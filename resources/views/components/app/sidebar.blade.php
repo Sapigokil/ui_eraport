@@ -145,12 +145,16 @@
             @endcan
 
             {{-- ========================================================= --}}
-            {{-- 2. MASTER DATA (Admin Only) --}}
+            {{-- 2. DATA POKOK (Master, PKL, Mutasi) --}}
             {{-- ========================================================= --}}
-            @can('master.view') 
+            @canany(['master.view', 'pkl.view', 'mutasi.view'])
             <li class="nav-item mt-3">
                 <div class="sidenav-category text-uppercase">Data Pokok</div>
             </li>
+            @endcanany
+
+            {{-- MASTER DATA --}}
+            @can('master.view') 
             @php 
                 $masterRoutes = [
                     'master.sekolah.*', 'master.guru.*', 'master.siswa.*', 'master.kelas.*', 
@@ -182,9 +186,44 @@
             </li>
             @endcan
 
-            {{-- ========================================================= --}}
-            {{-- 3. Mutasi dan Kenaikan Siswa (Admin Only) --}}
-            {{-- ========================================================= --}}
+            {{-- DATA PKL --}}
+            {{-- @can('pkl.view') --}}
+            @can('master.view')
+            @php
+                $pklRoutes = ['pkl.tempat.*', 'pkl.penempatan.*', 'pkl.nilai.*']; 
+                $isPklActive = request()->routeIs($pklRoutes); 
+            @endphp
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#menuPkl" class="nav-link {{ $isPklActive ? 'active' : '' }}" aria-controls="menuPkl" role="button" aria-expanded="{{ $isPklActive ? 'true' : 'false' }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-briefcase text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Data PKL</span>
+                </a>
+                
+                <div class="collapse {{ $isPklActive ? 'show' : '' }}" id="menuPkl">
+                    <ul class="nav">
+                        <li class="nav-item">
+                            <a class="nav-link {{ Request::routeIs('pkl.tempat.*') ? 'active' : '' }}" href="{{ route('pkl.tempat.index') }}">
+                                <span class="sidenav-normal"> Tempat PKL </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ Request::routeIs('pkl.gurusiswa.*') ? 'active' : '' }}" href="{{ route('pkl.gurusiswa.index') }}">
+                                <span class="sidenav-normal"> Guru Pembimbing </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ Request::routeIs('pkl.penempatan.*') ? 'active' : '' }}" href="{{ route('pkl.penempatan.index') }}">
+                                <span class="sidenav-normal"> Penempatan PKL </span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+            {{-- MUTASI & KENAIKAN --}}
             @can('mutasi.view')
             @php
                 $mutasiRoutes = ['mutasi.keluar.*', 'mutasi.pindah.*', 'mutasi.kenaikan.*', 'mutasi.kelulusan.*', 'mutasi.dashboard_akhir.*', 'mutasi.riwayat.*'];

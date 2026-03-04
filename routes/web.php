@@ -171,6 +171,40 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+    // =========================================================
+    // MENU DATA PKL
+    // =========================================================
+    Route::prefix('pkl')->name('pkl.')->middleware(['auth', 'can:master.view'])->group(function () {
+        
+        // Tempat PKL - Export, Import & Template
+        Route::get('/tempat/export/excel', [\App\Http\Controllers\PklTempatController::class, 'exportExcel'])->name('tempat.export.excel');
+        Route::get('/tempat/template', [\App\Http\Controllers\PklTempatController::class, 'downloadTemplate'])->name('tempat.template');
+        Route::post('/tempat/import/excel', [\App\Http\Controllers\PklTempatController::class, 'importExcel'])->name('tempat.import.excel');
+
+        // Tempat PKL - CRUD
+        Route::get('/tempat', [\App\Http\Controllers\PklTempatController::class, 'index'])->name('tempat.index');
+        Route::get('/tempat/create', [\App\Http\Controllers\PklTempatController::class, 'create'])->name('tempat.create');
+        Route::post('/tempat', [\App\Http\Controllers\PklTempatController::class, 'store'])->name('tempat.store');
+        Route::get('/tempat/{id}/edit', [\App\Http\Controllers\PklTempatController::class, 'edit'])->name('tempat.edit');
+        Route::put('/tempat/{id}', [\App\Http\Controllers\PklTempatController::class, 'update'])->name('tempat.update');
+        Route::delete('/tempat/{id}', [\App\Http\Controllers\PklTempatController::class, 'destroy'])->name('tempat.destroy');
+
+        // Kelompok Bimbingan PKL (Guru - Siswa)
+        Route::get('/gurusiswa', [\App\Http\Controllers\PklGuruSiswaController::class, 'index'])->name('gurusiswa.index');
+        Route::get('/gurusiswa/setup', [\App\Http\Controllers\PklGuruSiswaController::class, 'setup'])->name('gurusiswa.setup');
+        Route::post('/gurusiswa/store', [\App\Http\Controllers\PklGuruSiswaController::class, 'store'])->name('gurusiswa.store');
+        Route::get('/gurusiswa/get-siswa', [\App\Http\Controllers\PklGuruSiswaController::class, 'getSiswa'])->name('gurusiswa.get_siswa');
+
+        // REVISI: Tambahan route untuk simpan massal dari mode kelas
+        Route::post('/gurusiswa/store-massal', [\App\Http\Controllers\PklGuruSiswaController::class, 'storeMassal'])->name('gurusiswa.store_massal');
+
+        Route::get('/penempatan', [\App\Http\Controllers\PklPenempatanController::class, 'index'])->name('penempatan.index');
+        Route::get('/penempatan/setup', [\App\Http\Controllers\PklPenempatanController::class, 'setup'])->name('penempatan.setup');
+        Route::post('/penempatan/store', [\App\Http\Controllers\PklPenempatanController::class, 'store'])->name('penempatan.store');
+        Route::get('/penempatan/get-siswa', [\App\Http\Controllers\PklPenempatanController::class, 'getSiswa'])->name('penempatan.get_siswa');
+        Route::post('/penempatan/store-massal', [\App\Http\Controllers\PklPenempatanController::class, 'storeMassal'])->name('penempatan.store_massal');
+    });
+
     // ==========================================================================
     // MODULE: MUTASI SISWA
     // Permission: mutasi.view (Admin Erapor)
@@ -347,7 +381,7 @@ Route::middleware(['auth'])->group(function () {
     Route::group(['prefix' => 'ledger', 'as' => 'ledger.', 'middleware' => ['can:ledger.view']], function () {
         Route::get('/data-nilai', [LedgerController::class, 'index'])->name('ledger_index');
         
-        Route::middleware('can:cetak-print-ledger')->group(function() {
+        Route::middleware('can:ledger.cetak')->group(function() {
             Route::get('/export/excel', [LedgerController::class, 'exportExcel'])->name('export.excel');
             Route::get('/export/pdf', [LedgerController::class, 'exportPdf'])->name('export.pdf');
         });

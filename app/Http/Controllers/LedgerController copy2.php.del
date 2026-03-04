@@ -66,78 +66,46 @@ class LedgerController extends Controller
 
     /**
      * =========================================================================
-     * 2. CORE LOGIC (FULL SNAPSHOT ADAPTED FROM RAPOR)
+     * 2. CORE LOGIC
      * =========================================================================
      */
     private function buildDataCore($kelasIds, $semesterInt, $tahun_ajaran)
     {
-        // A. Ambil Data Siswa & Absensi langsung dari Snapshot Header (nilai_akhir_rapor)
-        // Sama persis dengan cara rapor mengambil data siswa
-        $rawAbsen = DB::table('nilai_akhir_rapor')
-            ->whereIn('id_kelas', $kelasIds)
-            ->where('semester', $semesterInt)
-            ->where('tahun_ajaran', trim($tahun_ajaran))
-            ->get();
-
-        $snapshotSiswaIds = $rawAbsen->pluck('id_siswa')->toArray();
-
-        // Jika tidak ada data snapshot di kelas & tahun tersebut, kembalikan kosong
-        if (empty($snapshotSiswaIds)) {
-            return [
-                'daftarMapel' => collect(),
-                'dataLedger'  => collect(),
-                'kelasObj'    => Kelas::find($kelasIds[0] ?? null)
-            ];
-        }
-
-        // B. Ambil Detail Nilai Mapel (Snapshot nilai_akhir)
-        // Kita join ke mata_pelajaran HANYA untuk mengambil urutan (seperti di rapor)
-        $rawNilai = DB::table('nilai_akhir')
-            ->whereIn('id_siswa', $snapshotSiswaIds)
-            ->where('semester', $semesterInt)
-            ->where('tahun_ajaran', trim($tahun_ajaran))
-            ->leftJoin('mata_pelajaran', 'nilai_akhir.id_mapel', '=', 'mata_pelajaran.id_mapel')
+        // A. Ambil Data Mapel (Header Tabel)
+        $rawMapelData = DB::table('pembelajaran')
+            ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
+            ->whereIn('pembelajaran.id_kelas', $kelasIds)
+            ->where('mata_pelajaran.is_active', 1)
             ->select(
-                'nilai_akhir.*', 
-                'mata_pelajaran.urutan', 
-                'mata_pelajaran.kategori' // Fallback kategori
+                'mata_pelajaran.id_mapel',
+                'mata_pelajaran.nama_mapel',
+                'mata_pelajaran.nama_singkat',
+                'mata_pelajaran.kategori',
+                'mata_pelajaran.urutan',
+                DB::raw("
+                    CASE 
+                        WHEN mata_pelajaran.nama_mapel LIKE '%Agama%' THEN 'AGAMA' 
+                        ELSE mata_pelajaran.id_mapel 
+                    END AS mapel_key
+                ")
             )
+            ->distinct()
+            ->orderBy('mata_pelajaran.kategori')
+            ->orderBy('mata_pelajaran.urutan')
             ->get();
 
-        // C. Ekstrak Mata Pelajaran dari Snapshot
-        $mapNilai = [];
-        $rawMapelData = [];
+        // Ambil ID Mapel Agama untuk lookup nilai nanti
+        $globalAgamaIds = DB::table('mata_pelajaran')
+            ->where('nama_mapel', 'LIKE', '%Agama%')
+            ->pluck('id_mapel')
+            ->map(fn($id) => (string)$id)
+            ->toArray();
         
-        foreach ($rawNilai as $rn) {
-            $sId = $rn->id_siswa;
-            $mId = (string)$rn->id_mapel; 
-            
-            // Simpan nilai
-            $mapNilai[$sId][$mId] = $rn->nilai_akhir;
-
-            // Simpan Header Mapel jika belum ada (Berdasarkan data snapshot)
-            if (!isset($rawMapelData[$mId])) {
-                $rawMapelData[$mId] = (object) [
-                    'id_mapel'     => $mId,
-                    'nama_mapel'   => $rn->nama_mapel_snapshot ?? 'Mapel Terhapus',
-                    'nama_singkat' => $rn->nama_mapel_snapshot ?? 'Mapel Terhapus', // Pakai nama snapshot
-                    'kategori'     => $rn->kategori_mapel_snapshot ?? $rn->kategori ?? 1,
-                    'urutan'       => $rn->urutan ?? 99
-                ];
-                
-                // Deteksi mapel Agama untuk digabung
-                if (stripos($rawMapelData[$mId]->nama_mapel, 'Agama') !== false) {
-                    $rawMapelData[$mId]->mapel_key = 'AGAMA';
-                } else {
-                    $rawMapelData[$mId]->mapel_key = $mId;
-                }
-            }
+        if (!in_array("1", $globalAgamaIds)) {
+            $globalAgamaIds[] = "1"; 
         }
 
-        $rawMapelData = collect(array_values($rawMapelData));
-        $globalAgamaIds = $rawMapelData->where('mapel_key', 'AGAMA')->pluck('id_mapel')->toArray();
-
-        // D. Grouping Header Mapel & Sorting
+        // Grouping Header Mapel & Sorting
         $daftarMapel = $rawMapelData
             ->groupBy('mapel_key')
             ->map(function ($items) {
@@ -173,10 +141,43 @@ class LedgerController extends Controller
             })
             ->values();
 
-        // E. Build Data Ledger (Mapping Nilai ke Kolom Mapel per Siswa)
+        // B. Ambil Siswa (Urutkan by id_siswa agar sesuai urutan absen sistem)
+        $siswaList = Siswa::whereIn('id_kelas', $kelasIds)
+            ->orderBy('id_siswa')
+            ->get();
+
+        // C. Ambil Nilai Akhir
+        $rawNilai = DB::table('nilai_akhir')
+            ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
+            ->where('semester', $semesterInt)
+            ->where('tahun_ajaran', trim($tahun_ajaran))
+            ->select('id_siswa', 'id_mapel', 'nilai_akhir') 
+            ->get();
+
+        $mapNilai = [];
+        foreach ($rawNilai as $rn) {
+            $sId = $rn->id_siswa;
+            $mId = (string)$rn->id_mapel; 
+            $mapNilai[$sId][$mId] = $rn->nilai_akhir;
+        }
+
+        // D. Ambil Absensi (REVISI: Dari table nilai_akhir_rapor)
+        $rawAbsen = DB::table('nilai_akhir_rapor')
+            ->whereIn('id_siswa', $siswaList->pluck('id_siswa'))
+            ->where('semester', $semesterInt)
+            ->where('tahun_ajaran', trim($tahun_ajaran))
+            ->select('id_siswa', 'sakit', 'ijin', 'alpha') // Pastikan kolom 'izin' menggunakan 'z' sesuai struktur table nilai_akhir_rapor
+            ->get();
+        
+        $mapAbsen = [];
+        foreach ($rawAbsen as $ra) {
+            $mapAbsen[$ra->id_siswa] = $ra;
+        }
+
+        // E. Build Data Ledger Awal
         $dataLedger = [];
 
-        foreach ($rawAbsen as $siswaSnap) {
+        foreach ($siswaList as $siswa) {
             $nilaiPerMapel = [];
             $totalNilai = 0;
             $jumlahMapelTerisi = 0;
@@ -186,8 +187,8 @@ class LedgerController extends Controller
 
                 if ($mapel->id_mapel === 'AGAMA') {
                     foreach ($globalAgamaIds as $idAgamaAsli) {
-                        if (isset($mapNilai[$siswaSnap->id_siswa][$idAgamaAsli])) {
-                            $val = $mapNilai[$siswaSnap->id_siswa][$idAgamaAsli];
+                        if (isset($mapNilai[$siswa->id_siswa][$idAgamaAsli])) {
+                            $val = $mapNilai[$siswa->id_siswa][$idAgamaAsli];
                             if ($val > 0) {
                                 $score = $val;
                                 break; 
@@ -196,8 +197,8 @@ class LedgerController extends Controller
                     }
                 } else {
                     $mId = (string)$mapel->id_mapel;
-                    if (isset($mapNilai[$siswaSnap->id_siswa][$mId])) {
-                        $score = $mapNilai[$siswaSnap->id_siswa][$mId];
+                    if (isset($mapNilai[$siswa->id_siswa][$mId])) {
+                        $score = $mapNilai[$siswa->id_siswa][$mId];
                     }
                 }
 
@@ -209,19 +210,20 @@ class LedgerController extends Controller
                 }
             }
 
-            // Memasukkan data murni dari Snapshot
+            $absensi = $mapAbsen[$siswa->id_siswa] ?? null;
+
             $dataLedger[] = (object)[
-                'id_siswa'   => $siswaSnap->id_siswa,
-                'nama_siswa' => $siswaSnap->nama_siswa_snapshot ?? 'Data Kosong',
-                'nipd'       => $siswaSnap->nipd_snapshot ?? '-',
-                'nisn'       => $siswaSnap->nisn_snapshot ?? '-',
+                'id_siswa'   => $siswa->id_siswa,
+                'nama_siswa' => $siswa->nama_siswa,
+                'nipd'       => $siswa->nipd,
+                'nisn'       => $siswa->nisn,
                 'scores'     => $nilaiPerMapel, 
                 'total'      => $totalNilai,
                 'rata_rata'  => $jumlahMapelTerisi ? round($totalNilai / $jumlahMapelTerisi, 2) : 0,
                 'absensi'    => (object)[
-                    'sakit' => $siswaSnap->sakit ?? 0,
-                    'izin'  => $siswaSnap->ijin ?? $siswaSnap->izin ?? 0, // Handle typo ijin/izin
-                    'alpha' => $siswaSnap->alpha ?? 0,
+                    'sakit' => $absensi->sakit ?? 0,
+                    'izin'  => $absensi->ijin ?? 0,
+                    'alpha' => $absensi->alpha ?? 0,
                 ],
                 'ranking_no' => 0
             ];
@@ -253,6 +255,7 @@ class LedgerController extends Controller
 
         // 2. SORTING TAMPILAN SESUAI PERMINTAAN USER
         if ($sortBy === 'absen') {
+            // REVISI: Sort by id_siswa (Urutan Absen Sistem)
             return $rankedData->sortBy(fn($item) => $item->id_siswa)->values();
         } 
         
@@ -388,6 +391,7 @@ class LedgerController extends Controller
         $tahun_ajaran = $request->tahun_ajaran ?? '2025/2026';
         $semesterInt = $this->mapSemesterToInt($semesterRaw);
 
+        // Ambil parameter sorting dari request, default ke 'absen' jika tidak ada
         $sortBy = $request->sort_by ?? 'absen';
 
         $kelasIds = $this->getKelasIdsFromRequest($request);
@@ -403,9 +407,11 @@ class LedgerController extends Controller
         $data['namaKelas'] = $kelasObj ? $kelasObj->nama_kelas : 'Semua';
         $data['waliKelas'] = $kelasObj ? $kelasObj->wali_kelas : '-';
 
+        // REVISI: Gunakan variabel $sortBy, jangan di-hardcode 'ranking'
         $data['dataLedger'] = $this->calculateRankingAndSort($core['dataLedger'], $sortBy);
         $data['daftarMapel'] = $core['daftarMapel'];
 
+        // Tambahkan flag showRanking jika diperlukan di view Excel
         $data['showRanking'] = $request->show_ranking ?? '0';
 
         return $data;
