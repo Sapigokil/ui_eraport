@@ -11,13 +11,13 @@ return [
     |
     */
 
-    'current_version' => '1.0.9beta',
+    'current_version' => '1.0.9',
     
     'last_updated' => '2026-03-04',
 
     'changelog' => [
         [
-            'version' => '1.0.9beta',
+            'version' => '1.0.9',
             'date'    => '2026-03-04',
             'notes'   => [
                 'Menambahkan Menu Daftar Tempat Prakerin / PKL / Magang',
