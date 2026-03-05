@@ -458,6 +458,26 @@ Route::middleware(['auth'])->group(function () {
                 });
             });
         });
+
+        // C. Setting ERAPOR PKL (Admin Erapor)
+        Route::group(['prefix' => 'pkl', 'as' => 'pkl.', 'middleware' => ['can:settings.erapor.read']], function () {
+            Route::controller(\App\Http\Controllers\PklSettingController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/store-massal', 'storeMassal')->name('store_massal');
+                Route::delete('/destroy-tp/{id_tp}', 'destroyTp')->name('destroy_tp'); // Untuk menghapus 1 block tabel TP
+                // REVISI: Tambahan route untuk Template dan Import Excel
+                Route::get('/template-excel', 'downloadTemplate')->name('template');
+                Route::post('/import-excel', 'importExcel')->name('import');
+            });
+
+            // 2. REVISI: Pengaturan Season PKL
+            Route::prefix('season')->controller(\App\Http\Controllers\PklSeasonController::class)->name('season.')->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/store', 'store')->name('store');
+                Route::put('/{id}', 'update')->name('update');
+                Route::delete('/{id}', 'destroy')->name('destroy');
+            });
+        });
     });
 
 });

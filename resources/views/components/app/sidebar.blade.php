@@ -23,19 +23,24 @@
     <style>
         /* === MINIMALIST CLASSIC DARK PURPLE SIDEBAR CSS === */
         
-        /* Custom Scrollbar yang sangat tipis & elegan */
+        /* Custom Scrollbar */
         #sidenav-collapse-main::-webkit-scrollbar { width: 4px; }
         #sidenav-collapse-main::-webkit-scrollbar-track { background: transparent; }
         #sidenav-collapse-main::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
         #sidenav-collapse-main::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
-        /* Menu Item Standar */
+        /* Mencegah default padding UL bawaan Bootstrap */
+        .sidenav .navbar-nav {
+            padding-left: 0 !important;
+        }
+
+        /* Menu Item Standar (Level 1) - SUPER RAPAT KIRI */
         .sidenav .nav-link {
-            color: rgba(255, 255, 255, 0.7) !important; /* Teks default putih sedikit redup */
+            color: rgba(255, 255, 255, 0.7) !important;
             font-weight: 500 !important;
             border-radius: 6px !important;
-            margin: 0.15rem 1rem !important;
-            padding: 0.65rem 1rem !important;
+            margin: 0.15rem 0.25rem !important; /* Margin luar sangat tipis */
+            padding: 0.65rem 0.5rem !important; /* Padding dalam (kiri) ditipiskan */
             transition: all 0.2s ease;
             position: relative;
         }
@@ -46,44 +51,43 @@
             color: #ffffff !important;
         }
 
-        /* Menu Aktif Induk (Level 1) - Header jangan berubah warna background */
+        /* Menu Aktif Induk (Level 1) */
         .navbar-nav > .nav-item > .nav-link.active {
             background-color: transparent !important; 
-            color: #ffffff !important; /* Teks putih solid */
+            color: #ffffff !important;
             font-weight: 700 !important;
             box-shadow: none !important;
         }
 
-        /* Indikator Garis Kiri untuk Menu Induk Aktif */
+        /* Indikator Garis Kiri untuk Menu Induk Aktif - Ditempelkan ke ujung kiri */
         .navbar-nav > .nav-item > .nav-link.active::before {
             content: '';
             position: absolute;
-            left: -1rem; /* Merapat ke sisi paling kiri sidebar */
+            left: -0.25rem; /* Menyesuaikan margin luar agar pas di tepi */
             top: 15%;
             height: 70%;
             width: 4px;
-            background-color: #b088ff; /* Garis aksen ungu terang */
+            background-color: #b088ff;
             border-radius: 0 4px 4px 0;
             display: block;
         }
 
-        /* Submenu Aktif (Level 2) - Text Ungu */
+        /* Submenu Aktif (Level 2) */
         .navbar-nav .collapse .nav-link.active {
             background-color: transparent !important; 
-            color: #b088ff !important; /* Teks ungu terang */
+            color: #b088ff !important;
             font-weight: 700 !important;
             box-shadow: none !important;
         }
 
-        /* Hilangkan indikator garis kiri untuk submenu */
         .navbar-nav .collapse .nav-link.active::before {
             display: none;
         }
 
-        /* Sub-Menu Dropdown Styling */
+        /* Sub-Menu Dropdown Styling - SUPER RAPAT KIRI */
         #sidenav-main .collapse .nav-link {
-            margin: 0.15rem 1rem 0.15rem 2.8rem !important;
-            padding: 0.5rem 1rem !important;
+            margin: 0.15rem 0.25rem 0.15rem 1.5rem !important; /* Jarak indent kiri dikurangi dari 2.8rem jadi 1.5rem */
+            padding: 0.5rem 0.5rem !important; /* Padding dalam (kiri) dikurangi */
             font-size: 0.85rem !important;
         }
 
@@ -108,15 +112,15 @@
             opacity: 1;
         }
 
-        /* Label Kategori */
+        /* Label Kategori - SUPER RAPAT KIRI */
         .sidenav-category {
             font-size: 0.7rem;
             font-weight: 700;
             color: rgba(255, 255, 255, 0.4);
             letter-spacing: 0.5px;
-            margin-top: 1.5rem;
+            margin-top: 0.5rem;
             margin-bottom: 0.5rem;
-            padding-left: 1.5rem;
+            padding-left: 0.75rem; /* Teks label kategori digeser mentok kiri */
         }
 
         /* Garis Pemisah (Divider) */
@@ -187,10 +191,9 @@
             @endcan
 
             {{-- DATA PKL --}}
-            {{-- @can('pkl.view') --}}
             @can('master.view')
             @php
-                $pklRoutes = ['pkl.tempat.*', 'pkl.penempatan.*', 'pkl.nilai.*']; 
+                $pklRoutes = ['pkl.tempat.*', 'pkl.gurusiswa.*', 'pkl.penempatan.*', 'pkl.nilai.*']; 
                 $isPklActive = request()->routeIs($pklRoutes); 
             @endphp
             <li class="nav-item">
@@ -235,7 +238,7 @@
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
                         <i class="fas fa-exchange-alt text-sm"></i>
                     </div>
-                    <span class="nav-link-text">Mutasi & Kenaikan</span>
+                    <span class="nav-link-text">Mutasi Siswa</span>
                 </a>
                 
                 <div class="collapse {{ $isMutasiActive ? 'show' : '' }}" id="menuMutasi">
@@ -375,11 +378,87 @@
                 </div>
             </li>
             @endcanany
+
+            <hr class="horizontal light my-2">
+
+            {{-- ========================================================= --}}
+            {{-- 5. PRAKERIN / PKL --}}
+            {{-- ========================================================= --}}
+            {{-- @canany(['pkl.view', 'pkl.nilai']) --}}
+            <li class="nav-item mt-3">
+                <div class="sidenav-category text-uppercase">Prakerin</div>
+            </li>
+            {{-- @endcanany --}}
+
+            {{-- Penilaian Prakerin --}}
+            {{-- @can('pkl.nilai') --}}
+            @php
+                $pklNilaiRoutes = ['placeholder.route.1', 'placeholder.route.2'];
+                $isPklNilaiActive = request()->routeIs($pklNilaiRoutes); 
+            @endphp
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#penilaianPrakerinMenu" class="nav-link {{ $isPklNilaiActive ? 'active' : '' }}" aria-controls="penilaianPrakerinMenu" role="button" aria-expanded="{{ $isPklNilaiActive ? 'true' : 'false' }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-clipboard-check text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Penilaian Prakerin</span>
+                </a>
+                <div class="collapse {{ $isPklNilaiActive ? 'show' : '' }}" id="penilaianPrakerinMenu">
+                    <ul class="nav">
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.1') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Input Nilai </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.2') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Rekap Nilai </span></a></li>
+                    </ul>
+                </div> 
+            </li>
+            {{-- @endcan --}}
+
+            {{-- Monitoring Nilai --}}
+            {{-- @can('pkl.view') --}}
+            @php
+                $pklMonitorRoutes = ['placeholder.route.3'];
+                $isPklMonitorActive = request()->routeIs($pklMonitorRoutes); 
+            @endphp
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#monitoringPrakerinMenu" class="nav-link {{ $isPklMonitorActive ? 'active' : '' }}" aria-controls="monitoringPrakerinMenu" role="button" aria-expanded="{{ $isPklMonitorActive ? 'true' : 'false' }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-chart-line text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Monitoring Nilai</span>
+                </a>
+                <div class="collapse {{ $isPklMonitorActive ? 'show' : '' }}" id="monitoringPrakerinMenu">
+                    <ul class="nav">
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.3') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Monitoring </span></a></li>
+                    </ul>
+                </div> 
+            </li>
+            {{-- @endcan --}}
+
+            {{-- Data Rapor --}}
+            {{-- @can('pkl.view') --}}
+            @php
+                $pklRaporRoutes = ['placeholder.route.4', 'placeholder.route.5'];
+                $isPklRaporActive = request()->routeIs($pklRaporRoutes); 
+            @endphp
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#raporPrakerinMenu" class="nav-link {{ $isPklRaporActive ? 'active' : '' }}" aria-controls="raporPrakerinMenu" role="button" aria-expanded="{{ $isPklRaporActive ? 'true' : 'false' }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-print text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Data Rapor</span>
+                </a>
+                <div class="collapse {{ $isPklRaporActive ? 'show' : '' }}" id="raporPrakerinMenu">
+                    <ul class="nav">
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.4') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Monitoring Rapor </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.5') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Cetak Rapor </span></a></li>
+                    </ul>
+                </div> 
+            </li>
+            {{-- @endcan --}}
             
             <hr class="horizontal light my-2">
             
             {{-- ========================================================= --}}
-            {{-- 5. PENGATURAN (Admin) --}}
+            {{-- 6. PENGATURAN (Admin) --}}
             {{-- ========================================================= --}}
             @canany(['settings.erapor.read', 'users.read', 'roles.menu'])
             <li class="nav-item mt-3">
@@ -405,6 +484,29 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.bobot.index') ? 'active' : '' }}" href="{{ route('settings.erapor.bobot.index') }}"><span class="sidenav-normal"> Bobot Nilai </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.input.index') ? 'active' : '' }}" href="{{ route('settings.erapor.input.index') }}"><span class="sidenav-normal"> Event Dashboard </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.season.index') ? 'active' : '' }}" href="{{ route('settings.erapor.season.index') }}"><span class="sidenav-normal"> Set Season </span></a></li>
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+            @can('settings.erapor.read')
+            @php 
+                $pklSettingRoutes = ['settings.pkl.*'];
+                $isPklSetActive = request()->routeIs($pklSettingRoutes);
+            @endphp
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#settingPklMenu" class="nav-link {{ $isPklSetActive ? 'active' : '' }}" aria-controls="settingPklMenu" role="button" aria-expanded="{{ $isPklSetActive ? 'true' : 'false' }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-sliders-h text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Setting Rapor Pkl</span>
+                </a>
+                <div class="collapse {{ $isPklSetActive ? 'show' : '' }}" id="settingPklMenu">
+                    <ul class="nav">
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.index') ? 'active' : '' }}" href="{{ route('settings.pkl.index') }}"><span class="sidenav-normal"> Set Tujuan pembelajaran </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.season.*') ? 'active' : '' }}" href="{{ route('settings.pkl.season.index') }}"><span class="sidenav-normal"> Set Season PKL </span></a></li>
+                        {{-- <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.input.index') ? 'active' : '' }}" href="{{ route('settings.pkl.input.index') }}"><span class="sidenav-normal"> Event Dashboard </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.season.index') ? 'active' : '' }}" href="{{ route('settings.pkl.season.index') }}"><span class="sidenav-normal"> Set Season </span></a></li> --}}
                     </ul>
                 </div>
             </li>
@@ -438,7 +540,7 @@
             <hr class="horizontal light my-2">
 
             {{-- ========================================================= --}}
-            {{-- 6. PERSONAL --}}
+            {{-- 7. PERSONAL --}}
             {{-- ========================================================= --}}
             <li class="nav-item mt-3">
                 <div class="sidenav-category text-uppercase">Personal</div>

@@ -17,13 +17,21 @@ return [
 
     'changelog' => [
         [
+            'version' => '1.0.10beta',
+            'date'    => '2026-03-04',
+            'notes'   => [
+                'Menambahkan Menu Prakerin sebagai menu utama untuk menampung semua fitur terkait Prakerin / PKL / Magang',
+                'menambahkan Menu Pengaturan Rapor PKL untuk mengelola indikator penilaian dan setting terkait PKL',
+            ],
+        ],
+        [
             'version' => '1.0.9',
             'date'    => '2026-03-04',
             'notes'   => [
                 'Menambahkan Menu Daftar Tempat Prakerin / PKL / Magang',
-                'Merombak Ledger untuk mendukung pembacaan data history setelah mutasi siswa',
                 'Menambahkan Menu Guru Pembimbing PKL',
                 'Menambahkan Menu Penempatan PKL',
+                'Merombak Ledger untuk mendukung pembacaan data history setelah mutasi siswa',
             ],
         ],
         [
