@@ -11,14 +11,14 @@ return [
     |
     */
 
-    'current_version' => '1.0.9',
+    'current_version' => '1.0.10beta',
     
-    'last_updated' => '2026-03-04',
+    'last_updated' => '2026-03-05',
 
     'changelog' => [
         [
             'version' => '1.0.10beta',
-            'date'    => '2026-03-04',
+            'date'    => '2026-03-05',
             'notes'   => [
                 'Menambahkan Menu Prakerin sebagai menu utama untuk menampung semua fitur terkait Prakerin / PKL / Magang',
                 'menambahkan Menu Pengaturan Rapor PKL untuk mengelola indikator penilaian dan setting terkait PKL',
