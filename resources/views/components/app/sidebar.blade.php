@@ -393,7 +393,7 @@
             {{-- Penilaian Prakerin --}}
             {{-- @can('pkl.nilai') --}}
             @php
-                $pklNilaiRoutes = ['placeholder.route.1', 'placeholder.route.2'];
+                $pklNilaiRoutes = ['pkl.nilai.index', 'pkl.nilai.rekap'];
                 $isPklNilaiActive = request()->routeIs($pklNilaiRoutes); 
             @endphp
             <li class="nav-item">
@@ -405,8 +405,8 @@
                 </a>
                 <div class="collapse {{ $isPklNilaiActive ? 'show' : '' }}" id="penilaianPrakerinMenu">
                     <ul class="nav">
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.1') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Input Nilai </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.2') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Rekap Nilai </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('pkl.nilai.index') ? 'active' : '' }}" href="{{ route('pkl.nilai.index') }}"><span class="sidenav-normal"> Input Nilai </span></a></li>
+                        {{-- <li class="nav-item"><a class="nav-link {{ request()->routeIs('pkl.nilai.rekap') ? 'active' : '' }}" href="{{ route('pkl.nilai.rekap') }}"><span class="sidenav-normal"> Rekap Nilai </span></a></li> --}}
                     </ul>
                 </div> 
             </li>

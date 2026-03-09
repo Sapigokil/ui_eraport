@@ -304,6 +304,19 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ==========================================================================
+    // MODULE: PENILAIAN PKL
+    // Permission: nilai.view
+    // ==========================================================================
+    Route::group(['prefix' => 'pkl/nilai', 'as' => 'pkl.nilai.', 'middleware' => ['can:nilai.view']], function () {
+        Route::controller(\App\Http\Controllers\PklNilaiController::class)->group(function () {
+            Route::get('/', 'index')->name('index'); // Halaman Dashboard Monitoring
+            Route::get('/input', 'input')->name('input'); // Halaman Form Split Screen
+            Route::get('/get-siswa/{id_penempatan}', 'getSiswaData')->name('get_siswa'); // AJAX Ajax
+            Route::post('/simpan', 'store')->name('store'); // AJAX Post
+        });
+    });
+
+    // ==========================================================================
     // MODULE: CATATAN WALI KELAS & REKAP RAPOR
     // Permission: nilai.view (Guru & Admin Erapor)
     // ==========================================================================
