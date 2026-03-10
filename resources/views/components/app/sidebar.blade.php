@@ -370,6 +370,7 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('rapornilai.nilaiakhir.index') ? 'active' : '' }}" href="{{ route('rapornilai.nilaiakhir.index') }}"><span class="sidenav-normal">Nilai Akhir</span></a></li>
                         <li class="nav-item"><a class="nav-link {{ Route::is('rapornilai.monitoring.index') ? 'active' : '' }}" href="{{ route('rapornilai.monitoring.index') }}"><span class="sidenav-normal">Monitoring Rapor</span></a></li>
                         <li class="nav-item"><a class="nav-link {{ Route::is('rapornilai.cetak') ? 'active' : '' }}" href="{{ route('rapornilai.cetak') }}"><span class="sidenav-normal">Cetak Rapor</span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ Route::is('rapornilai.cover.index') ? 'active' : '' }}" href="{{ route('rapornilai.cover.index') }}"><span class="sidenav-normal">Cetak Cover Rapor</span></a></li>
                         @endcan
                         @can('ledger.view')
                         <li class="nav-item"><a class="nav-link {{ Route::is('ledger.ledger_index') ? 'active' : '' }}" href="{{ route('ledger.ledger_index') }}"><span class="sidenav-normal">Ledger Nilai</span></a></li>

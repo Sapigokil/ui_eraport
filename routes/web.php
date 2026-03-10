@@ -388,6 +388,15 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/generate', [RaporController::class, 'generateRapor'])->name('generate_rapor');
             Route::post('/unlock', [RaporController::class, 'unlockRapor'])->name('unlock_rapor');
         });
+
+        // CETAK COVER RAPOR (FITUR BARU)
+        Route::get('/cover', [\App\Http\Controllers\RaporCoverController::class, 'index'])->name('cover.index');
+        
+        // Aksi Download PDF Cover (Butuh permission cetak)
+        Route::middleware('can:rapor.cetak')->group(function() {
+            Route::get('/cover/print/{id_siswa}', [\App\Http\Controllers\RaporCoverController::class, 'cetak_satuan'])->name('cover.cetak_satuan');
+            Route::get('/cover/print-massal', [\App\Http\Controllers\RaporCoverController::class, 'cetak_massal'])->name('cover.cetak_massal');
+        });
     });
 
     
