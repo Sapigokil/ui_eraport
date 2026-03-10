@@ -11,11 +11,23 @@ return [
     |
     */
 
-    'current_version' => '1.0.10',
+    'current_version' => '1.0.11',
     
-    'last_updated' => '2026-03-09',
+    'last_updated' => '2026-03-10',
 
     'changelog' => [
+        [
+            'version' => '1.0.11',
+            'date'    => '2026-03-10',
+            'notes'   => [
+                'Menambahkan menu monitoring rapor PKL untuk memantau kesiapan data rapor sebelum dicetak',
+                'Menambahkan menu cetak rapor PKL untuk memudahkan proses generate dan finalisasi rapor PKL',
+                'Menambahkan fitur finalisasi rapor PKL untuk mengunci data rapor agar tidak bisa diubah setelah final',
+                'Menambahkan fitur unlock rapor PKL untuk membuka kunci data rapor jika diperlukan',
+                'Menambahkan fitur pencarian dan filter pada halaman monitoring rapor PKL',
+                'Menambahkan fitur download PDF rapor PKL per siswa ataupun massal dengan opsi merge menjadi satu file PDF',
+            ],
+        ],
         [
             'version' => '1.0.10',
             'date'    => '2026-03-09',

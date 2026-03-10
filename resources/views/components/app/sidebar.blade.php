@@ -191,9 +191,9 @@
             @endcan
 
             {{-- DATA PKL --}}
-            @can('master.view')
+            {{-- @can('master.pkl.view') --}}
             @php
-                $pklRoutes = ['pkl.tempat.*', 'pkl.gurusiswa.*', 'pkl.penempatan.*', 'pkl.nilai.*']; 
+                $pklRoutes = ['pkl.tempat.*', 'pkl.gurusiswa.*', 'pkl.penempatan.*']; 
                 $isPklActive = request()->routeIs($pklRoutes); 
             @endphp
             <li class="nav-item">
@@ -224,7 +224,7 @@
                     </ul>
                 </div>
             </li>
-            @endcan
+            {{-- @endcan --}}
 
             {{-- MUTASI & KENAIKAN --}}
             @can('mutasi.view')
@@ -414,7 +414,7 @@
 
             {{-- Monitoring Nilai --}}
             {{-- @can('pkl.view') --}}
-            @php
+            {{-- @php
                 $pklMonitorRoutes = ['placeholder.route.3'];
                 $isPklMonitorActive = request()->routeIs($pklMonitorRoutes); 
             @endphp
@@ -430,13 +430,13 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.3') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Monitoring </span></a></li>
                     </ul>
                 </div> 
-            </li>
+            </li> --}}
             {{-- @endcan --}}
 
             {{-- Data Rapor --}}
             {{-- @can('pkl.view') --}}
             @php
-                $pklRaporRoutes = ['placeholder.route.4', 'placeholder.route.5'];
+                $pklRaporRoutes = ['pkl.rapor.monitoring.index', 'pkl.rapor.cetak.index'];
                 $isPklRaporActive = request()->routeIs($pklRaporRoutes); 
             @endphp
             <li class="nav-item">
@@ -448,8 +448,8 @@
                 </a>
                 <div class="collapse {{ $isPklRaporActive ? 'show' : '' }}" id="raporPrakerinMenu">
                     <ul class="nav">
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.4') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Monitoring Rapor </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.5') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Cetak Rapor </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('pkl.rapor.monitoring.index') ? 'active' : '' }}" href="{{ route('pkl.rapor.monitoring.index') }}"><span class="sidenav-normal"> Monitoring Rapor </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('pkl.rapor.cetak.index') ? 'active' : '' }}" href="{{ route('pkl.rapor.cetak.index') }}"><span class="sidenav-normal"> Cetak Rapor </span></a></li>
                     </ul>
                 </div> 
             </li>
@@ -505,8 +505,6 @@
                     <ul class="nav">
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.index') ? 'active' : '' }}" href="{{ route('settings.pkl.index') }}"><span class="sidenav-normal"> Set Tujuan pembelajaran </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.season.*') ? 'active' : '' }}" href="{{ route('settings.pkl.season.index') }}"><span class="sidenav-normal"> Set Season PKL </span></a></li>
-                        {{-- <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.input.index') ? 'active' : '' }}" href="{{ route('settings.pkl.input.index') }}"><span class="sidenav-normal"> Event Dashboard </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.season.index') ? 'active' : '' }}" href="{{ route('settings.pkl.season.index') }}"><span class="sidenav-normal"> Set Season </span></a></li> --}}
                     </ul>
                 </div>
             </li>

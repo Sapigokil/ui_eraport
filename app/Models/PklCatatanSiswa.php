@@ -28,7 +28,7 @@ class PklCatatanSiswa extends Model
     ];
 
     protected $casts = [
-        'status_penilaian' => 'boolean',
+        'status_penilaian' => 'integer',
         'sakit' => 'integer',
         'izin' => 'integer',
         'alpa' => 'integer',

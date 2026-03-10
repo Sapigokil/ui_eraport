@@ -390,6 +390,7 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
+    
     // MODULE: LEDGER
     Route::group(['prefix' => 'ledger', 'as' => 'ledger.', 'middleware' => ['can:ledger.view']], function () {
         Route::get('/data-nilai', [LedgerController::class, 'index'])->name('ledger_index');
@@ -397,6 +398,26 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:ledger.cetak')->group(function() {
             Route::get('/export/excel', [LedgerController::class, 'exportExcel'])->name('export.excel');
             Route::get('/export/pdf', [LedgerController::class, 'exportPdf'])->name('export.pdf');
+        });
+    });
+
+    // ==========================================================================
+    // MODULE: RAPOR PKL (Monitoring & Cetak)
+    // Permission: rapor.view
+    // ==========================================================================
+    Route::group(['prefix' => 'pkl/rapor', 'as' => 'pkl.rapor.', 'middleware' => ['can:rapor.view']], function () {
+        
+        Route::get('/monitoring', [\App\Http\Controllers\PklRaporMonitoringController::class, 'index'])->name('monitoring.index');
+        Route::get('/cetak', [\App\Http\Controllers\PklRaporController::class, 'index'])->name('cetak.index');
+        
+        Route::post('/generate', [\App\Http\Controllers\PklRaporController::class, 'generate'])->name('generate');
+        Route::post('/finalisasi', [\App\Http\Controllers\PklRaporController::class, 'finalisasi'])->name('finalisasi');
+        Route::post('/unlock', [\App\Http\Controllers\PklRaporController::class, 'unlock'])->name('unlock');
+        
+        // AKSI CETAK PDF
+        Route::middleware('can:rapor.cetak')->group(function() {
+            Route::get('/print/{id_siswa}', [\App\Http\Controllers\PklRaporController::class, 'cetak_proses'])->name('cetak_proses');
+            Route::get('/download-massal-merge', [\App\Http\Controllers\PklRaporController::class, 'download_massal_merge'])->name('download_massal_merge');
         });
     });
 
