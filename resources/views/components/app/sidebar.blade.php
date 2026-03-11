@@ -483,7 +483,7 @@
                     <ul class="nav">
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.kok.index') ? 'active' : '' }}" href="{{ route('settings.erapor.kok.index') }}"><span class="sidenav-normal"> Set Kokurikuler </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.bobot.index') ? 'active' : '' }}" href="{{ route('settings.erapor.bobot.index') }}"><span class="sidenav-normal"> Bobot Nilai </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.input.index') ? 'active' : '' }}" href="{{ route('settings.erapor.input.index') }}"><span class="sidenav-normal"> Event Dashboard </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.event.index') ? 'active' : '' }}" href="{{ route('settings.erapor.event.index') }}"><span class="sidenav-normal"> Event Dashboard </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.season.index') ? 'active' : '' }}" href="{{ route('settings.erapor.season.index') }}"><span class="sidenav-normal"> Set Season </span></a></li>
                     </ul>
                 </div>

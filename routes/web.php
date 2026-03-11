@@ -49,7 +49,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SetKokurikulerController;
 use App\Http\Controllers\BobotNilaiController;
-use App\Http\Controllers\InputController;
+use App\Http\Controllers\EventController;
 use App\Http\Controllers\SeasonController;
 
 /*
@@ -80,15 +80,13 @@ Route::group(['middleware' => 'guest'], function () {
     Route::post('/reset-password', [ResetPasswordController::class, 'store']);
 });
 
-Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
-
-
 // ==============================================================================
 // 2. MAIN APPLICATION ROUTES (Require Login)
 // ==============================================================================
 Route::middleware(['auth'])->group(function () {
 
     // --- DASHBOARD (All Authenticated Users) ---
+    Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard')->middleware('can:dashboard.view');
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -478,25 +476,22 @@ Route::middleware(['auth'])->group(function () {
             });
 
             // MODULE: SEASON
-            Route::prefix('season')->middleware(['auth'])->group(function () {
-                Route::get('/', [SeasonController::class, 'index'])->name('season.index');
-                Route::post('/store', [SeasonController::class, 'store'])->name('season.store');
-                
-                // Update (Cukup ini saja, otomatis jadi settings.erapor.season.update)
-                Route::put('/{id}', [SeasonController::class, 'update'])->name('season.update'); 
-                
-                // Destroy (Otomatis jadi settings.erapor.season.destroy)
-                Route::delete('/{id}', [SeasonController::class, 'destroy'])->name('season.destroy');
+            Route::prefix('season')->controller(SeasonController::class)->group(function () {
+                Route::get('/', 'index')->name('season.index');
+                Route::post('/store', 'store')->name('season.store');
+                Route::put('/{id}', 'update')->name('season.update'); 
+                Route::delete('/{id}', 'destroy')->name('season.destroy');
             });
 
-            // Input Event
-            Route::controller(InputController::class)->prefix('event')->name('input.')->group(function () {
+            // Event & Notifikasi Dashboard
+            Route::controller(EventController::class)->prefix('event')->name('event.')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::middleware('can:settings.erapor.update')->group(function() {
                     Route::post('/store', 'store')->name('store');
-                    Route::put('/event/{id}', 'updateEvent')->name('event.update');
+                    Route::put('/{id}', 'updateEvent')->name('update');
+                    Route::delete('/{id}', 'destroyEvent')->name('delete');
+                    
                     Route::put('/notifikasi/{id}', 'updateNotifikasi')->name('notifikasi.update');
-                    Route::delete('/event/{id}', 'destroyEvent')->name('event.delete');
                     Route::delete('/notifikasi/{id}', 'destroyNotifikasi')->name('notifikasi.delete');
                 });
             });

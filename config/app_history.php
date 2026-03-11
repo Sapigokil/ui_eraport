@@ -11,14 +11,14 @@ return [
     |
     */
 
-    'current_version' => '1.0.11b',
+    'current_version' => '1.0.11c',
     
     'last_updated' => '2026-03-10',
 
     'changelog' => [
         
         [
-            'version' => '1.0.11b',
+            'version' => '1.0.11c',
             'date'    => '2026-03-10',
             'notes'   => [
                 'Menambahkan menu monitoring rapor PKL untuk memantau kesiapan data rapor sebelum dicetak',
@@ -28,6 +28,7 @@ return [
                 'Menambahkan fitur pencarian dan filter pada halaman monitoring rapor PKL',
                 'Menambahkan fitur download PDF rapor PKL per siswa ataupun massal dengan opsi merge menjadi satu file PDF',
                 'Menambahkan halaman Cetak Cover Rapor',
+                'Optimasi beberapa query untuk meningkatkan performa aplikasi',
             ],
         ],
         [

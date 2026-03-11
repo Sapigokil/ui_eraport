@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\Notifikasi;
 
-class InputController extends Controller
+class EventController extends Controller
 {
     /**
      * HALAMAN UTAMA
@@ -16,7 +16,7 @@ class InputController extends Controller
         $events = Event::orderBy('tanggal', 'desc')->get();
         $notifications = Notifikasi::orderBy('tanggal', 'desc')->get();
 
-        return view('data.input_index', compact('events', 'notifications'));
+        return view('data.event_index', compact('events', 'notifications'));
     }
 
     /**

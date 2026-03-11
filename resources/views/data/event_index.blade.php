@@ -43,7 +43,7 @@
                         @endif
 
                         {{-- FORM INPUT --}}
-                        <form action="{{ route('settings.erapor.input.store') }}" method="POST">
+                        <form action="{{ route('settings.erapor.event.store') }}" method="POST">
                         @csrf
 
                             <div class="row mb-4">
@@ -128,7 +128,7 @@
                     
 
 {{-- HISTORY EVENT & NOTIFIKASI --}}
-@include('data.partials.history_input')
+@include('data.partials.history_event')
 
 </div>
    
