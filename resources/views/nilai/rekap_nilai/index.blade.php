@@ -65,7 +65,7 @@
         {{-- 1. CARD FILTER --}}
         <div class="card shadow-sm border mb-4">
             <div class="card-body p-3">
-                <form action="{{ route('master.rekap.index') }}" method="GET" class="row g-3 align-items-end">
+                <form action="{{ route('nilai.rekap.index') }}" method="GET" class="row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-bold text-xs text-uppercase text-secondary">Pilih Kelas</label>
                         <select name="id_kelas" class="form-select border-secondary ps-2" onchange="this.form.submit()">
@@ -233,7 +233,7 @@
                 <div class="col-12">
                     <div class="card shadow-sm border">
                         <div class="card-body p-0">
-                            <form id="formSimpanRekap" action="{{ route('master.rekap.store') }}" method="POST">
+                            <form id="formSimpanRekap" action="{{ route('nilai.rekap.store') }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="id_kelas" value="{{ $id_kelas }}">
                                 <input type="hidden" name="id_mapel" value="{{ $id_mapel }}">
@@ -273,24 +273,24 @@
                                                     <p class="text-xs text-secondary mb-0">{{ $s->nisn }}</p>
                                                 </td>
                                                 <td class="text-center text-xs td-clickable">
-                                                    <a href="{{ route('master.sumatif.s1', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s1 }}</a>
+                                                    <a href="{{ route('nilai.sumatif.s1', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s1 }}</a>
                                                 </td>
                                                 <td class="text-center text-xs td-clickable">
-                                                    <a href="{{ route('master.sumatif.s2', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s2 }}</a>
+                                                    <a href="{{ route('nilai.sumatif.s2', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s2 }}</a>
                                                 </td>
                                                 <td class="text-center text-xs td-clickable">
-                                                    <a href="{{ route('master.sumatif.s3', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s3 }}</a>
+                                                    <a href="{{ route('nilai.sumatif.s3', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s3 }}</a>
                                                 </td>
                                                 <td class="text-center text-xs td-clickable">
-                                                    <a href="{{ route('master.sumatif.s4', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s4 }}</a>
+                                                    <a href="{{ route('nilai.sumatif.s4', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s4 }}</a>
                                                 </td>
                                                 <td class="text-center text-xs td-clickable">
-                                                    <a href="{{ route('master.sumatif.s5', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s5 }}</a>
+                                                    <a href="{{ route('nilai.sumatif.s5', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-secondary" target="_blank">{{ $s->s5 }}</a>
                                                 </td>
                                                 <td class="text-center text-sm font-weight-bolder text-info bg-read-only border-start">{{ $s->rata_s }}</td>
                                                 <td class="text-center text-sm font-weight-bolder text-dark bg-read-only">{{ $s->bobot_s_v }}</td>
                                                 <td class="text-center text-sm font-weight-bold td-clickable border-start">
-                                                    <a href="{{ route('master.project.index', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-success" target="_blank">{{ $s->nilai_p }}</a>
+                                                    <a href="{{ route('nilai.project.index', ['id_kelas' => $id_kelas, 'id_mapel' => $id_mapel, 'semester' => $semesterRaw, 'tahun_ajaran' => $tahun_ajaran]) }}" class="cell-link text-success" target="_blank">{{ $s->nilai_p }}</a>
                                                 </td>
                                                 <td class="text-center text-sm font-weight-bolder text-dark bg-read-only">{{ $s->bobot_p_v }}</td>
                                                 <td class="align-middle text-center p-2 border-start bg-read-only">

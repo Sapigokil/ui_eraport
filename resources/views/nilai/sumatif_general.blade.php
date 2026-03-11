@@ -86,7 +86,7 @@
                             
                             {{-- 2. FORM FILTER --}}
                             <div class="p-4 border-bottom">
-                                <form action="{{ route('master.sumatif.s' . $sumatifId) }}" method="GET" class="row align-items-end mb-0">
+                                <form action="{{ route('nilai.sumatif.s' . $sumatifId) }}" method="GET" class="row align-items-end mb-0">
                                     <input type="hidden" name="sumatif" id="input_sumatif" value="{{ $sumatifId }}">
 
                                     <div class="col-md-3 mb-3">
@@ -212,7 +212,7 @@
                                     <p class="text-danger mt-3 p-3 text-center border rounded">Data siswa tidak ditemukan.</p>
                                 @else
                                     
-                                    <form action="{{ route('master.sumatif.store') }}" method="POST">
+                                    <form action="{{ route('nilai.sumatif.store') }}" method="POST">
                                         @csrf
                                         <input type="hidden" name="id_kelas" value="{{ request('id_kelas') }}">
                                         <input type="hidden" name="sumatif" value="{{ $sumatifId }}">
@@ -289,7 +289,7 @@
                     <h5 class="modal-title">Download Template Sumatif {{ $sumatifId }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{{ route('master.sumatif.download') }}" method="GET"> 
+                <form action="{{ route('nilai.sumatif.download') }}" method="GET"> 
                     <input type="hidden" name="sumatif" value="{{ $sumatifId }}">
                     <div class="modal-body">
                         <div class="mb-3">
@@ -340,7 +340,7 @@
                     <h5 class="modal-title">Import Nilai Sumatif {{ $sumatifId }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{{ route('master.sumatif.import') }}" method="POST" enctype="multipart/form-data"> 
+                <form action="{{ route('nilai.sumatif.import') }}" method="POST" enctype="multipart/form-data"> 
                     @csrf
                     <input type="hidden" name="sumatif" value="{{ $sumatifId }}">
                     <div class="modal-body">
@@ -411,7 +411,7 @@
 
                 if(semester && tahunAjaran) {
                     $.ajax({
-                        url: "{{ route('master.sumatif.check_prerequisite') }}",
+                        url: "{{ route('nilai.sumatif.check_prerequisite') }}",
                         method: "GET",
                         data: {
                             id_kelas: idKelas,
@@ -490,7 +490,7 @@
 
                 if (idKelas) {
                     $.ajax({
-                        url: "{{ route('master.sumatif.get_mapel', '') }}/" + idKelas,
+                        url: "{{ route('nilai.sumatif.get_mapel', '') }}/" + idKelas,
                         method: "GET",
                         success: function(res) {
                             let html = '<option value="">-- Pilih Mapel --</option>';

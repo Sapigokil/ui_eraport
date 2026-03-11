@@ -9,7 +9,7 @@ use App\Models\RaporCatatan; // Model untuk Catatan Wali Kelas
 
 class RaporCatatanController extends Controller
 {
-    // === 1. Input Catatan (Route: master.rapornilai.wali.catatan) ===
+    // === 1. Input Catatan (Route: nilai.rapornilai.wali.catatan) ===
     public function inputCatatan(Request $request) 
     {
         $kelasList = Kelas::all();
@@ -46,7 +46,7 @@ class RaporCatatanController extends Controller
         ]);
     }
 
-    // === 2. Simpan Catatan (Route: master.rapornilai.wali.simpan) ===
+    // === 2. Simpan Catatan (Route: nilai.rapornilai.wali.simpan) ===
     public function simpanCatatan(Request $request)
     {
         $request->validate([
@@ -89,14 +89,14 @@ class RaporCatatanController extends Controller
         }
 
         // Redirect kembali ke form input dengan filter yang sama
-        return redirect()->route('master.rapornilai.wali.catatan', [ 
+        return redirect()->route('nilai.rapornilai.wali.catatan', [ 
             'id_kelas'        => $request->id_kelas,
             'id_tahun_ajaran' => $request->id_tahun_ajaran,
             'semester'        => $request->semester, 
         ])->with('success', 'Catatan Wali Kelas dan Absensi berhasil disimpan!');
     }
 
-    // === 3. Get Siswa (Route: master.rapornilai.wali.get_siswa) - Jika diperlukan AJAX ===
+    // === 3. Get Siswa (Route: nilai.rapornilai.wali.get_siswa) - Jika diperlukan AJAX ===
     public function getSiswa($id_kelas)
     {
         // Asumsi ini endpoint AJAX

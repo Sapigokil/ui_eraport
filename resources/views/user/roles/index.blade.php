@@ -13,11 +13,11 @@
                         <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
                             <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 d-flex justify-content-between align-items-center">
                                 <h6 class="text-white text-capitalize ps-3">Daftar Role Pengguna E-Rapor</h6>
-                                @can('roles.menu')
+                                {{-- @can('roles.menu') --}}
                                 <a href="{{ route('settings.system.roles.create') }}" class="btn btn-white me-3 mb-0">
                                     <i class="fas fa-plus me-1"></i> Tambah Role Baru
                                 </a>
-                                @endcan
+                                {{-- @endcan --}}
                             </div>
                         </div>
                         
@@ -65,13 +65,13 @@
                                                 <span class="badge badge-sm bg-gradient-success">{{ $role->users->count() }} User</span>
                                             </td>
                                             <td class="align-middle">
-                                                @can('roles.menu')
+                                                {{-- @can('roles.menu') --}}
                                                 <a href="{{ route('settings.system.roles.edit', $role->id) }}" class="text-primary font-weight-bold text-xs me-3" data-toggle="tooltip" title="Atur Izin">
                                                     <i class="fas fa-pencil-alt me-1"></i> Edit
                                                 </a>
-                                                @endcan
+                                                {{-- @endcan --}}
                                                 
-                                                @can('roles.menu')
+                                                {{-- @can('roles.menu') --}}
                                                     @if ($isSystemRole)
                                                         {{-- Role Default/Sistem TERKUNCI --}}
                                                         <span class="text-secondary text-xs" data-toggle="tooltip" title="Role Sistem/Default tidak dapat dihapus">
@@ -88,7 +88,7 @@
                                                             </button>
                                                         </form>
                                                     @endif
-                                                @endcan
+                                                {{-- @endcan --}}
                                             </td>
                                         </tr>
                                         @empty

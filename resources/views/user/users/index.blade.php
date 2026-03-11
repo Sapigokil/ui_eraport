@@ -20,11 +20,11 @@
                                 <h6 class="text-white text-capitalize ps-3">Daftar Akun Pengguna E-Rapor</h6>
                                 
                                 {{-- Hanya Admin/Developer yang berhak menambah pengguna --}}
-                                @can('users.edit')
+                                {{-- @can('users.edit') --}}
                                 <a href="{{ route('settings.system.users.create') }}" class="btn btn-white me-3 mb-0">
                                     <i class="fas fa-plus me-1"></i> Tambah Pengguna Baru
                                 </a>
-                                @endcan
+                                {{-- @endcan --}}
                             </div>
                         </div>
                         
@@ -47,7 +47,7 @@
                                             @php
                                                 // UPDATE PENTING: Sesuaikan nama role dengan yang ada di screenshot Anda
                                                 // Tambahkan 'admin_erapor' dan 'guru_erapor' agar terdeteksi
-                                                $isProtected = $user->hasAnyRole(['developer', 'admin', 'guru', 'admin_erapor', 'guru_erapor']);
+                                                $isProtected = $user->hasAnyRole(['developer', 'admin', 'guru', 'admin_erapor', 'guru_erapor', 'guru_ekskul']);
                                                 
                                                 // Cek apakah ini akun sendiri
                                                 $isSelf = Auth::id() === $user->id;
@@ -93,7 +93,7 @@
                                                     </span>
                                                 </td>
                                                 <td class="align-middle">
-                                                    @can('users.update')
+                                                    {{-- @can('users.update') --}}
                                                         {{-- Tombol Edit (Selalu Muncul) --}}
                                                         <a href="{{ route('settings.system.users.edit', $user->id) }}" class="text-primary font-weight-bold text-xs me-3" data-toggle="tooltip" title="Edit User">
                                                             <i class="fas fa-edit me-1"></i> Edit
@@ -121,7 +121,7 @@
                                                                 </button>
                                                             </form>
                                                         @endif
-                                                    @endcan
+                                                    {{-- @endcan --}}
                                                 </td>
                                             </tr>
                                         @empty

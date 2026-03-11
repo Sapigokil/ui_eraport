@@ -151,14 +151,14 @@
             {{-- ========================================================= --}}
             {{-- 2. DATA POKOK (Master, PKL, Mutasi) --}}
             {{-- ========================================================= --}}
-            @canany(['master.view', 'pkl.view', 'mutasi.view'])
+            @canany(['master.menu', 'pkl.data.menu', 'mutasi.menu'])
             <li class="nav-item mt-3">
                 <div class="sidenav-category text-uppercase">Data Pokok</div>
             </li>
             @endcanany
 
             {{-- MASTER DATA --}}
-            @can('master.view') 
+            @can('master.menu') 
             @php 
                 $masterRoutes = [
                     'master.sekolah.*', 'master.guru.*', 'master.siswa.*', 'master.kelas.*', 
@@ -191,7 +191,7 @@
             @endcan
 
             {{-- DATA PKL --}}
-            {{-- @can('master.pkl.view') --}}
+            @can('pkl.data.menu')
             @php
                 $pklRoutes = ['pkl.tempat.*', 'pkl.gurusiswa.*', 'pkl.penempatan.*']; 
                 $isPklActive = request()->routeIs($pklRoutes); 
@@ -224,10 +224,10 @@
                     </ul>
                 </div>
             </li>
-            {{-- @endcan --}}
+            @endcan
 
             {{-- MUTASI & KENAIKAN --}}
-            @can('mutasi.view')
+            @can('mutasi.menu')
             @php
                 $mutasiRoutes = ['mutasi.keluar.*', 'mutasi.pindah.*', 'mutasi.kenaikan.*', 'mutasi.kelulusan.*', 'mutasi.dashboard_akhir.*', 'mutasi.riwayat.*'];
                 $isMutasiActive = request()->routeIs($mutasiRoutes); 
@@ -273,16 +273,16 @@
             {{-- ========================================================= --}}
             {{-- 4. AKADEMIK (GURU & WALI KELAS) --}}
             {{-- ========================================================= --}}
-            @canany(['nilai.view', 'ekskul.view', 'rapor.view'])
+            @canany(['nilai.menu', 'ekskul.menu', 'rapor.menu', 'ledger.menu'])
             <li class="nav-item mt-3">
                 <div class="sidenav-category text-uppercase">Akademik</div>
             </li>
             @endcanany
 
             {{-- INPUT NILAI --}}
-            @can('nilai.view')
+            @can('nilai.menu')
             @php
-                $nilaiRoutes = ['master.sumatif.*', 'master.project.*', 'master.catatan.*', 'master.rekap.*'];
+                $nilaiRoutes = ['nilai.sumatif.*', 'nilai.project.*', 'nilai.catatan.*', 'nilai.rekap.*'];
                 $isNilaiActive = request()->routeIs($nilaiRoutes); 
             @endphp
             <li class="nav-item">
@@ -294,20 +294,20 @@
                 </a>
                 <div class="collapse {{ $isNilaiActive ? 'show' : '' }}" id="dataNilaiMenu">
                     <ul class="nav">
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s1') ? 'active' : '' }}" href="{{ route('master.sumatif.s1') }}"><span class="sidenav-normal"> Nilai Sumatif 1 </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s2') ? 'active' : '' }}" href="{{ route('master.sumatif.s2') }}"><span class="sidenav-normal"> Nilai Sumatif 2 </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s3') ? 'active' : '' }}" href="{{ route('master.sumatif.s3') }}"><span class="sidenav-normal"> Nilai Sumatif 3 </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s4') ? 'active' : '' }}" href="{{ route('master.sumatif.s4') }}"><span class="sidenav-normal"> Nilai Sumatif 4 </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sumatif.s5') ? 'active' : '' }}" href="{{ route('master.sumatif.s5') }}"><span class="sidenav-normal"> Nilai Sumatif 5 </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.project.index') ? 'active' : '' }}" href="{{ route('master.project.index') }}"><span class="sidenav-normal"> Nilai Project </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.rekap.*') ? 'active' : '' }}" href="{{ route('master.rekap.index') }}"><span class="sidenav-normal"> Rekap Nilai </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('nilai.sumatif.s1') ? 'active' : '' }}" href="{{ route('nilai.sumatif.s1') }}"><span class="sidenav-normal"> Nilai Sumatif 1 </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('nilai.sumatif.s2') ? 'active' : '' }}" href="{{ route('nilai.sumatif.s2') }}"><span class="sidenav-normal"> Nilai Sumatif 2 </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('nilai.sumatif.s3') ? 'active' : '' }}" href="{{ route('nilai.sumatif.s3') }}"><span class="sidenav-normal"> Nilai Sumatif 3 </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('nilai.sumatif.s4') ? 'active' : '' }}" href="{{ route('nilai.sumatif.s4') }}"><span class="sidenav-normal"> Nilai Sumatif 4 </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('nilai.sumatif.s5') ? 'active' : '' }}" href="{{ route('nilai.sumatif.s5') }}"><span class="sidenav-normal"> Nilai Sumatif 5 </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('nilai.project.index') ? 'active' : '' }}" href="{{ route('nilai.project.index') }}"><span class="sidenav-normal"> Nilai Project </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('nilai.rekap.*') ? 'active' : '' }}" href="{{ route('nilai.rekap.index') }}"><span class="sidenav-normal"> Rekap Nilai </span></a></li>
                     </ul>
                 </div> 
             </li>
             @endcan
 
             {{-- EKSTRAKURIKULER --}}
-            @can('ekskul.view')
+            @can('ekskul.menu')
             @php
                 $ekskulActiveRoutes = ['ekskul.peserta.*', 'ekskul.nilai.*'];
                 $isEkskulActive = request()->routeIs($ekskulActiveRoutes); 
@@ -329,7 +329,7 @@
             @endcan
 
             {{-- WALI KELAS --}}
-            @canany(['nilai.view', 'rapor.view'])
+            @can('nilai.menu')
             @php
                 $waliRoutes = ['walikelas.*'];
                 $isWaliActive = request()->routeIs($waliRoutes); 
@@ -349,10 +349,10 @@
                     </ul>
                 </div> 
             </li>
-            @endcanany
+            @endcan
 
             {{-- LAPORAN & RAPOR --}}
-            @canany(['rapor.view', 'ledger.view'])
+            @canany(['rapor.menu', 'ledger.menu'])
             @php
                 $raporRoutes = ['rapornilai.*', 'ledger.*'];
                 $isRaporActive = request()->routeIs($raporRoutes);
@@ -366,13 +366,13 @@
                 </a>
                 <div class="collapse {{ $isRaporActive ? 'show' : '' }}" id="dataRaporMenu">
                     <ul class="nav">
-                        @can('rapor.view')
+                        @can('rapor.menu')
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('rapornilai.nilaiakhir.index') ? 'active' : '' }}" href="{{ route('rapornilai.nilaiakhir.index') }}"><span class="sidenav-normal">Nilai Akhir</span></a></li>
                         <li class="nav-item"><a class="nav-link {{ Route::is('rapornilai.monitoring.index') ? 'active' : '' }}" href="{{ route('rapornilai.monitoring.index') }}"><span class="sidenav-normal">Monitoring Rapor</span></a></li>
                         <li class="nav-item"><a class="nav-link {{ Route::is('rapornilai.cetak') ? 'active' : '' }}" href="{{ route('rapornilai.cetak') }}"><span class="sidenav-normal">Cetak Rapor</span></a></li>
                         <li class="nav-item"><a class="nav-link {{ Route::is('rapornilai.cover.index') ? 'active' : '' }}" href="{{ route('rapornilai.cover.index') }}"><span class="sidenav-normal">Cetak Cover Rapor</span></a></li>
                         @endcan
-                        @can('ledger.view')
+                        @can('ledger.menu')
                         <li class="nav-item"><a class="nav-link {{ Route::is('ledger.ledger_index') ? 'active' : '' }}" href="{{ route('ledger.ledger_index') }}"><span class="sidenav-normal">Ledger Nilai</span></a></li>
                         @endcan
                     </ul>
@@ -385,14 +385,14 @@
             {{-- ========================================================= --}}
             {{-- 5. PRAKERIN / PKL --}}
             {{-- ========================================================= --}}
-            {{-- @canany(['pkl.view', 'pkl.nilai']) --}}
+            @canany(['pkl.nilai.menu', 'rapor.menu'])
             <li class="nav-item mt-3">
                 <div class="sidenav-category text-uppercase">Prakerin</div>
             </li>
-            {{-- @endcanany --}}
+            @endcanany
 
             {{-- Penilaian Prakerin --}}
-            {{-- @can('pkl.nilai') --}}
+            @can('pkl.nilai.menu')
             @php
                 $pklNilaiRoutes = ['pkl.nilai.index', 'pkl.nilai.rekap'];
                 $isPklNilaiActive = request()->routeIs($pklNilaiRoutes); 
@@ -407,35 +407,13 @@
                 <div class="collapse {{ $isPklNilaiActive ? 'show' : '' }}" id="penilaianPrakerinMenu">
                     <ul class="nav">
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('pkl.nilai.index') ? 'active' : '' }}" href="{{ route('pkl.nilai.index') }}"><span class="sidenav-normal"> Input Nilai </span></a></li>
-                        {{-- <li class="nav-item"><a class="nav-link {{ request()->routeIs('pkl.nilai.rekap') ? 'active' : '' }}" href="{{ route('pkl.nilai.rekap') }}"><span class="sidenav-normal"> Rekap Nilai </span></a></li> --}}
                     </ul>
                 </div> 
             </li>
-            {{-- @endcan --}}
+            @endcan
 
-            {{-- Monitoring Nilai --}}
-            {{-- @can('pkl.view') --}}
-            {{-- @php
-                $pklMonitorRoutes = ['placeholder.route.3'];
-                $isPklMonitorActive = request()->routeIs($pklMonitorRoutes); 
-            @endphp
-            <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#monitoringPrakerinMenu" class="nav-link {{ $isPklMonitorActive ? 'active' : '' }}" aria-controls="monitoringPrakerinMenu" role="button" aria-expanded="{{ $isPklMonitorActive ? 'true' : 'false' }}">
-                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                        <i class="fas fa-chart-line text-sm"></i>
-                    </div>
-                    <span class="nav-link-text">Monitoring Nilai</span>
-                </a>
-                <div class="collapse {{ $isPklMonitorActive ? 'show' : '' }}" id="monitoringPrakerinMenu">
-                    <ul class="nav">
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('placeholder.route.3') ? 'active' : '' }}" href="#"><span class="sidenav-normal"> Monitoring </span></a></li>
-                    </ul>
-                </div> 
-            </li> --}}
-            {{-- @endcan --}}
-
-            {{-- Data Rapor --}}
-            {{-- @can('pkl.view') --}}
+            {{-- Data Rapor PKL --}}
+            @can('rapor.menu')
             @php
                 $pklRaporRoutes = ['pkl.rapor.monitoring.index', 'pkl.rapor.cetak.index'];
                 $isPklRaporActive = request()->routeIs($pklRaporRoutes); 
@@ -454,20 +432,19 @@
                     </ul>
                 </div> 
             </li>
-            {{-- @endcan --}}
+            @endcan
             
             <hr class="horizontal light my-2">
             
             {{-- ========================================================= --}}
-            {{-- 6. PENGATURAN (Admin) --}}
+            {{-- 6. PENGATURAN (Admin 1 Pintu) --}}
             {{-- ========================================================= --}}
-            @canany(['settings.erapor.read', 'users.read', 'roles.menu'])
+            @can('setting.menu')
             <li class="nav-item mt-3">
                 <div class="sidenav-category text-uppercase">Pengaturan</div>
             </li>
-            @endcanany
 
-            @can('settings.erapor.read')
+            {{-- Setting E-Rapor --}}
             @php 
                 $eraporSettingRoutes = ['settings.erapor.*'];
                 $isEraporSetActive = request()->routeIs($eraporSettingRoutes);
@@ -488,9 +465,8 @@
                     </ul>
                 </div>
             </li>
-            @endcan
 
-            @can('settings.erapor.read')
+            {{-- Setting Rapor PKL --}}
             @php 
                 $pklSettingRoutes = ['settings.pkl.*'];
                 $isPklSetActive = request()->routeIs($pklSettingRoutes);
@@ -509,9 +485,8 @@
                     </ul>
                 </div>
             </li>
-            @endcan
 
-            @canany(['users.read', 'roles.menu'])
+            {{-- System & User --}}
             @php 
                 $systemSettingRoutes = ['settings.system.*'];
                 $isSystemSetActive = request()->routeIs($systemSettingRoutes);
@@ -525,16 +500,12 @@
                 </a>
                 <div class="collapse {{ $isSystemSetActive ? 'show' : '' }}" id="settingSystemMenu">
                     <ul class="nav">
-                        @can('users.read')
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.system.users.index') ? 'active' : '' }}" href="{{ route('settings.system.users.index') }}"><span class="sidenav-normal"> Manajemen User </span></a></li>
-                        @endcan
-                        @can('roles.menu')
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.system.roles.index') ? 'active' : '' }}" href="{{ route('settings.system.roles.index') }}"><span class="sidenav-normal"> Role & Permission </span></a></li>
-                        @endcan
                     </ul>
                 </div>
             </li>
-            @endcanany
+            @endcan
 
             <hr class="horizontal light my-2">
 

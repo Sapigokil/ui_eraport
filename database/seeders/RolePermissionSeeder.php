@@ -33,54 +33,44 @@ class RolePermissionSeeder extends Seeder
         $permissions = [
             // A. DASHBOARD
             '01. Dashboard (Semua)' => [
-                'dashboard.view' => 'Melihat Halaman Dashboard',
+                'dashboard.view' => 'Melihat Halaman Dashboard Utama',
             ],
 
-            // B. MASTER DATA (Admin Only)
-            '02. Master Data (Admin Only)' => [
-                'master.view' => 'Melihat Data Sekolah',      // Lihat menu
-                'master.edit' => 'Mengelola Data Sekolah',    // Simpan/edit data sekolah
+            // B. DATA POKOK (Admin Only)
+            '02. Master Data Pokok' => [
+                'master.menu'    => 'Akses Menu Master Data (Sekolah, Guru, Siswa, dll)',
+                'pkl.data.menu'  => 'Akses Menu Data PKL (Tempat, Pembimbing, Penempatan)',
+                'mutasi.menu'    => 'Akses Menu Mutasi & Kenaikan Kelas',
             ],
 
-            // C. MUTASI DATA (Admin Only)
-            '03. Mutasi Data (Admin Only)' => [
-                'mutasi.view' => 'Melihat Data Mutasi',      // Lihat menu
-                'mutasi.edit' => 'Mengelola Data Mutasi',    // Simpan/edit data mutasi
+            // C. AKADEMIK - INPUT NILAI (Guru & Admin)
+            '03. Akademik: Input Nilai' => [
+                'nilai.menu'   => 'Akses Menu Input Nilai & Tugas Wali Kelas', 
+                'nilai.input'  => 'Hak Aksi (Create/Update/Delete) Data Nilai', 
+            ],
+
+            // D. AKADEMIK - EKSTRAKURIKULER (Pembina & Admin)
+            '04. Akademik: Ekstrakurikuler' => [
+                'ekskul.menu' => 'Akses Menu Ekstrakurikuler (Peserta & Nilai)', 
             ],
             
-            // D. PENILAIAN (Guru & Admin)
-            '04. Penilaian (Guru & Admin)' => [
-                'nilai.view' => 'Melihat Data Nilai',       // Akses menu input nilai
-                'nilai.input' => 'Mengelola Data Nilai',      // Hak simpan/edit nilai
+            // E. AKADEMIK - PENILAIAN PKL (Guru Pembimbing & Admin)
+            '05. Akademik: Penilaian PKL' => [
+                'pkl.nilai.menu' => 'Akses Menu Input Penilaian PKL', 
             ],
 
-            // E. EKSTRAKURIKULER (Pembina & Admin)
-            '05. Ekstrakurikuler (Pembina & Admin)' => [
-                'ekskul.view' => 'Melihat Nilai Ekstrakurikuler',      // Akses menu input nilai ekskul
-                'ekskul.edit' => 'Mengelola Nilai Ekstrakurikuler',     // Hak simpan/edit nilai ekskul
-            ],
-
-            // E. EKSTRAKURIKULER (Walikelas & Admin)
-            '06. Walikelas Menu (Walikelas & Admin)' => [
-                'walikelas.view' => 'Melihat Nilai Walikelas',      // Akses menu input nilai ekskul
-                'walikelas.edit' => 'Mengelola Nilai Walikelas',     // Hak simpan/edit nilai ekskul
-            ],
-
-            // F. LAPORAN & RAPOR (Guru & Admin)
-            '07. Laporan & Rapor (Guru & Admin)' => [
-                'rapor.view' => 'Melihat Rapor Siswa',       // Akses menu cetak rapor
-                'rapor.cetak' => 'Mencetak Rapor Siswa',      // Hak print/download
-                'ledger.view' => 'Melihat Ledger Nilai',      // Akses menu ledger
-                'ledger.cetak' => 'Mencetak Legder Nilai',     // Hak download ledger
+            // F. LAPORAN & RAPOR 
+            '06. Laporan & Rapor' => [
+                'rapor.menu'   => 'Akses Menu Rapor (Reguler & PKL)', 
+                'rapor.cetak'  => 'Mencetak / Download Rapor Siswa', 
+                'ledger.menu'  => 'Akses Menu Ledger Nilai', 
+                'ledger.cetak' => 'Mencetak / Download Ledger Nilai', 
             ],
 
             // G. SYSTEM SETTINGS (Admin Only)
-            '08. System Settings (Admin Only)' => [
-                'users.read' => 'Melihat Menu Manajemen User', 
-                'users.edit' => 'Mengelola Data User',
-                'roles.menu' => 'Mengakses Menu Role & Permission',
-                'settings.erapor.read' => 'Melihat Pengaturan E-Rapor', 
-                'settings.erapor.update' => 'Mengelola Pengaturan E-Rapor',
+            '07. Pengaturan Sistem' => [
+                // Menggunakan 1 Pintu sesuai permintaan
+                'setting.menu' => 'Akses Penuh Seluruh Menu Pengaturan (Erapor, PKL, User, Role)', 
             ],
         ];
 
@@ -111,35 +101,33 @@ class RolePermissionSeeder extends Seeder
         $roleGuruErapor = Role::create(['name' => 'guru_erapor']);
         $roleGuruErapor->givePermissionTo([
             'dashboard.view',
-            // Full Akses Penilaian
-            'nilai.view', 'nilai.input',
-            // Full Akses Rapor & Ledger
-            // 'rapor.view', 'rapor.cetak',
-            // 'ledger.view', 'ledger.cetak',
-            'ekskul.view', 'ekskul.edit',
+            // Data Akademik
+            'nilai.menu', 'nilai.input',
+            'ekskul.menu', 
+            'pkl.nilai.menu',
         ]);
 
         // --- Role 2a: GURU EKSTRAKURIKULER (Opsional) ---
         $roleGuruEkskul = Role::create(['name' => 'guru_ekskul']);
         $roleGuruEkskul->givePermissionTo([
             'dashboard.view',
-            'ekskul.view', 'ekskul.edit',
+            'ekskul.menu',
         ]);
 
         // --- ROLE 3: GURU REGULER (Standar) ---
         $roleGuru = Role::create(['name' => 'guru']);
         $roleGuru->givePermissionTo([
             'dashboard.view',
-            'nilai.view', 'nilai.input',
-            // 'rapor.view', 'ledger.view', // Mungkin guru biasa view saja, cetak urusan admin? (Opsional)
-            'ekskul.view', 'ekskul.edit',
+            'nilai.menu', 'nilai.input',
+            'ekskul.menu', 
+            'pkl.nilai.menu',
         ]);
 
         // --- ROLE 4: SISWA ---
         $roleSiswa = Role::create(['name' => 'siswa']);
         $roleSiswa->givePermissionTo([
             'dashboard.view',
-            'rapor.view' // Siswa hanya bisa lihat/download rapor sendiri
+            'rapor.menu' // Asumsi: Siswa hanya bisa lihat/download rapor sendiri (dibatasi via query controller)
         ]);
 
 
@@ -201,8 +189,8 @@ class RolePermissionSeeder extends Seeder
         $guruEkskulUser->assignRole($roleGuruEkskul);
 
         $this->command->info('SUKSES! User Spesial telah dibuat:');
-        $this->command->info('1. Admin: admin.erapor / password');
-        $this->command->info('2. Guru: guru.erapor / password');
-        $this->command->info('3. Guru: guru.ekskul / password');
+        $this->command->info('1. Admin: admin.erapor / adminerapor#');
+        $this->command->info('2. Guru: guru.erapor / gurusmkn1');
+        $this->command->info('3. Guru Ekskul: guru.ekskul / ekskulsmkn1');
     }
 }

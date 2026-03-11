@@ -102,7 +102,7 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: DATA UTAMA / MASTER DATA 
     // Permission: master.view (Hanya Admin / Admin Erapor)
     // ==========================================================================
-    Route::group(['prefix' => 'master/data', 'as' => 'master.', 'middleware' => ['can:master.view']], function () {
+    Route::group(['prefix' => 'master/data', 'as' => 'master.', 'middleware' => ['can:master.menu']], function () {
         
         // Sekolah
         Route::get('/sekolah', [InfoSekolahController::class, 'infoSekolah'])->name('sekolah.index');
@@ -172,7 +172,7 @@ Route::middleware(['auth'])->group(function () {
     // =========================================================
     // MENU DATA PKL
     // =========================================================
-    Route::prefix('pkl')->name('pkl.')->middleware(['auth', 'can:master.view'])->group(function () {
+    Route::prefix('pkl/data')->name('pkl.')->middleware(['auth', 'can:pkl.data.menu'])->group(function () {
         
         // Tempat PKL - Export, Import & Template
         Route::get('/tempat/export/excel', [\App\Http\Controllers\PklTempatController::class, 'exportExcel'])->name('tempat.export.excel');
@@ -207,7 +207,7 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: MUTASI SISWA
     // Permission: mutasi.view (Admin Erapor)
     // ==========================================================================
-    Route::group(['prefix' => 'mutasi', 'as' => 'mutasi.', 'middleware' => ['can:mutasi.view']], function () {
+    Route::group(['prefix' => 'mutasi', 'as' => 'mutasi.', 'middleware' => ['can:mutasi.menu']], function () {
         Route::get('/keluar', [MutasiKeluarController::class, 'index'])->name('keluar.index');
         Route::post('/keluar', [MutasiKeluarController::class, 'store'])->name('keluar.store');
         Route::delete('/keluar/{id}', [MutasiKeluarController::class, 'destroy'])->name('keluar.destroy');
@@ -232,7 +232,7 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: PENILAIAN / INPUT NILAI
     // Permission: nilai.view (Guru & Admin Erapor)
     // ==========================================================================
-    Route::group(['prefix' => 'master/nilai', 'as' => 'master.', 'middleware' => ['can:nilai.view']], function () {
+    Route::group(['prefix' => 'nilai', 'as' => 'nilai.', 'middleware' => ['can:nilai.menu']], function () {
         
         // 1. Sumatif
         Route::group(['prefix' => 'sumatif', 'as' => 'sumatif.', 'controller' => SumatifController::class], function () {
@@ -250,7 +250,7 @@ Route::middleware(['auth'])->group(function () {
 
             // ✅ PERBAIKAN DI SINI:
             // 1. Cukup gunakan string 'checkPrerequisite' (karena controller sudah didefinisikan di group)
-            // 2. Name cukup 'check_prerequisite' (prefix 'master.sumatif.' otomatis ditambahkan oleh group)
+            // 2. Name cukup 'check_prerequisite' (prefix 'nilai.sumatif.' otomatis ditambahkan oleh group)
             Route::get('check-prerequisite', 'checkPrerequisite')->name('check_prerequisite');
 
             // Aksi Simpan (Butuh Permission)
@@ -272,7 +272,7 @@ Route::middleware(['auth'])->group(function () {
             });
         });
 
-        // 5. Rekap Nilai (Finalisasi) - ✅ Route Name: master.rekap.index
+        // 5. Rekap Nilai (Finalisasi) - ✅ Route Name: nilai.rekap.index
         Route::group(['prefix' => 'rekap-nilai', 'as' => 'rekap.', 'controller' => RekapNilaiController::class], function () {
             Route::get('/', 'index')->name('index');
             Route::post('/simpan', 'store')->name('store');
@@ -283,7 +283,7 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: PENILAIAN / INPUT NILAI Ekstrakurikuler
     // Permission: ekskul.view (Guru & Admin Erapor)
     // ==========================================================================
-    Route::group(['prefix' => 'ekskul', 'as' => 'ekskul.', 'middleware' => ['can:ekskul.view']], function () {
+    Route::group(['prefix' => 'ekskul', 'as' => 'ekskul.', 'middleware' => ['can:ekskul.menu']], function () {
         
         // Group Controller: EkskulNilaiController
         Route::controller(EkskulNilaiController::class)->group(function () {
@@ -305,7 +305,7 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: PENILAIAN PKL
     // Permission: nilai.view
     // ==========================================================================
-    Route::group(['prefix' => 'pkl/nilai', 'as' => 'pkl.nilai.', 'middleware' => ['can:nilai.view']], function () {
+    Route::group(['prefix' => 'pkl/nilai', 'as' => 'pkl.nilai.', 'middleware' => ['can:pkl.nilai.menu']], function () {
         Route::controller(\App\Http\Controllers\PklNilaiController::class)->group(function () {
             Route::get('/', 'index')->name('index'); // Halaman Dashboard Monitoring
             Route::get('/input', 'input')->name('input'); // Halaman Form Split Screen
@@ -318,7 +318,7 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: CATATAN WALI KELAS & REKAP RAPOR
     // Permission: nilai.view (Guru & Admin Erapor)
     // ==========================================================================
-    Route::group(['prefix' => 'walikelas', 'as' => 'walikelas.', 'middleware' => ['can:nilai.view']], function () {
+    Route::group(['prefix' => 'walikelas', 'as' => 'walikelas.', 'middleware' => ['can:nilai.menu']], function () {
         
         // 1. Custom Kokurikuler By Guru Wali Kelas
         Route::controller(CatatanKokurikulerController::class)->prefix('kokurikuler')->name('cakok.')->group(function () {
@@ -355,12 +355,12 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: LAPORAN & RAPOR 
     // Permission: rapor.view (Guru & Admin Erapor)
     // ==========================================================================
-    Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.', 'middleware' => ['can:rapor.view']], function () {
+    Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.', 'middleware' => ['can:rapor.menu']], function () {
         
         // 3. Nilai Akhir pindah sini
         Route::group(['prefix' => 'akhir', 'as' => 'nilaiakhir.', 'controller' => NilaiAkhirController::class], function () {
             Route::get('/', 'index')->name('index');
-            Route::post('hitung', 'hitung')->name('hitung')->middleware('can:nilai.input');
+            Route::post('hitung', 'hitung')->name('hitung')->middleware('can:nilai.menu');
         });
     
         // Monitoring
@@ -387,11 +387,11 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/unlock', [RaporController::class, 'unlockRapor'])->name('unlock_rapor');
         });
 
-        // CETAK COVER RAPOR (FITUR BARU)
-        Route::get('/cover', [\App\Http\Controllers\RaporCoverController::class, 'index'])->name('cover.index');
+        
         
         // Aksi Download PDF Cover (Butuh permission cetak)
         Route::middleware('can:rapor.cetak')->group(function() {
+            Route::get('/cover', [\App\Http\Controllers\RaporCoverController::class, 'index'])->name('cover.index');
             Route::get('/cover/print/{id_siswa}', [\App\Http\Controllers\RaporCoverController::class, 'cetak_satuan'])->name('cover.cetak_satuan');
             Route::get('/cover/print-massal', [\App\Http\Controllers\RaporCoverController::class, 'cetak_massal'])->name('cover.cetak_massal');
         });
@@ -399,7 +399,7 @@ Route::middleware(['auth'])->group(function () {
 
     
     // MODULE: LEDGER
-    Route::group(['prefix' => 'ledger', 'as' => 'ledger.', 'middleware' => ['can:ledger.view']], function () {
+    Route::group(['prefix' => 'ledger', 'as' => 'ledger.', 'middleware' => ['can:ledger.menu']], function () {
         Route::get('/data-nilai', [LedgerController::class, 'index'])->name('ledger_index');
         
         Route::middleware('can:ledger.cetak')->group(function() {
@@ -412,7 +412,7 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: RAPOR PKL (Monitoring & Cetak)
     // Permission: rapor.view
     // ==========================================================================
-    Route::group(['prefix' => 'pkl/rapor', 'as' => 'pkl.rapor.', 'middleware' => ['can:rapor.view']], function () {
+    Route::group(['prefix' => 'pkl/rapor', 'as' => 'pkl.rapor.', 'middleware' => ['can:rapor.menu']], function () {
         
         Route::get('/monitoring', [\App\Http\Controllers\PklRaporMonitoringController::class, 'index'])->name('monitoring.index');
         Route::get('/cetak', [\App\Http\Controllers\PklRaporController::class, 'index'])->name('cetak.index');
@@ -432,73 +432,67 @@ Route::middleware(['auth'])->group(function () {
     // ==========================================================================
     // MODULE: PENGATURAN / SETTINGS
     // ==========================================================================
-    Route::group(['prefix' => 'settings', 'as' => 'settings.', 'middleware' => ['auth']], function () {
+    Route::group(['prefix' => 'settings', 'as' => 'settings.', 'middleware' => ['can:setting.menu']], function () {
 
         // A. SETTING SYSTEM (User & Permission - Admin Only)
         Route::group(['prefix' => 'system', 'as' => 'system.'], function () {
             
             // Users Granular
             Route::controller(UserController::class)->prefix('users')->name('users.')->group(function () {
-                Route::get('/', 'index')->name('index')->middleware('can:users.read');
-                Route::get('/create', 'create')->name('create')->middleware('can:users.edit');
-                Route::post('/', 'store')->name('store')->middleware('can:users.edit');
-                Route::get('/{user}/edit', 'edit')->name('edit')->middleware('can:users.edit');
-                Route::put('/{user}', 'update')->name('update')->middleware('can:users.edit');
-                Route::delete('/{user}', 'destroy')->name('destroy')->middleware('can:users.edit');
+                Route::get('/', 'index')->name('index');
+                Route::get('/create', 'create')->name('create');
+                Route::post('/', 'store')->name('store');
+                Route::get('/{user}/edit', 'edit')->name('edit');
+                Route::put('/{user}', 'update')->name('update');
+                Route::delete('/{user}', 'destroy')->name('destroy');
             });
 
             // Roles
-            Route::resource('roles', RoleController::class)->middleware('can:roles.menu');
+            Route::resource('roles', RoleController::class);
         });
 
         // B. SETTING ERAPOR (Akademik - Admin Erapor Only)
-        Route::group(['prefix' => 'erapor', 'as' => 'erapor.', 'middleware' => ['can:settings.erapor.read']], function () {
+        Route::group(['prefix' => 'erapor', 'as' => 'erapor.'], function () {
             
             // Kokurikuler
             Route::controller(SetKokurikulerController::class)->prefix('kokurikuler')->name('kok.')->group(function () {
                 Route::get('/', 'index')->name('index'); 
-                Route::middleware('can:settings.erapor.update')->group(function() {
-                    Route::post('/', 'store')->name('store');
-                    Route::put('/{id}', 'update')->name('update');
-                    Route::delete('/{id}', 'destroy')->name('destroy');
-                    Route::patch('/{id}/toggle', 'toggleStatus')->name('toggle');
-                });
+                Route::post('/', 'store')->name('store');
+                Route::put('/{id}', 'update')->name('update');
+                Route::delete('/{id}', 'destroy')->name('destroy');
+                Route::patch('/{id}/toggle', 'toggleStatus')->name('toggle');
             });
 
             // Bobot Nilai
             Route::controller(BobotNilaiController::class)->prefix('bobot-nilai')->name('bobot.')->group(function () {
                 Route::get('/', 'index')->name('index');
-                Route::middleware('can:settings.erapor.update')->group(function() {
-                    Route::post('/', 'store')->name('store');
-                    Route::put('/{id}', 'update')->name('update');
-                    Route::delete('/{id}', 'destroy')->name('destroy');
-                });
+                Route::post('/', 'store')->name('store');
+                Route::put('/{id}', 'update')->name('update');
+                Route::delete('/{id}', 'destroy')->name('destroy');
             });
 
             // MODULE: SEASON
-            Route::prefix('season')->controller(SeasonController::class)->group(function () {
-                Route::get('/', 'index')->name('season.index');
-                Route::post('/store', 'store')->name('season.store');
-                Route::put('/{id}', 'update')->name('season.update'); 
-                Route::delete('/{id}', 'destroy')->name('season.destroy');
+            Route::prefix('season')->name('season.')->controller(SeasonController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/store', 'store')->name('store');
+                Route::put('/{id}', 'update')->name('update'); 
+                Route::delete('/{id}', 'destroy')->name('destroy');
             });
 
             // Event & Notifikasi Dashboard
             Route::controller(EventController::class)->prefix('event')->name('event.')->group(function () {
                 Route::get('/', 'index')->name('index');
-                Route::middleware('can:settings.erapor.update')->group(function() {
-                    Route::post('/store', 'store')->name('store');
-                    Route::put('/{id}', 'updateEvent')->name('update');
-                    Route::delete('/{id}', 'destroyEvent')->name('delete');
-                    
-                    Route::put('/notifikasi/{id}', 'updateNotifikasi')->name('notifikasi.update');
-                    Route::delete('/notifikasi/{id}', 'destroyNotifikasi')->name('notifikasi.delete');
-                });
+                Route::post('/store', 'store')->name('store');
+                Route::put('/{id}', 'updateEvent')->name('update');
+                Route::delete('/{id}', 'destroyEvent')->name('delete');
+                
+                Route::put('/notifikasi/{id}', 'updateNotifikasi')->name('notifikasi.update');
+                Route::delete('/notifikasi/{id}', 'destroyNotifikasi')->name('notifikasi.delete');
             });
         });
 
         // C. Setting ERAPOR PKL (Admin Erapor)
-        Route::group(['prefix' => 'pkl', 'as' => 'pkl.', 'middleware' => ['can:settings.erapor.read']], function () {
+        Route::group(['prefix' => 'pkl', 'as' => 'pkl.'], function () {
             Route::controller(\App\Http\Controllers\PklSettingController::class)->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('/store-massal', 'storeMassal')->name('store_massal');
@@ -508,7 +502,7 @@ Route::middleware(['auth'])->group(function () {
                 Route::post('/import-excel', 'importExcel')->name('import');
             });
 
-            // 2. REVISI: Pengaturan Season PKL
+            // Pengaturan Season PKL
             Route::prefix('season')->controller(\App\Http\Controllers\PklSeasonController::class)->name('season.')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('/store', 'store')->name('store');

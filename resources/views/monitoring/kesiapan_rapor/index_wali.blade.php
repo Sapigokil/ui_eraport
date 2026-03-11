@@ -212,7 +212,7 @@
                                                     @endif
                                                 </td>
                                                 <td class="align-middle text-center">
-                                                    <a href="{{ route('master.rekap.index', ['id_kelas' => $dataKelas->kelas->id_kelas, 'id_mapel' => $m['id_mapel'], 'semester' => $semester, 'tahun_ajaran' => $tahun_ajaran]) }}" target="_blank" class="btn btn-xs btn-outline-primary mb-0" title="Lihat Detail"><i class="fas fa-search"></i></a>
+                                                    <a href="{{ route('nilai.rekap.index', ['id_kelas' => $dataKelas->kelas->id_kelas, 'id_mapel' => $m['id_mapel'], 'semester' => $semester, 'tahun_ajaran' => $tahun_ajaran]) }}" target="_blank" class="btn btn-xs btn-outline-primary mb-0" title="Lihat Detail"><i class="fas fa-search"></i></a>
                                                 </td>
                                             </tr>
                                             @endforeach

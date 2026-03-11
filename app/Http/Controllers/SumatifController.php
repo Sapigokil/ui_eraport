@@ -562,7 +562,7 @@ class SumatifController extends Controller
             $totalSkipped = $import->getSkippedCount();
             
             $message = "Import selesai. Berhasil disimpan: **{$totalStored} baris**. Dilewati: **{$totalSkipped} baris**.";
-            return redirect()->route('master.sumatif.s' . $sumatifId, $request->query())->with('success', $message);
+            return redirect()->route('nilai.sumatif.s' . $sumatifId, $request->query())->with('success', $message);
 
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();

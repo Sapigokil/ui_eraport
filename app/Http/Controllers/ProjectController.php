@@ -236,7 +236,7 @@ class ProjectController extends Controller
             $totalSkipped = $import->getSkippedCount();
             
             $message = "Import selesai. Berhasil: {$totalStored}. Dilewati: {$totalSkipped}.";
-            return redirect()->route('master.project.index', $request->query())->with('success', $message);
+            return redirect()->route('nilai.project.index', $request->query())->with('success', $message);
 
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'Import Gagal: ' . $e->getMessage());

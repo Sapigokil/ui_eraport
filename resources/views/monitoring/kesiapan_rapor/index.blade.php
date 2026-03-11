@@ -201,7 +201,7 @@
                                                                         @endif
                                                                     </td>
                                                                     <td class="align-middle text-center py-2">
-                                                                        <a href="{{ route('master.rekap.index', [
+                                                                        <a href="{{ route('nilai.rekap.index', [
                                                                             'id_kelas' => $data->kelas->id_kelas, 
                                                                             'id_mapel' => $m['id_mapel'], 
                                                                             'semester' => $semester, 

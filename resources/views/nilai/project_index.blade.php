@@ -100,7 +100,7 @@
 
                         {{-- FORM FILTER UTAMA (STYLE BERSIH / CLEAN) --}}
                         <div class="p-4 border-bottom">
-                            <form action="{{ route('master.project.index') }}" method="GET" class="row align-items-end mb-0">
+                            <form action="{{ route('nilai.project.index') }}" method="GET" class="row align-items-end mb-0">
                                 {{-- Filter Kelas --}}
                                 <div class="col-md-3 mb-3">
                                     <label for="id_kelas" class="form-label">Kelas:</label>
@@ -193,7 +193,7 @@
                             @if($siswa->isEmpty())
                                 <p class="text-center text-secondary">Silakan pilih filter untuk menampilkan daftar siswa.</p>
                             @else
-                                <form action="{{ route('master.project.store') }}" method="POST">
+                                <form action="{{ route('nilai.project.store') }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="id_kelas" value="{{ request('id_kelas') }}">
                                     <input type="hidden" name="id_mapel" value="{{ request('id_mapel') }}">
@@ -250,7 +250,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title">Download Template Project</h5></div>
-            <form action="{{ route('master.project.download') }}" method="GET">
+            <form action="{{ route('nilai.project.download') }}" method="GET">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Kelas:</label>
@@ -286,7 +286,7 @@
                 <h5 class="modal-title font-weight-normal"><i class="fas fa-file-import me-2 text-success"></i>Import Nilai Project</h5>
                 <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('master.project.import') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('nilai.project.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -348,7 +348,7 @@
 
             if(semester && tahunAjaran) {
                 $.ajax({
-                    url: "{{ route('master.project.check_prerequisite') }}",
+                    url: "{{ route('nilai.project.check_prerequisite') }}",
                     method: "GET",
                     data: {
                         id_kelas: idKelas,
@@ -404,7 +404,7 @@
             dropdownMapel.html('<option value="">Memuat...</option>');
             if (idKelas) {
                 $.ajax({
-                    url: "{{ route('master.project.get_mapel', '') }}/" + idKelas,
+                    url: "{{ route('nilai.project.get_mapel', '') }}/" + idKelas,
                     method: "GET",
                     success: function(res) {
                         let html = '<option value="">-- Pilih Mapel --</option>';
