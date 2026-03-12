@@ -23,6 +23,17 @@
                         
                         <div class="card-body pb-2 px-4">
                             
+                            {{-- Notifikasi Error Validasi --}}
+                            @if ($errors->any())
+                                <div class="alert alert-danger text-white mb-4" role="alert">
+                                    <ul class="mb-0">
+                                        @foreach ($errors->all() as $error)
+                                            <li>{{ $error }}</li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @endif
+
                             <form method="POST" action="{{ route('settings.system.users.update', $user->id) }}">
                                 @csrf
                                 @method('PUT')
@@ -34,38 +45,46 @@
                                     <label for="inputName" class="form-label">Nama Lengkap</label>
                                     <input type="text" id="inputName" name="name" 
                                            value="{{ old('name', $user->name) }}" 
-                                           class="form-control rounded-pill py-2">
+                                           class="form-control border px-3 py-2" required>
                                 </div>
                                 
-                                {{-- 2. Input Email (BISA DIUBAH) --}}
+                                {{-- 2. Input Email --}}
                                 <div class="mb-3"> 
                                     <label for="inputEmail" class="form-label">Email</label>
                                     <input type="email" id="inputEmail" name="email" 
                                            value="{{ old('email', $user->email) }}" 
-                                           class="form-control rounded-pill py-2">
+                                           class="form-control border px-3 py-2" required>
+                                </div>
+
+                                {{-- TAMBAHAN: 3. Input Password (Opsional) --}}
+                                <div class="mb-3">
+                                    <label for="inputPassword" class="form-label">Password Baru <span class="text-xs text-muted fw-normal">(Kosongkan jika tidak ingin mengubah password)</span></label>
+                                    <input type="password" id="inputPassword" name="password" 
+                                           class="form-control border px-3 py-2" 
+                                           placeholder="Minimal 8 Karakter">
                                 </div>
                                 
                                 <hr class="my-4">
 
                                 <h6 class="text-sm font-weight-bolder mb-3 text-danger">Pengaturan Role & Status</h6>
 
-                                {{-- 3. PILIHAN ROLE (Select) --}}
+                                {{-- 4. PILIHAN ROLE (Select) --}}
                                 <div class="mb-3">
                                     <label for="role_select" class="form-label">Role Pengguna</label>
-                                    <select class="form-select rounded-pill py-2" id="role_select" name="role_name">
+                                    <select class="form-select border px-3 py-2" id="role_select" name="role_name" required>
                                         <option value="">-- Pilih Role --</option>
                                         @foreach ($roles as $role)
                                             <option value="{{ $role->name }}" 
                                                     {{ $user->hasRole($role->name) ? 'selected' : '' }}>
-                                                {{ Str::title($role->name) }}
+                                                {{ Str::title(str_replace('_', ' ', $role->name)) }}
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
                                 
-                                {{-- 4. STATUS AKTIF/NONAKTIF --}}
-                                <div class="form-check form-switch d-flex align-items-center mb-4">
-                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" value="1" {{ $user->is_active ? 'checked' : '' }}>
+                                {{-- 5. STATUS AKTIF/NONAKTIF --}}
+                                <div class="form-check form-switch d-flex align-items-center mb-4 ps-0 mt-4">
+                                    <input class="form-check-input ms-0" type="checkbox" id="is_active" name="is_active" value="1" {{ $user->is_active ? 'checked' : '' }}>
                                     <label class="form-check-label mb-0 ms-3" for="is_active">
                                         Status Akun Aktif (Izinkan Login)
                                     </label>

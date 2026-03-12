@@ -47,7 +47,7 @@
                                             @php
                                                 // UPDATE PENTING: Sesuaikan nama role dengan yang ada di screenshot Anda
                                                 // Tambahkan 'admin_erapor' dan 'guru_erapor' agar terdeteksi
-                                                $isProtected = $user->hasAnyRole(['developer', 'admin', 'guru', 'admin_erapor', 'guru_erapor', 'guru_ekskul']);
+                                                $isProtected = $user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor', 'guru_ekskul']);
                                                 
                                                 // Cek apakah ini akun sendiri
                                                 $isSelf = Auth::id() === $user->id;

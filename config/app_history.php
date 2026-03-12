@@ -17,6 +17,14 @@ return [
 
     'changelog' => [
         [
+            'version' => '1.0.13beta',
+            'date'    => '2026-03-11',
+            'notes'   => [
+                'Memperbaiki Bug Import Export Excel untuk Tempat PKL',
+                'Memperbaiki halaman user agar Admin bisa mengupdate password user lain tanpa harus mengisi password baru (password tetap jika kolom password dikosongkan)',
+            ],
+        ],
+        [
             'version' => '1.0.12',
             'date'    => '2026-03-11',
             'notes'   => [

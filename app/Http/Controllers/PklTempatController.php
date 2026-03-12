@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\PklTempat;
 use App\Models\Guru;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PklTempatExport;
 
 class PklTempatController extends Controller
 {
@@ -129,92 +131,26 @@ class PklTempatController extends Controller
     }
 
     // =====================================================================
-    // FUNGSI IMPORT, EXPORT, & TEMPLATE
+    // FUNGSI IMPORT, EXPORT, & TEMPLATE (Menggunakan Maatwebsite Excel)
     // =====================================================================
 
     /**
-     * Kolom baku untuk Template dan Export
-     */
-    private function getExcelColumns()
-    {
-        return [
-            'Nama Perusahaan', 'Bidang Usaha', 'Nama Pimpinan', 'Alamat Lengkap', 
-            'Kota', 'No Telp Perusahaan', 'Email', 'No Surat MOU', 'Tanggal MOU (YYYY-MM-DD)', 
-            'Nama Instruktur', 'No Telp Instruktur', 'Status Aktif (1/0)'
-        ];
-    }
-
-    /**
-     * Mengunduh Template Kosong
+     * Mengunduh Template Kosong (.xlsx)
      */
     public function downloadTemplate()
     {
-        $fileName = 'Template_Import_Tempat_PKL.csv';
-        $columns = $this->getExcelColumns();
-
-        $headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
-
-        $callback = function() use($columns) {
-            $file = fopen('php://output', 'w');
-            // Tambahkan BOM agar Excel mengenali UTF-8
-            fputs($file, $bom =( chr(0xEF) . chr(0xBB) . chr(0xBF) ));
-            fputcsv($file, $columns, ';');
-            // Tambahkan 1 baris contoh
-            fputcsv($file, ['PT. Contoh Abadi', 'Teknologi', 'Budi Santoso', 'Jl. Merdeka No 1', 'Salatiga', '0298-123456', 'info@contoh.com', '001/MOU/2024', '2024-01-01', 'Agus', '08123456789', '1'], ';');
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        // Parameter 'true' untuk mode template (isi dummy data)
+        return Excel::download(new PklTempatExport(true), 'Template_Import_Tempat_PKL.xlsx');
     }
 
     /**
-     * Export Data ke Excel (Format CSV UTF-8 yang terbaca native di Excel)
+     * Export Data ke Excel (.xlsx)
      */
     public function exportExcel()
     {
-        $fileName = 'Data_Tempat_PKL_' . date('Ymd_His') . '.csv';
-        $tempatPkls = PklTempat::all();
-        $columns = $this->getExcelColumns();
-
-        $headers = [
-            "Content-type"        => "text/csv",
-            "Content-Disposition" => "attachment; filename=$fileName",
-            "Pragma"              => "no-cache",
-            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-            "Expires"             => "0"
-        ];
-
-        $callback = function() use($tempatPkls, $columns) {
-            $file = fopen('php://output', 'w');
-            fputs($file, $bom =( chr(0xEF) . chr(0xBB) . chr(0xBF) ));
-            fputcsv($file, $columns, ';');
-
-            foreach ($tempatPkls as $row) {
-                fputcsv($file, [
-                    $row->nama_perusahaan,
-                    $row->bidang_usaha,
-                    $row->nama_pimpinan,
-                    $row->alamat_perusahaan,
-                    $row->kota,
-                    $row->no_telp_perusahaan,
-                    $row->email_perusahaan,
-                    $row->no_surat_mou,
-                    $row->tanggal_mou ? $row->tanggal_mou->format('Y-m-d') : '',
-                    $row->nama_instruktur,
-                    $row->no_telp_instruktur,
-                    $row->is_active ? '1' : '0'
-                ], ';');
-            }
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        $fileName = 'Data_Tempat_PKL_' . date('Ymd_His') . '.xlsx';
+        // Parameter 'false' untuk mode export data murni
+        return Excel::download(new PklTempatExport(false), $fileName);
     }
 
     /**

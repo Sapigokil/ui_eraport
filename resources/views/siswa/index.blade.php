@@ -53,7 +53,7 @@
                                             </ul>
                                         </div>
 
-                                        @can('master.view')
+                                        @can('master.menu')
                                         {{-- 2. Dropdown Import --}}
                                         <div class="dropdown me-2">
                                             <button class="btn btn-outline-white btn-sm mb-0 dropdown-toggle" type="button" id="dropdownImport" data-bs-toggle="dropdown" aria-expanded="false">
@@ -214,7 +214,7 @@
                                                     <i class="fas fa-eye text-sm"></i>
                                                 </a>
                                                 
-                                                @can('master.view')
+                                                @can('master.menu')
                                                 <a href="{{ route('master.siswa.edit', $siswa->id_siswa) }}" class="btn btn-link text-primary text-xs mb-0 px-2" title="Edit Data">
                                                     <i class="fas fa-pencil-alt text-sm"></i>
                                                 </a>

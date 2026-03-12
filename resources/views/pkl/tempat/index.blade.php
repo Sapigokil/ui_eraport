@@ -20,7 +20,7 @@
                                 </h6>
                                 
                                 <div class="d-flex me-3">
-                                    @can('master.view')
+                                    @can('master.menu')
                                     
                                     {{-- Tombol Export Excel --}}
                                     <a href="{{ route('pkl.tempat.export.excel') }}" class="btn btn-success btn-sm mb-0 me-2" title="Export ke Excel">
@@ -167,7 +167,7 @@
                                                 @endif
                                             </td>
                                             <td class="align-middle">
-                                                @can('master.view')
+                                                @can('master.menu')
                                                 <a href="{{ route('pkl.tempat.edit', $tempat->id) }}" class="text-primary font-weight-bold text-xs me-2" data-bs-toggle="tooltip" title="Edit Data">
                                                     <i class="fas fa-pencil-alt me-1"></i> Edit
                                                 </a>
@@ -235,7 +235,7 @@
                             <i class="fas fa-info-circle me-1"></i> Pastikan format file sesuai dengan template standar.
                             <div class="mt-2 text-center">
                                 <a href="{{ route('pkl.tempat.template') }}" class="btn btn-dark btn-sm mb-0">
-                                    <i class="fas fa-download me-1"></i> Unduh Template Excel
+                                    <i class="fas fa-download me-1"></i> Unduh Template Excel (.xlsx)
                                 </a>
                             </div>
                         </div>
