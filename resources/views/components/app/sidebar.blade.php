@@ -505,6 +505,26 @@
                     </ul>
                 </div>
             </li>
+
+            {{-- Backup & Restore --}}
+            @php 
+                $backupRestoreRoutes = ['settings.backup.*'];
+                $isBackupRestoreActive = request()->routeIs($backupRestoreRoutes);
+            @endphp
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#settingBackupRestoreMenu" class="nav-link {{ $isBackupRestoreActive ? 'active' : '' }}" aria-controls="settingBackupRestoreMenu" role="button" aria-expanded="{{ $isBackupRestoreActive ? 'true' : 'false' }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-database text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Backup & Restore</span>
+                </a>
+                <div class="collapse {{ $isBackupRestoreActive ? 'show' : '' }}" id="settingBackupRestoreMenu">
+                    <ul class="nav">
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.backup.index') ? 'active' : '' }}" href="{{ route('settings.backup.index') }}"><span class="sidenav-normal"> Backup & Restore </span></a></li>
+                        {{-- <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.restore.index') ? 'active' : '' }}" href="{{ route('settings.restore.index') }}"><span class="sidenav-normal"> Restore Data </span></a></li> --}}
+                    </ul>
+                </div>
+            </li>
             @endcan
 
             <hr class="horizontal light my-2">

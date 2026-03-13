@@ -510,6 +510,16 @@ Route::middleware(['auth'])->group(function () {
                 Route::delete('/{id}', 'destroy')->name('destroy');
             });
         });
+
+        // Backup & Restore Database
+        Route::controller(\App\Http\Controllers\BackupRestoreController::class)->prefix('backup')->name('backup.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/create', 'createBackup')->name('create');
+            Route::get('/download/{file_name}', 'download')->name('download');
+            Route::post('/upload', 'uploadBackup')->name('upload');
+            Route::post('/restore/{file_name}', 'restore')->name('restore');
+            Route::delete('/delete/{file_name}', 'delete')->name('delete');
+        });
     });
 
 });
