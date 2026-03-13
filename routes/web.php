@@ -244,13 +244,13 @@ Route::middleware(['auth'])->group(function () {
             Route::get('s4', 'sumatif4')->name('s4'); 
             Route::get('s5', 'sumatif5')->name('s5'); 
 
-            // Route Helper
+            // Route Helper (AJAX Dropdown)
             Route::get('get-mapel/{id_kelas}', 'getMapelByKelas')->name('get_mapel');
+            Route::get('get-kelas-guru/{id_mapel}/{id_guru}', 'getKelasByMapelGuru')->name('get_kelas_guru'); // <-- Route baru yang sudah dirapikan
+            
             Route::get('download-template', 'downloadTemplate')->name('download');
 
-            // ✅ PERBAIKAN DI SINI:
-            // 1. Cukup gunakan string 'checkPrerequisite' (karena controller sudah didefinisikan di group)
-            // 2. Name cukup 'check_prerequisite' (prefix 'nilai.sumatif.' otomatis ditambahkan oleh group)
+            // Route Check Prerequisite
             Route::get('check-prerequisite', 'checkPrerequisite')->name('check_prerequisite');
 
             // Aksi Simpan (Butuh Permission)
@@ -260,12 +260,17 @@ Route::middleware(['auth'])->group(function () {
             });
         });
 
-        // 2. Project P5
+        // 2. Project
         Route::group(['prefix' => 'project', 'as' => 'project.', 'controller' => ProjectController::class], function () {
             Route::get('/', 'index')->name('index'); 
             Route::get('/download-template', 'downloadTemplate')->name('download'); 
+            
+            // Route Helper (AJAX Dropdown)
             Route::get('get-mapel/{id_kelas}', 'getMapelByKelas')->name('get_mapel');
+            Route::get('get-kelas-guru/{id_mapel}/{id_guru}', 'getKelasByMapelGuru')->name('get_kelas_guru'); // <-- Route AJAX Baru
+            
             Route::get('check-prerequisite', 'checkPrerequisite')->name('check_prerequisite');
+            
             Route::middleware('can:nilai.input')->group(function() {
                 Route::post('simpan', 'simpan')->name('store'); 
                 Route::post('/import', 'import')->name('import');

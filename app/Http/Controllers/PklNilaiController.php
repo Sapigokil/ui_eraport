@@ -13,6 +13,7 @@ use App\Models\Guru;
 use App\Models\PklTempat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class PklNilaiController extends Controller
 {
@@ -37,8 +38,18 @@ class PklNilaiController extends Controller
         $semester = $request->semester ?? ($season ? $season->semester : $defaultSemesterFallback);
 
         $id_kelas = $request->id_kelas;
-        $id_guru = $request->id_guru;
         $id_tempat = $request->id_tempat;
+        $status_penilaian = $request->status_penilaian; // Tangkap request status
+
+        // ==========================================
+        // LOGIKA FILTER ROLE (DATA ISOLATION)
+        // ==========================================
+        $user = Auth::user();
+        if ($user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor'])) {
+            $id_guru = $request->id_guru;
+        } else {
+            $id_guru = $user->id_guru;
+        }
 
         $kelasList = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get();
         $guruList = Guru::orderBy('nama_guru')->get();
@@ -59,9 +70,28 @@ class PklNilaiController extends Controller
             ->leftJoin('pkl_tempat', 'pkl_penempatan.id_pkltempat', '=', 'pkl_tempat.id')
             ->leftJoin('pkl_catatansiswa', 'pkl_penempatan.id', '=', 'pkl_catatansiswa.id_penempatan');
 
+        // EKSEKUSI FILTER
         if ($id_kelas) $query->where('pkl_gurusiswa.id_kelas', $id_kelas);
-        if ($id_guru) $query->where('pkl_gurusiswa.id_guru', $id_guru);
+        
+        if ($user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor'])) {
+            if ($id_guru) $query->where('pkl_gurusiswa.id_guru', $id_guru);
+        } else {
+            // PENGAMANAN ABSOLUT
+            $query->where('pkl_gurusiswa.id_guru', $id_guru ?: 0);
+        }
+
         if ($id_tempat) $query->where('pkl_penempatan.id_pkltempat', $id_tempat);
+
+        // FILTER STATUS PENILAIAN
+        if ($status_penilaian !== null && $status_penilaian !== '') {
+            if ($status_penilaian === 'belum') {
+                $query->whereNull('pkl_catatansiswa.status_penilaian');
+            } elseif ($status_penilaian === '0') {
+                $query->where('pkl_catatansiswa.status_penilaian', 0);
+            } elseif ($status_penilaian === '1') {
+                $query->where('pkl_catatansiswa.status_penilaian', 1);
+            }
+        }
 
         $dataSiswa = $query->select(
                 'pkl_penempatan.id as id_penempatan',
@@ -85,7 +115,7 @@ class PklNilaiController extends Controller
         return view('pkl.nilai.index', compact(
             'tahun_ajaran', 'semester', 'tahunAjaranList',
             'kelasList', 'guruList', 'tempatList',
-            'id_kelas', 'id_guru', 'id_tempat',
+            'id_kelas', 'id_guru', 'id_tempat', 'status_penilaian',
             'dataSiswa', 'totalSiswa', 'rawCount', 'finalCount', 'persenRaw', 'persenFinal'
         ));
     }
@@ -95,7 +125,14 @@ class PklNilaiController extends Controller
     // ==============================================================
     public function input(Request $request)
     {
-        $id_guru = $request->id_guru ?? auth()->user()->id_guru;
+        $user = Auth::user();
+        
+        // PENGAMANAN LAPIS DUA UNTUK HALAMAN INPUT
+        if ($user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor'])) {
+            $id_guru = $request->id_guru ?? $user->id_guru;
+        } else {
+            $id_guru = $user->id_guru; // Kunci paksa
+        }
         
         $tahunSekarang = date('Y');
         $bulanSekarang = date('n');
@@ -152,7 +189,7 @@ class PklNilaiController extends Controller
         $persenFinal = $totalSiswa > 0 ? round(($finalCount / $totalSiswa) * 100) : 0;
 
         return view('pkl.nilai.input', compact(
-            'tahun_ajaran', 'semester', 'id_guru', // id_guru dilempar ke view
+            'tahun_ajaran', 'semester', 'id_guru', 
             'tpData', 'indikatorData', 'rubrikData', 
             'dataSiswa', 'pembimbingInfo',
             'totalSiswa', 'rawCount', 'finalCount', 'persenRaw', 'persenFinal'

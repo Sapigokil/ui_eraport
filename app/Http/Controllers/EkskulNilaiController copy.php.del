@@ -9,9 +9,7 @@ use App\Models\Siswa;
 use App\Models\Kelas;
 use App\Models\Season;
 use App\Models\NilaiEkskul;
-use App\Models\Guru; // Pastikan model Guru dipanggil
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth; // Pastikan Auth dipanggil
 
 class EkskulNilaiController extends Controller
 {
@@ -21,41 +19,20 @@ class EkskulNilaiController extends Controller
 
     public function indexPeserta(Request $request)
     {
-        $user = Auth::user();
-        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']); 
-        
-        if ($isGuru) {
-            $id_guru_filter = $user->id_guru;
-        } else {
-            $id_guru_filter = $request->id_guru; 
-        }
+        $ekskuls = Ekskul::with('guru')
+            ->withCount('peserta')
+            ->orderBy('nama_ekskul', 'asc')
+            ->paginate(10);
 
-        $guruList = Guru::orderBy('nama_guru')->get();
-
-        $query = Ekskul::with('guru')->withCount('peserta');
-
-        if ($id_guru_filter) {
-            $query->where('id_guru', $id_guru_filter);
-        }
-
-        $ekskuls = $query->orderBy('nama_ekskul', 'asc')->paginate(10)->withQueryString();
-
-        return view('ekskul.peserta_index', compact('ekskuls', 'isGuru', 'id_guru_filter', 'guruList'));
+        return view('ekskul.peserta_index', compact('ekskuls'));
     }
 
     public function editPeserta(Request $request, $id_ekskul)
     {
-        $user = Auth::user();
-        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']);
-
         $ekskul = Ekskul::with('guru')->findOrFail($id_ekskul);
-
-        if ($isGuru && $ekskul->id_guru != $user->id_guru) {
-            return redirect()->route('ekskul.peserta.index')->with('error', 'Akses Ditolak! Anda bukan pembimbing ekstrakurikuler ini.');
-        }
-
         $kelas = Kelas::orderBy('nama_kelas')->get();
         
+        // Hitung peserta per kelas (untuk badge di sidebar)
         $peserta_per_kelas = EkskulSiswa::where('ekskul_siswa.id_ekskul', $id_ekskul)
             ->join('siswa', 'ekskul_siswa.id_siswa', '=', 'siswa.id_siswa')
             ->select('siswa.id_kelas', DB::raw('count(*) as total'))
@@ -93,15 +70,6 @@ class EkskulNilaiController extends Controller
 
     public function updatePeserta(Request $request, $id_ekskul)
     {
-        $user = Auth::user();
-        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']);
-
-        $ekskul = Ekskul::findOrFail($id_ekskul);
-
-        if ($isGuru && $ekskul->id_guru != $user->id_guru) {
-            return redirect()->route('ekskul.peserta.index')->with('error', 'Akses Ditolak! Anda tidak memiliki izin memperbarui ekskul ini.');
-        }
-
         $request->validate([
             'id_kelas_filter' => 'required',
         ]);
@@ -111,12 +79,15 @@ class EkskulNilaiController extends Controller
 
         DB::beginTransaction();
         try {
+            // 1. Ambil semua siswa di kelas yang sedang diedit
             $all_siswa_in_class = Siswa::where('id_kelas', $id_kelas)->pluck('id_siswa')->toArray();
 
+            // 2. Detach (Hapus) siswa di kelas ini dari ekskul tsb
             EkskulSiswa::where('id_ekskul', $id_ekskul)
                 ->whereIn('id_siswa', $all_siswa_in_class)
                 ->delete();
 
+            // 3. Attach (Pasang) kembali siswa yang dicentang
             $data_insert = [];
             foreach ($submitted_ids as $id_siswa) {
                 $data_insert[] = [
@@ -151,19 +122,6 @@ class EkskulNilaiController extends Controller
 
     public function indexNilai(Request $request)
     {
-        // 1. IDENTIFIKASI ROLE & GURU FILTER
-        $user = Auth::user();
-        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']); 
-        
-        if ($isGuru) {
-            $id_guru_filter = $user->id_guru;
-        } else {
-            $id_guru_filter = $request->id_guru; 
-        }
-
-        $guruList = Guru::orderBy('nama_guru')->get();
-
-        // 2. SEASON LOGIC
         $activeSeason = Season::where('is_active', 1)->first();
         
         $defaultSemester = ($activeSeason && $activeSeason->semester == 1) ? 'Ganjil' : 'Genap';
@@ -174,6 +132,7 @@ class EkskulNilaiController extends Controller
         
         $semesterInt = $this->mapSemesterToInt($semesterRaw);
 
+        // Logic Validasi Akses
         $isLocked = true; 
         $accessStatus = 'denied'; 
         $lockMessage = "";
@@ -200,44 +159,31 @@ class EkskulNilaiController extends Controller
             $lockMessage = "Tidak ada Season aktif saat ini.";
         }
 
-        // 3. QUERY EKSKUL BERSERTA FILTER GURU
-        $query = Ekskul::with('guru')
+        $ekskuls = Ekskul::with('guru')
             ->withCount([
                 'peserta', 
-                'nilai as sudah_dinilai' => function ($q) use ($semesterInt, $tahunAjaran) {
-                    $q->where('semester', $semesterInt)
-                      ->where('tahun_ajaran', $tahunAjaran);
+                'nilai as sudah_dinilai' => function ($query) use ($semesterInt, $tahunAjaran) {
+                    $query->where('semester', $semesterInt)
+                          ->where('tahun_ajaran', $tahunAjaran);
                 }
-            ]);
-
-        if ($id_guru_filter) {
-            $query->where('id_guru', $id_guru_filter);
-        }
-
-        $ekskuls = $query->orderBy('nama_ekskul')->get();
+            ])
+            ->orderBy('nama_ekskul')
+            ->get();
 
         return view('ekskul.nilai_index', compact(
-            'ekskuls', 'semesterRaw', 'tahunAjaran', 'isLocked', 'accessStatus', 'lockMessage', 'activeSeason',
-            'isGuru', 'id_guru_filter', 'guruList'
+            'ekskuls', 'semesterRaw', 'tahunAjaran', 'isLocked', 'accessStatus', 'lockMessage', 'activeSeason'
         ));
     }
 
     public function inputNilai(Request $request, $id_ekskul)
     {
-        $user = Auth::user();
-        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']);
-
         $ekskul = Ekskul::with('guru')->findOrFail($id_ekskul);
         
-        // SECURITY LOCK: Mencegah guru akses URL manual untuk input nilai ekskul lain
-        if ($isGuru && $ekskul->id_guru != $user->id_guru) {
-            return redirect()->route('ekskul.nilai.index')->with('error', 'Akses Ditolak! Anda bukan pembimbing ekstrakurikuler ini.');
-        }
-
         $semesterRaw = $request->input('semester');
         $tahunAjaran = $request->input('tahun_ajaran');
         $semesterInt = $this->mapSemesterToInt($semesterRaw);
 
+        // Ambil Siswa Peserta
         $siswa = EkskulSiswa::with(['siswa.kelas'])
             ->where('ekskul_siswa.id_ekskul', $id_ekskul)
             ->join('siswa', 'ekskul_siswa.id_siswa', '=', 'siswa.id_siswa')
@@ -247,10 +193,12 @@ class EkskulNilaiController extends Controller
             ->orderBy('siswa.nama_siswa', 'asc')
             ->get();
 
+        // List Kelas Unik Filter
         $listKelas = $siswa->map(function($item) {
             return $item->siswa->kelas;
         })->unique('id_kelas')->values();
 
+        // Nilai Existing
         $existing_nilai = DB::table('nilai_ekskul')
             ->where('id_ekskul', $id_ekskul)
             ->where('semester', $semesterInt)
@@ -258,6 +206,7 @@ class EkskulNilaiController extends Controller
             ->get()
             ->keyBy('id_siswa');
 
+        // Statistik Header
         $totalPeserta = $siswa->count();
         $sudahDinilai = $existing_nilai->count();
         $persenSelesai = $totalPeserta > 0 ? round(($sudahDinilai / $totalPeserta) * 100) : 0;
@@ -277,27 +226,23 @@ class EkskulNilaiController extends Controller
         ));
     }
 
+    /**
+     * SIMPAN NILAI (STORE) - FIXED & CLEAN
+     */
     public function storeNilai(Request $request)
     {
-        $user = Auth::user();
-        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']);
-
-        $ekskul = Ekskul::findOrFail($request->id_ekskul);
-
-        // SECURITY LOCK
-        if ($isGuru && $ekskul->id_guru != $user->id_guru) {
-            return back()->with('error', 'Akses Ditolak! Anda tidak memiliki izin menyimpan nilai di ekskul ini.');
-        }
-
+        // Validasi dasar
         $request->validate([
             'id_ekskul' => 'required',
             'semester' => 'required',
             'tahun_ajaran' => 'required',
+            // Kita validasi bulk_json_data, bukan selected_ids lagi
             'bulk_json_data' => 'required', 
         ]);
 
         $semesterInt = $this->mapSemesterToInt($request->semester);
         
+        // Decode JSON dari view
         $dataPeserta = json_decode($request->bulk_json_data, true);
 
         if (empty($dataPeserta)) {
@@ -306,7 +251,9 @@ class EkskulNilaiController extends Controller
 
         DB::beginTransaction();
         try {
+            // Loop data dari hasil decode JSON
             foreach ($dataPeserta as $item) {
+                
                 $idSiswa = $item['id_siswa'];
                 $predikat = $item['predikat'] ?? null;
                 $keterangan = $item['keterangan'] ?? null;

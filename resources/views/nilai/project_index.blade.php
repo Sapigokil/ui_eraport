@@ -30,13 +30,11 @@
 @section('content')
 {{-- CSS TAMBAHAN: Hilangkan Spinner pada Input Number --}}
 <style>
-    /* Chrome, Safari, Edge, Opera */
     input::-webkit-outer-spin-button,
     input::-webkit-inner-spin-button {
         -webkit-appearance: none;
         margin: 0;
     }
-    /* Firefox */
     input[type=number] {
         -moz-appearance: textfield;
     }
@@ -49,9 +47,8 @@
             <div class="col-12">
                 <div class="card my-4 shadow-xs border">
                     
-                    {{-- HEADER YANG DIPERBAIKI (GAYA GRADIENT PRIMARY + ICON DEKORASI) --}}
+                    {{-- HEADER YANG DIPERBAIKI --}}
                     @php
-                        // Logic sederhana untuk ambil nama mapel dari koleksi $mapel yang ada
                         $namaMapelProject = 'Mata Pelajaran'; 
                         if(request('id_mapel') && isset($mapel)) {
                             $found = $mapel->firstWhere('id_mapel', request('id_mapel'));
@@ -63,7 +60,6 @@
 
                     <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
                         <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 overflow-hidden position-relative">
-                            {{-- Dekorasi Icon Besar di Pojok Kanan --}}
                             <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3">
                                 <i class="fas fa-rocket text-white" style="font-size: 8rem;"></i>
                             </div>
@@ -73,7 +69,6 @@
                                     <h6 class="text-white text-capitalize mb-0">
                                         <i class="fas fa-rocket me-2"></i> Input Nilai Project
                                     </h6>
-                                    {{-- TEXT DINAMIS: Kelola Project [Nama Mapel] --}}
                                     <p class="text-white text-xs opacity-8 mb-0 ms-4 ps-1">
                                         Kelola Project <strong>{{ $namaMapelProject }}</strong>
                                     </p>
@@ -98,65 +93,89 @@
                             <div class="alert bg-gradient-danger mx-4 text-white">{{ session('error') }}</div>
                         @endif
 
-                        {{-- FORM FILTER UTAMA (STYLE BERSIH / CLEAN) --}}
-                        <div class="p-4 border-bottom">
-                            <form action="{{ route('nilai.project.index') }}" method="GET" class="row align-items-end mb-0">
-                                {{-- Filter Kelas --}}
-                                <div class="col-md-3 mb-3">
-                                    <label for="id_kelas" class="form-label">Kelas:</label>
-                                    <select name="id_kelas" id="id_kelas" required class="form-select ajax-select-kelas" data-target="#mapel_filter" onchange="this.form.submit()">
-                                        <option value="">Pilih Kelas</option>
-                                        @foreach($kelas as $k)
-                                            <option value="{{ $k->id_kelas }}" {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>
-                                                {{ $k->nama_kelas }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                        {{-- FORM FILTER DINAMIS BERDASARKAN ROLE --}}
+                        <div class="p-4 border-bottom bg-gray-100">
+                            <form id="mainFilterForm" action="{{ route('nilai.project.index') }}" method="GET" class="row align-items-end mb-0">
                                 
-                                {{-- Filter Mapel --}}
-                                <div class="col-md-5 mb-3">
-                                    <label for="id_mapel" class="form-label">Mata Pelajaran:</label>
-                                    <select name="id_mapel" id="mapel_filter" required class="form-select" {{ !request('id_kelas') ? 'disabled' : '' }} onchange="this.form.submit()">
-                                        <option value="">Pilih Mapel</option>
-                                        @foreach ($mapel as $m)
-                                            <option value="{{ $m->id_mapel }}" {{ request('id_mapel') == $m->id_mapel ? 'selected' : '' }}>
-                                                {{ $m->nama_mapel }}
-                                            </option>
+                                {{-- KOTAK DEBUG/FILTER ID GURU --}}
+                                <div class="col-md-2 mb-3 d-none">
+                                    <label class="form-label text-primary font-weight-bolder text-uppercase text-xs"><i class="fas fa-bug"></i> Filter Guru</label>
+                                    <select name="id_guru" class="form-select border ps-2 bg-white border-primary" onchange="handleFilterChange('guru')" {{ $isGuru ? 'disabled' : '' }}>
+                                        <option value="">Semua Guru</option>
+                                        @foreach($guruList as $g)
+                                            <option value="{{ $g->id_guru }}" {{ $id_guru_filter == $g->id_guru ? 'selected' : '' }}>{{ $g->nama_guru }}</option>
                                         @endforeach
                                     </select>
+                                    @if($isGuru) <input type="hidden" name="id_guru" id="guru_terkunci" value="{{ $id_guru_filter }}"> @endif
                                 </div>
 
-                                {{-- Filter Semester --}}
+                                @if($isGuru)
+                                    {{-- 🟢 ALUR GURU: MAPEL -> KELAS --}}
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label font-weight-bolder text-uppercase text-xs">Mata Pelajaran (Guru)</label>
+                                        <select name="id_mapel" id="mapel_filter_guru" required class="form-select border ps-2 bg-white" onchange="handleFilterChange('mapel_guru')">
+                                            <option value="">-- Pilih Mapel --</option>
+                                            @foreach ($mapel as $m)
+                                                <option value="{{ $m->id_mapel }}" {{ request('id_mapel') == $m->id_mapel ? 'selected' : '' }}>{{ $m->nama_mapel }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label font-weight-bolder text-uppercase text-xs">Kelas</label>
+                                        <select name="id_kelas" id="kelas_filter_guru" required class="form-select border ps-2 bg-white" {{ !request('id_mapel') ? 'disabled' : '' }} onchange="handleFilterChange('umum')">
+                                            <option value="">-- Pilih Kelas --</option>
+                                            @foreach ($kelas as $k)
+                                                <option value="{{ $k->id_kelas }}" {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @else
+                                    {{-- 🔴 ALUR ADMIN: KELAS -> MAPEL --}}
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label font-weight-bolder text-uppercase text-xs">Kelas (Admin)</label>
+                                        <select name="id_kelas" id="id_kelas" required class="form-select border ps-2 bg-white ajax-select-kelas" data-target="#mapel_filter" onchange="handleFilterChange('kelas_admin')">
+                                            <option value="">-- Pilih Kelas --</option>
+                                            @foreach($kelas as $k)
+                                                <option value="{{ $k->id_kelas }}" {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label font-weight-bolder text-uppercase text-xs">Mata Pelajaran</label>
+                                        <select name="id_mapel" id="mapel_filter" required class="form-select border ps-2 bg-white" {{ !request('id_kelas') ? 'disabled' : '' }} onchange="handleFilterChange('umum')">
+                                            <option value="">-- Pilih Mapel --</option>
+                                            @foreach ($mapel as $m)
+                                                <option value="{{ $m->id_mapel }}" {{ request('id_mapel') == $m->id_mapel ? 'selected' : '' }}>{{ $m->nama_mapel }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
+
                                 <div class="col-md-2 mb-3">
-                                    <label class="form-label">Semester:</label>
-                                    <select name="semester" id="input_semester" required class="form-select" onchange="this.form.submit()">
+                                    <label class="form-label font-weight-bolder text-uppercase text-xs">Semester</label>
+                                    <select name="semester" id="input_semester" required class="form-select border ps-2 bg-white" onchange="handleFilterChange('umum')">
                                         @foreach($semesterList as $sem)
-                                            <option value="{{ $sem }}" {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>
-                                                {{ $sem }}
-                                            </option>
+                                            <option value="{{ $sem }}" {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>{{ $sem }}</option>
                                         @endforeach
                                     </select>
                                 </div>
 
-                                {{-- Filter Tahun Ajaran --}}
                                 <div class="col-md-2 mb-3">
-                                    <label class="form-label">Tahun Ajaran:</label>
-                                    <select name="tahun_ajaran" id="input_tahun_ajaran" required class="form-select" onchange="this.form.submit()">
+                                    <label class="form-label font-weight-bolder text-uppercase text-xs">Tahun Ajaran</label>
+                                    <select name="tahun_ajaran" id="input_tahun_ajaran" required class="form-select border ps-2 bg-white" onchange="handleFilterChange('umum')">
                                         @foreach ($tahunAjaranList as $ta)
-                                            <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>
-                                                {{ $ta }}
-                                            </option>
+                                            <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>{{ $ta }}</option>
                                         @endforeach
                                     </select>
                                 </div>
 
-                                {{-- Hidden Submit Button (Untuk Trigger Onchange) --}}
                                 <button type="submit" class="d-none"></button>
                             </form>
                         </div>
 
-                        {{-- BOX INFO SEASON (Penataan Rapi & Berjarak) --}}
+                        {{-- BOX INFO SEASON --}}
                         <div id="season-info-box" class="mx-4 mt-3" style="display: none;">
                             <div class="d-flex align-items-center bg-light border-radius-lg p-3 border shadow-xs">
                                 <div class="d-flex align-items-center flex-wrap">
@@ -190,8 +209,10 @@
 
                         {{-- TABEL INPUT --}}
                         <div class="p-4" id="input-form-container">
-                            @if($siswa->isEmpty())
-                                <p class="text-center text-secondary">Silakan pilih filter untuk menampilkan daftar siswa.</p>
+                            @if(!request('id_kelas') || !request('id_mapel'))
+                                <p class="text-center text-secondary">Pilih filter untuk menginput nilai Project.</p>
+                            @elseif($siswa->isEmpty())
+                                <p class="text-danger mt-3 p-3 text-center border rounded">Data siswa tidak ditemukan di kelas/mapel ini.</p>
                             @else
                                 <form action="{{ route('nilai.project.store') }}" method="POST">
                                     @csrf
@@ -252,17 +273,41 @@
             <div class="modal-header"><h5 class="modal-title">Download Template Project</h5></div>
             <form action="{{ route('nilai.project.download') }}" method="GET">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Kelas:</label>
-                        <select name="id_kelas" required class="form-select ajax-select-kelas" data-target="#mapel_download_project">
-                            <option value="">Pilih Kelas</option>
-                            @foreach($kelas as $k) <option value="{{ $k->id_kelas }}">{{ $k->nama_kelas }}</option> @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Mata Pelajaran:</label>
-                        <select name="id_mapel" id="mapel_download_project" required class="form-select"><option value="">Pilih Kelas Dahulu</option></select>
-                    </div>
+                    {{-- Logika Dropdown Modal disesuaikan Role --}}
+                    @if($isGuru)
+                        <div class="mb-3">
+                            <label class="form-label">Mata Pelajaran (Guru):</label>
+                            <select name="id_mapel" id="modal_mapel_guru" required class="form-select ajax-mapel-modal-guru">
+                                <option value="">Pilih Mapel</option>
+                                @foreach($mapel as $m)
+                                    <option value="{{ $m->id_mapel }}">{{ $m->nama_mapel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kelas:</label>
+                            <select name="id_kelas" id="modal_kelas_guru" required class="form-select">
+                                <option value="">Pilih Mapel Terlebih Dahulu</option>
+                            </select>
+                        </div>
+                    @else
+                        <div class="mb-3">
+                            <label class="form-label">Kelas (Admin):</label>
+                            <select name="id_kelas" required class="form-select ajax-select-kelas-modal" data-target="#mapel_download_project">
+                                <option value="">Pilih Kelas</option>
+                                @foreach(\App\Models\Kelas::orderBy('nama_kelas')->get() as $k)
+                                    <option value="{{ $k->id_kelas }}">{{ $k->nama_kelas }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mata Pelajaran:</label>
+                            <select name="id_mapel" id="mapel_download_project" required class="form-select">
+                                <option value="">Pilih Kelas Terlebih Dahulu</option>
+                            </select>
+                        </div>
+                    @endif
+
                     <div class="mb-3">
                         <label class="form-label">Semester:</label>
                         <input type="text" name="semester" value="{{ request('semester', $defaultSemester) }}" class="form-control bg-light" readonly>
@@ -289,22 +334,28 @@
             <form action="{{ route('nilai.project.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
+                    <div class="mb-3 text-center">
+                        <p class="text-secondary font-weight-bold">Pastikan data Excel sesuai dengan filter yang aktif saat ini.</p>
+                    </div>
                     <div class="mb-3">
-                        <label class="form-label">Kelas:</label>
+                        <label class="form-label">Kelas Aktif:</label>
                         <select name="id_kelas" class="form-select bg-light" style="pointer-events: none;" tabindex="-1" required>
-                            @foreach($kelas as $k)
-                                <option value="{{ $k->id_kelas }}" {{ request('id_kelas') == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
-                            @endforeach
+                            @if(request('id_kelas'))
+                                @php $selKls = \App\Models\Kelas::find(request('id_kelas')); @endphp
+                                <option value="{{ request('id_kelas') }}" selected>{{ $selKls->nama_kelas ?? 'Kelas Terpilih' }}</option>
+                            @else
+                                <option value="">Pilih Filter Utama Dahulu</option>
+                            @endif
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Mata Pelajaran:</label>
+                        <label class="form-label">Mapel Aktif:</label>
                         <select name="id_mapel" class="form-select bg-light" style="pointer-events: none;" tabindex="-1" required>
                             @if(request('id_mapel'))
                                 @php $selMapel = \App\Models\MataPelajaran::find(request('id_mapel')); @endphp
                                 <option value="{{ request('id_mapel') }}" selected>{{ $selMapel->nama_mapel ?? 'Mapel Terpilih' }}</option>
                             @else
-                                <option value="">Pilih Filter Terlebih Dahulu</option>
+                                <option value="">Pilih Filter Utama Dahulu</option>
                             @endif
                         </select>
                     </div>
@@ -332,17 +383,43 @@
     </div>
 </div>
 
-<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 9999;">
-    <div class="spinner-border text-light me-3" role="status"></div> Sedang memproses...
+{{-- OVERLAY LOADING BARU --}}
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 999999;">
+    <div class="d-flex flex-column align-items-center">
+        <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status"></div> 
+        <span>Sedang memproses data...</span>
+    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+    // SCRIPT UX BARU: Mencegah Reset Mapel Saat Ganti Kelas
+    function handleFilterChange(source) {
+        if (source === 'guru') {
+            $('#kelas_filter_guru').val('');
+            $('#mapel_filter_guru').val('');
+            $('#id_kelas').val('');
+            $('#mapel_filter').val('');
+        } else if (source === 'mapel_guru') {
+            // Jika guru ganti mapel (filter utama), kosongkan opsi kelas
+            $('#kelas_filter_guru').val('');
+        } else if (source === 'kelas_admin') {
+            // Jika admin ganti kelas (filter utama), kosongkan opsi mapel
+            $('#mapel_filter').val('');
+        }
+        
+        // Tampilkan overlay loading
+        $('#loadingOverlay').find('span').text('Memuat filter...');
+        $('#loadingOverlay').css('display', 'flex');
+        
+        $('#mainFilterForm').submit();
+    }
+
     $(document).ready(function() {
         // --- 1. AJAX PREREQUISITE & SEASON CHECK ---
         function checkProjectPrerequisite() {
-            let idKelas = $('#id_kelas').val();
-            let idMapel = $('#mapel_filter').val();
+            let idKelas = $('#id_kelas').length ? $('#id_kelas').val() : $('#kelas_filter_guru').val();
+            let idMapel = $('#mapel_filter').length ? $('#mapel_filter').val() : $('#mapel_filter_guru').val();
             let semester = $('#input_semester').val();
             let tahunAjaran = $('#input_tahun_ajaran').val();
 
@@ -360,20 +437,16 @@
                         let alertContainer = $('#alert-box-container');
                         let btnImport = $('.btn-import-trigger');
                         
-                        // 1. Update Info Season Box (Termasuk Tanggal)
                         if(response.season) {
                             $('#info-semester').text(response.season.semester);
                             $('#info-tahun').text(response.season.tahun);
-                            $('#info-status').text(response.season.status)
-                                .attr('class', 'badge badge-sm bg-gradient-success');
-                            
+                            $('#info-status').text(response.season.status).attr('class', 'badge badge-sm bg-gradient-success');
                             $('#info-date-range').text(response.season.start + ' s/d ' + response.season.end);
                             $('#season-info-box').show();
                         } else {
                             $('#season-info-box').hide();
                         }
 
-                        // 2. Logika Lock/Unlock Tampilan
                         if(response.status === 'locked_season') {
                             $('#prerequisite-message').html(response.message);
                             alertContainer.removeClass('alert-warning alert-danger text-dark').addClass('alert-danger text-dark');
@@ -392,15 +465,14 @@
                 });
             }
         }
-
-        // Jalankan check saat page load & saat filter berubah
         checkProjectPrerequisite();
 
-        // --- 2. DROPDOWN MAPEL DINAMIS ---
-        $('.ajax-select-kelas').on('change', function() {
+        // --- 2. AJAX DROPDOWN UNTUK MODAL (ADMIN FLOW: Kelas -> Mapel) ---
+        $('.ajax-select-kelas-modal').on('change', function() {
             let idKelas = $(this).val();
             let target = $(this).data('target');
             let dropdownMapel = $(target);
+
             dropdownMapel.html('<option value="">Memuat...</option>');
             if (idKelas) {
                 $.ajax({
@@ -410,26 +482,53 @@
                         let html = '<option value="">-- Pilih Mapel --</option>';
                         res.forEach(item => { html += `<option value="${item.id_mapel}">${item.nama_mapel}</option>`; });
                         dropdownMapel.html(html);
-                        checkProjectPrerequisite();
                     }
                 });
             } else {
-                dropdownMapel.html('<option value="">Pilih Kelas Dahulu</option>');
+                dropdownMapel.html('<option value="">Pilih Kelas Terlebih Dahulu</option>');
             }
         });
 
-        // Loading Overlay saat submit form simpan
-        $('form').on('submit', function() {
+        // --- 3. AJAX DROPDOWN UNTUK MODAL (GURU FLOW: Mapel -> Kelas) ---
+        $('.ajax-mapel-modal-guru').on('change', function() {
+            let idMapel = $(this).val();
+            let idGuru = "{{ $isGuru ? $id_guru_filter : '' }}"; 
+            let dropdownKelas = $('#modal_kelas_guru');
+
+            dropdownKelas.html('<option value="">Memuat...</option>');
+            if (idMapel && idGuru) {
+                let urlFetch = "{{ route('nilai.project.get_kelas_guru', ['id_mapel' => '__MAPEL__', 'id_guru' => '__GURU__']) }}";
+                urlFetch = urlFetch.replace('__MAPEL__', idMapel).replace('__GURU__', idGuru);
+
+                $.ajax({
+                    url: urlFetch,
+                    method: "GET",
+                    success: function(res) {
+                        let html = '<option value="">-- Pilih Kelas --</option>';
+                        res.forEach(item => { html += `<option value="${item.id_kelas}">${item.nama_kelas}</option>`; });
+                        dropdownKelas.html(html);
+                    },
+                    error: function(err) {
+                        console.error("AJAX Error: ", err);
+                        dropdownKelas.html('<option value="">Gagal memuat kelas</option>');
+                    }
+                });
+            } else {
+                dropdownKelas.html('<option value="">Pilih Mapel Terlebih Dahulu</option>');
+            }
+        });
+
+        // Loading Overlay untuk Form Save / Import
+        $('form').not('#mainFilterForm').on('submit', function() {
             if($(this).attr('method') === 'POST' && !$(this).hasClass('no-loading')){
+                $('#loadingOverlay').find('span').text('Sedang menyimpan data...');
                 $('#loadingOverlay').css('display', 'flex');
             }
         });
 
-        // --- 3. DISABLE SCROLL MOUSE ON INPUT NUMBER ---
+        // Disable scroll mouse on input number
         $('form').on('focus', 'input[type=number]', function (e) {
-            $(this).on('wheel.disableScroll', function (e) {
-                e.preventDefault();
-            })
+            $(this).on('wheel.disableScroll', function (e) { e.preventDefault(); })
         });
         $('form').on('blur', 'input[type=number]', function (e) {
             $(this).off('wheel.disableScroll');

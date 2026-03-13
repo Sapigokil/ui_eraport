@@ -65,41 +65,80 @@
         {{-- 1. CARD FILTER --}}
         <div class="card shadow-sm border mb-4">
             <div class="card-body p-3">
-                <form action="{{ route('nilai.rekap.index') }}" method="GET" class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold text-xs text-uppercase text-secondary">Pilih Kelas</label>
-                        <select name="id_kelas" class="form-select border-secondary ps-2" onchange="this.form.submit()">
-                            <option value="">- Pilih Kelas -</option>
-                            @foreach($kelas as $k)
-                                <option value="{{ $k->id_kelas }}" {{ $id_kelas == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                <form id="mainFilterForm" action="{{ route('nilai.rekap.index') }}" method="GET" class="row g-3 align-items-end">
+                    
+                    {{-- KOTAK DEBUG/FILTER ID GURU d-block or d-none --}}
+                    <div class="col-md-2 d-none">
+                        <label class="form-label fw-bold text-xs text-uppercase text-primary"><i class="fas fa-bug"></i> Filter Guru</label>
+                        <select name="id_guru" id="guru_filter" class="form-select border-primary ps-2 text-primary fw-bold" onchange="handleFilterChange('guru')" {{ $isGuru ? 'disabled' : '' }}>
+                            <option value="">Semua Guru</option>
+                            @foreach($guruList as $g)
+                                <option value="{{ $g->id_guru }}" {{ $id_guru_filter == $g->id_guru ? 'selected' : '' }}>{{ $g->nama_guru }}</option>
                             @endforeach
                         </select>
+                        @if($isGuru) <input type="hidden" name="id_guru" value="{{ $id_guru_filter }}"> @endif
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold text-xs text-uppercase text-secondary">Mata Pelajaran</label>
-                        <select name="id_mapel" class="form-select border-secondary ps-2" onchange="this.form.submit()" {{ empty($mapelList) ? 'disabled' : '' }}>
-                            <option value="">- Pilih Mapel -</option>
-                            @foreach($mapelList as $m)
-                                <option value="{{ $m->id_mapel }}" {{ $id_mapel == $m->id_mapel ? 'selected' : '' }}>{{ $m->nama_mapel }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+
+                    @if($isGuru)
+                        {{-- 🟢 ALUR GURU: MAPEL -> KELAS --}}
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-xs text-uppercase text-secondary">Mata Pelajaran (Guru)</label>
+                            <select name="id_mapel" id="mapel_filter_guru" class="form-select border-secondary ps-2" onchange="handleFilterChange('mapel_guru')">
+                                <option value="">- Pilih Mapel -</option>
+                                @foreach($mapelList as $m)
+                                    <option value="{{ $m->id_mapel }}" {{ $id_mapel == $m->id_mapel ? 'selected' : '' }}>{{ $m->nama_mapel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-xs text-uppercase text-secondary">Pilih Kelas</label>
+                            <select name="id_kelas" id="kelas_filter_guru" class="form-select border-secondary ps-2" {{ empty($kelas) ? 'disabled' : '' }} onchange="handleFilterChange('kelas')">
+                                <option value="">- Pilih Kelas -</option>
+                                @foreach($kelas as $k)
+                                    <option value="{{ $k->id_kelas }}" {{ $id_kelas == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @else
+                        {{-- 🔴 ALUR ADMIN: KELAS -> MAPEL --}}
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-xs text-uppercase text-secondary">Pilih Kelas</label>
+                            <select name="id_kelas" id="kelas_filter_admin" class="form-select border-secondary ps-2" onchange="handleFilterChange('kelas')">
+                                <option value="">- Pilih Kelas -</option>
+                                @foreach($kelas as $k)
+                                    <option value="{{ $k->id_kelas }}" {{ $id_kelas == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-xs text-uppercase text-secondary">Mata Pelajaran</label>
+                            <select name="id_mapel" id="mapel_filter_admin" class="form-select border-secondary ps-2" onchange="handleFilterChange('mapel_admin')" {{ empty($mapelList) ? 'disabled' : '' }}>
+                                <option value="">- Pilih Mapel -</option>
+                                @foreach($mapelList as $m)
+                                    <option value="{{ $m->id_mapel }}" {{ $id_mapel == $m->id_mapel ? 'selected' : '' }}>{{ $m->nama_mapel }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+
                     <div class="col-md-2">
                         <label class="form-label fw-bold text-xs text-uppercase text-secondary">Semester</label>
-                        <select name="semester" class="form-select border-secondary ps-2" onchange="this.form.submit()">
+                        <select name="semester" class="form-select border-secondary ps-2" onchange="handleFilterChange('umum')">
                             @foreach($semesterList as $smt)
                                 <option value="{{ $smt }}" {{ $semesterRaw == $smt ? 'selected' : '' }}>{{ $smt }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label fw-bold text-xs text-uppercase text-secondary">Tahun Ajaran</label>
-                        <select name="tahun_ajaran" class="form-select border-secondary ps-2" onchange="this.form.submit()">
+                        <select name="tahun_ajaran" class="form-select border-secondary ps-2" onchange="handleFilterChange('umum')">
                             @foreach($tahunAjaranList as $ta)
                                 <option value="{{ $ta }}" {{ $tahun_ajaran == $ta ? 'selected' : '' }}>{{ $ta }}</option>
                             @endforeach
                         </select>
                     </div>
+
+                    <button type="submit" class="d-none"></button>
                 </form>
             </div>
         </div>
@@ -108,7 +147,7 @@
             
             {{-- 2. HEADER BANNER --}}
             @php
-                $selectedKelas = $kelas->firstWhere('id_kelas', $id_kelas);
+                $selectedKelas = collect($kelas)->firstWhere('id_kelas', $id_kelas);
                 $selectedMapel = collect($mapelList)->firstWhere('id_mapel', $id_mapel);
                 
                 $totalSiswa = count($dataSiswa);
@@ -152,7 +191,7 @@
                 </div>
             </div>
 
-            {{-- NEW: INFO BOBOT NILAI --}}
+            {{-- INFO BOBOT NILAI --}}
             @if($bobotInfo)
             <div class="row mb-4">
                 <div class="col-12">
@@ -182,20 +221,19 @@
             <div class="row mb-4">
                 <div class="col-12">
                     @php
-                        // Logika Hierarki Status
                         $isLocked = $isLocked ?? false;
                         $canSave  = false;
 
                         if (!$seasonOpen) {
                             $gateColor = 'danger';
                             $gateIcon = 'fas fa-door-closed';
-                            $statusMessage = $seasonMessage; // Dari Controller (Jadwal Ditutup)
+                            $statusMessage = $seasonMessage; 
                         } elseif ($isLocked) {
                             $gateColor = 'warning';
                             $gateIcon = 'fas fa-lock';
                             $statusMessage = 'Data telah dikunci (Status: Final/Cetak). Hubungi Wali Kelas jika ada revisi nilai.';
                         } else {
-                            $canSave = true; // Hanya true jika season open DAN tidak dilock
+                            $canSave = true; 
                             $gateColor = 'primary';
                             $gateIcon = 'fas fa-door-open';
                             $statusMessage = 'Sistem siap melakukan kalkulasi dan simpan snapshot nilai akhir.';
@@ -233,6 +271,14 @@
                 <div class="col-12">
                     <div class="card shadow-sm border">
                         <div class="card-body p-0">
+                            
+                            @if (session('success'))
+                                <div class="alert bg-gradient-success mx-4 mt-3 text-white">{{ session('success') }}</div>
+                            @endif
+                            @if (session('error'))
+                                <div class="alert bg-gradient-danger mx-4 mt-3 text-white">{{ session('error') }}</div>
+                            @endif
+
                             <form id="formSimpanRekap" action="{{ route('nilai.rekap.store') }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="id_kelas" value="{{ $id_kelas }}">
@@ -322,7 +368,7 @@
                 <div class="card-body text-center py-5">
                     <i class="fas fa-filter text-primary mb-3 fa-3x opacity-5"></i>
                     <h5 class="text-dark font-weight-bold">Filter Data Diperlukan</h5>
-                    <p class="text-secondary text-sm mb-0">Silakan pilih <strong>Kelas</strong> dan <strong>Mata Pelajaran</strong> untuk menampilkan rekap nilai.</p>
+                    <p class="text-secondary text-sm mb-0">Silakan pilih <strong>Mata Pelajaran</strong> dan <strong>Kelas</strong> untuk menampilkan rekap nilai.</p>
                 </div>
             </div>
         @endif
@@ -335,7 +381,7 @@
 <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 999999;">
     <div class="d-flex flex-column align-items-center">
         <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status"></div> 
-        <span>Sedang menyimpan data...</span>
+        <span>Sedang memproses data...</span>
     </div>
 </div>
 
@@ -346,10 +392,30 @@
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) })
 
+    // SCRIPT UX BARU: Mencegah Reset Mapel Saat Ganti Kelas
+    function handleFilterChange(source) {
+        if (source === 'guru') {
+            $('#kelas_filter_guru').val('');
+            $('#mapel_filter_guru').val('');
+        } else if (source === 'mapel_guru') {
+            // Jika guru ganti mapel (filter utama), kosongkan opsi kelas (filter turunan)
+            $('#kelas_filter_guru').val('');
+        }
+        
+        // PENTING: Untuk source 'kelas' atau 'mapel_admin', tidak ada pengosongan apa-apa.
+        // Langsung tampilkan loading dan submit form.
+
+        $('#loadingOverlay').find('span').text('Memuat filter...');
+        $('#loadingOverlay').css('display', 'flex');
+        
+        $('#mainFilterForm').submit();
+    }
+
     // FUNGSI MANUAL UNTUK SIMPAN REKAP
     function confirmSimpan() {
         if (confirm('Apakah Anda yakin data nilai sudah benar? Data akan disimpan sebagai nilai akhir rapor.')) {
             // Tampilkan Overlay
+            $('#loadingOverlay').find('span').text('Sedang menyimpan data...');
             $('#loadingOverlay').attr('style', 'display: flex !important; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 999999;');
             
             // Submit Form

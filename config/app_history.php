@@ -11,17 +11,19 @@ return [
     |
     */
 
-    'current_version' => '1.0.12',
+    'current_version' => '1.0.13',
     
-    'last_updated' => '2026-03-11',
+    'last_updated' => '2026-03-13',
 
     'changelog' => [
         [
-            'version' => '1.0.13beta',
-            'date'    => '2026-03-11',
+            'version' => '1.0.13',
+            'date'    => '2026-03-13',
             'notes'   => [
                 'Memperbaiki Bug Import Export Excel untuk Tempat PKL',
                 'Memperbaiki halaman user agar Admin bisa mengupdate password user lain tanpa harus mengisi password baru (password tetap jika kolom password dikosongkan)',
+                'Menu Baru backup & restore database untuk keamanan data',    
+                'Penerapan Filter Data bagi Role Guru untuk hanya melihat data yang relevan dengan kelas dan mapel yang dia ampu',
             ],
         ],
         [

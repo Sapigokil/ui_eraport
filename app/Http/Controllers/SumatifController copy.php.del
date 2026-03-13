@@ -11,14 +11,13 @@ use App\Models\Sumatif;
 use App\Models\MataPelajaran;
 use App\Models\Pembelajaran;
 use App\Models\Season;
-use App\Models\Guru; // Tambahan untuk memanggil master Guru
 use App\Exports\SumatifTemplateExport;
 use App\Imports\SumatifImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\NilaiAkhirController;
+
 
 class SumatifController extends Controller
 {
@@ -51,8 +50,11 @@ class SumatifController extends Controller
         $sumatifSekarang = (int) $request->sumatif;
 
         // --- LAYER 1: VALIDASI SEASON KETAT ---
+        
+        // 1. Ambil Season yang sedang di-set sebagai "Active"
         $activeSeason = Season::where('is_active', 1)->first();
 
+        // 2. Cek Keberadaan Season Aktif
         if (!$activeSeason) {
             return response()->json([
                 'status' => 'locked_season',
@@ -61,6 +63,7 @@ class SumatifController extends Controller
             ]);
         }
 
+        // Siapkan data detail season untuk Info Box di frontend
         $seasonData = [
             'semester' => $activeSeason->semester == 1 ? 'Ganjil' : 'Genap',
             'tahun' => $activeSeason->tahun_ajaran,
@@ -70,6 +73,7 @@ class SumatifController extends Controller
             'end' => date('d/m/Y', strtotime($activeSeason->end_date))
         ];
 
+        // 3. Cek Status OPEN (Switch Manual Admin)
         if ($activeSeason->is_open == 0) {
             return response()->json([
                 'status' => 'locked_season',
@@ -78,6 +82,7 @@ class SumatifController extends Controller
             ]);
         }
 
+        // 4. Cek Rentang Tanggal (Start - End)
         $today = now()->format('Y-m-d');
         if ($today < $activeSeason->start_date) {
             return response()->json([
@@ -94,6 +99,7 @@ class SumatifController extends Controller
             ]);
         }
 
+        // 5. Cek Kesesuaian Data Input dengan Season Aktif
         if ($tahun_ajaran != $activeSeason->tahun_ajaran) {
             return response()->json([
                 'status' => 'locked_season',
@@ -112,7 +118,9 @@ class SumatifController extends Controller
             ]);
         }
 
-        // --- LAYER 2: VALIDASI PRASYARAT SUMATIF ---
+        // --- LAYER 2: VALIDASI PRASYARAT SUMATIF (Urutan 1, 2, 3...) ---
+        
+        // Jika filter belum lengkap, kirim status safe tapi tetap sertakan data season
         if (!$id_kelas || !$id_mapel || !$semesterInputInt || !$tahun_ajaran) {
             return response()->json([
                 'status' => 'safe',
@@ -120,6 +128,7 @@ class SumatifController extends Controller
             ]);
         }
 
+        // Cek Urutan Sumatif (Kecuali Sumatif 1)
         if ($sumatifSekarang > 1) {
             $sumatifSebelumnya = $sumatifSekarang - 1;
             
@@ -140,6 +149,7 @@ class SumatifController extends Controller
             }
         }
 
+        // Jika semua lolos (Safe)
         return response()->json([
             'status' => 'safe',
             'season' => $seasonData
@@ -151,144 +161,157 @@ class SumatifController extends Controller
      */
     private function loadSumatifData(Request $request, int $sumatifId): array
     {
-        // ==================================================
-        // 1. IDENTIFIKASI ROLE & GURU FILTER (RBAC)
-        // ==================================================
-        $user = Auth::user();
-        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']); // True jika hanya guru biasa
-        
-        if ($isGuru) {
-            $id_guru_filter = $user->id_guru;
-        } else {
-            // Jika admin, bisa menggunakan filter id_guru dari request (untuk debug/filter advance)
-            $id_guru_filter = $request->id_guru; 
-        }
-
-        $guruList = Guru::orderBy('nama_guru')->get();
-        $seasonOpen = Season::currentOpen();
-        
-        $kelas = collect();
+        $kelas = Kelas::orderBy('nama_kelas')->get();
         $mapel = collect();
 
-        // ==================================================
-        // 2. LOGIKA CASCADING DROPDOWN BERDASARKAN ROLE
-        // ==================================================
-        if ($isGuru) {
-            // ---> ALUR GURU: MAPEL DULU BARU KELAS <---
-            
-            // A. Ambil semua mapel yang DIAJAR oleh guru ini
-            $mapel = Pembelajaran::where('id_guru', $id_guru_filter)
-                ->whereHas('mapel', function ($q) { $q->where('is_active', 1); })
-                ->with(['mapel' => function ($q) { $q->where('is_active', 1); }])
-                ->get()
-                ->map(fn($p) => $p->mapel)
-                ->filter()
-                ->unique('id_mapel')
-                ->sortBy([['kategori', 'asc'], ['urutan', 'asc']])
-                ->values();
+        // 🔽 TAMBAHKAN INI (DIPA)
+        $seasonOpen = Season::currentOpen();
 
-            // B. Jika Mapel sudah dipilih, baru ambil kelas yang diajar guru ini di mapel tersebut
-            if ($request->id_mapel) {
-                $kelas = Pembelajaran::where('id_guru', $id_guru_filter)
-                    ->where('id_mapel', $request->id_mapel)
-                    ->with('kelas')
-                    ->get()
-                    ->map(fn($p) => $p->kelas)
-                    ->filter()
-                    ->unique('id_kelas')
-                    ->sortBy('nama_kelas')
-                    ->values();
-            }
-        } else {
-            // ---> ALUR ADMIN: KELAS DULU BARU MAPEL (Normal Flow) <---
-            $kelas = Kelas::orderBy('nama_kelas')->get();
-
-            if ($request->id_kelas) {
-                $queryMapel = Pembelajaran::where('id_kelas', $request->id_kelas);
-                
-                // Jika Admin menggunakan filter guru tambahan (debug)
-                if ($id_guru_filter) {
-                    $queryMapel->where('id_guru', $id_guru_filter);
-                }
-
-                $mapel = $queryMapel->whereHas('mapel', function ($q) { $q->where('is_active', 1); })
-                    ->with(['mapel' => function ($q) { $q->where('is_active', 1); }])
-                    ->get()
-                    ->map(fn($p) => $p->mapel)
-                    ->filter()
-                    ->unique('id_mapel')
-                    ->sortBy([['kategori', 'asc'], ['urutan', 'asc']])
-                    ->values();
-            }
+        // 1. Ambil Mata Pelajaran berdasarkan Kelas
+        if ($request->id_kelas) {
+            // $mapel = Pembelajaran::with('mapel')
+            //     ->where('id_kelas', $request->id_kelas)
+            //     ->get()
+            //     ->map(fn($p) => $p->mapel)
+            //     ->filter()
+            //     ->values();
+            $mapel = Pembelajaran::where('id_kelas', $request->id_kelas) //menonaktifkan mapel master agama
+            ->whereHas('mapel', function ($q) {
+                $q->where('is_active', 1);
+            })
+            ->with(['mapel' => function ($q) {
+                $q->where('is_active', 1);
+            }])
+            ->get()
+            ->map(fn($p) => $p->mapel)
+            ->filter()
+            ->sortBy([
+                ['kategori', 'asc'], // Prioritas 1
+                ['urutan', 'asc'],   // Prioritas 2
+            ])
+            ->values();
         }
 
-        // ==================================================
-        // 3. TARIK DATA SISWA & RAPOR
-        // ==================================================
         $siswa = collect();
         $rapor = collect();
 
-        if ($request->id_kelas && $request->id_mapel && $request->semester && $request->tahun_ajaran) {
+        if (
+            $request->id_kelas &&
+            $request->id_mapel &&
+            $request->semester &&
+            $request->tahun_ajaran
+        ) {
+            
+            // 🛑 KOREKSI KRUSIAL: MAPPING SEMESTER STRING KE INTEGER 🛑
             $semesterDB = $this->mapSemesterToInt($request->semester);
             
-            if (!is_null($semesterDB)) {
-                $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
-                
-                $selectedMapel = MataPelajaran::find($request->id_mapel);
-                if ($selectedMapel && $selectedMapel->agama_khusus) {
-                    $siswaQuery->whereHas('detail', function ($q) use ($selectedMapel) {
-                        $q->where('agama', $selectedMapel->agama_khusus);
-                    });
-                }
-
-                $siswa = $siswaQuery->orderBy('nama_siswa')->get();
-
-                $rapor = Sumatif::where([
-                    'id_kelas' => $request->id_kelas,
-                    'id_mapel' => $request->id_mapel,
-                    'sumatif' => $sumatifId, 
-                    'semester' => $semesterDB,
-                    'tahun_ajaran' => $request->tahun_ajaran,
-                ])->get()->keyBy('id_siswa');
+            // Jika mapping gagal, kita anggap filter tidak valid
+            if (is_null($semesterDB)) {
+                return compact('kelas', 'mapel', 'siswa', 'rapor');
             }
+            
+            // Filter Siswa berdasarkan Kelas dan Agama Khusus (jika ada)
+            $siswaQuery = Siswa::with('detail')
+                ->where('id_kelas', $request->id_kelas);
+            
+            $selectedMapel = MataPelajaran::find($request->id_mapel);
+            if ($selectedMapel && $selectedMapel->agama_khusus) {
+                $siswaQuery->whereHas('detail', function ($q) use ($selectedMapel) {
+                    $q->where('agama', $selectedMapel->agama_khusus);
+                });
+            }
+
+            $siswa = $siswaQuery->orderBy('nama_siswa')->get();
+
+            // === 🛑 MULAI DEBUGGING DI SINI (COPY DARI SINI) 🛑 ===
+            // Uncomment baris di bawah ini untuk melihat data apa yang sedang dicari
+            
+            
+            // dd([
+            //     'DEBUG_INFO' => 'Mengecek Parameter Query ke Database',
+            //     'INPUT_REQUEST' => [
+            //         'id_kelas' => $request->id_kelas,
+            //         'id_mapel' => $request->id_mapel,
+            //         'semester_pilihan' => $request->semester,
+            //         'tahun_ajaran' => $request->tahun_ajaran,
+            //     ],
+            //     'PARAMETER_DATABASE' => [
+            //         'sumatif' => $sumatifId,      // Harus 2
+            //         'semester_db' => $semesterDB, // Harus 1 (Jika Ganjil) atau 2 (Jika Genap)
+            //     ],
+            //     'CEK_DATA_LANGSUNG' => Sumatif::where([
+            //         'id_kelas' => $request->id_kelas,
+            //         'id_mapel' => $request->id_mapel,
+            //         'sumatif' => $sumatifId,
+            //     ])->get()->toArray() // Ini akan menampilkan semua data Sumatif 2 di mapel/kelas tersebut (tanpa filter semester/tahun)
+            // ]);
+            
+            // === 🛑 AKHIR DEBUGGING 🛑 ===
+
+            // Ambil data Sumatif yang sudah tersimpan
+            $rapor = Sumatif::where([
+                'id_kelas' => $request->id_kelas,
+                'id_mapel' => $request->id_mapel,
+                'sumatif' => $sumatifId, 
+                'semester' => $semesterDB, // <-- MENGGUNAKAN NILAI INT (1 atau 2)
+                'tahun_ajaran' => $request->tahun_ajaran,
+            ])->get()->keyBy('id_siswa');
         }
 
-        // Return Data Array 
-        return compact('kelas', 'mapel', 'siswa', 'rapor', 'isGuru', 'id_guru_filter', 'guruList', 'seasonOpen');
+        return compact('kelas', 'mapel', 'siswa', 'rapor');
     }
     
     // === METHOD UNTUK ROUTE SIDEBAR ===
-    public function sumatif1(Request $request) {
+    public function sumatif1(Request $request)
+    {
+        // Parameter Sumatif ID = 1
         $data = $this->loadSumatifData($request, 1);
         $data['sumatifId'] = 1; 
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI DIPAA
+        
+        // Memuat view sum1_index.blade.php
         return view('nilai.sumatif_general', $data); 
     }
 
-    public function sumatif2(Request $request) {
+    public function sumatif2(Request $request)
+    {
+        // Parameter Sumatif ID = 2
         $data = $this->loadSumatifData($request, 2);
         $data['sumatifId'] = 2;
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI
         return view('nilai.sumatif_general', $data); 
     }
 
-    public function sumatif3(Request $request) {
+    public function sumatif3(Request $request)
+    {
+        // Parameter Sumatif ID = 3
         $data = $this->loadSumatifData($request, 3);
         $data['sumatifId'] = 3;
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI
         return view('nilai.sumatif_general', $data); 
     }
 
-    public function sumatif4(Request $request) {
+    public function sumatif4(Request $request)
+    {
+        // Parameter Sumatif ID = 4
         $data = $this->loadSumatifData($request, 4);
         $data['sumatifId'] = 4;
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI
         return view('nilai.sumatif_general', $data); 
     }
 
-    public function sumatif5(Request $request) {
+    public function sumatif5(Request $request)
+    {
+        // Parameter Sumatif ID = 5
         $data = $this->loadSumatifData($request, 5);
         $data['sumatifId'] = 5;
+        $data['seasonOpen'] = Season::currentOpen(); // <=== TAMBAHKAN INI
         return view('nilai.sumatif_general', $data); 
     }
 
-    public function project(Request $request) {
+    public function project(Request $request)
+    {
+        // Parameter Project (asumsi Project)
         $data = $this->loadSumatifData($request, 4); 
         $data['sumatifId'] = 4;
         return view('nilai.project_index', $data);
@@ -297,18 +320,48 @@ class SumatifController extends Controller
     // === METHOD SIMPAN (STORE) - FULL VALIDASI (SEASON & PARTIAL) ===
     public function simpan(Request $request)
     {
+        // ---------------------------------------------------------
+        // 1. VALIDASI SEASON KETAT (BACKEND SECURITY)
+        // ---------------------------------------------------------
+        
+        // Ambil Season yang Aktif (is_active = 1)
         $activeSeason = Season::where('is_active', 1)->first();
-        if (!$activeSeason) return back()->withErrors('Gagal menyimpan: Tidak ada Tahun Ajaran/Season yang aktif di sistem.');
-        if ($activeSeason->is_open == 0) return back()->withErrors('Gagal menyimpan: Input nilai sedang ditutup sementara oleh Administrator.');
+        
+        // Cek 1: Apakah ada season aktif?
+        if (!$activeSeason) {
+            return back()->withErrors('Gagal menyimpan: Tidak ada Tahun Ajaran/Season yang aktif di sistem.');
+        }
 
+        // Cek 2: Apakah admin membuka gerbang input? (is_open)
+        if ($activeSeason->is_open == 0) {
+            return back()->withErrors('Gagal menyimpan: Input nilai sedang ditutup sementara oleh Administrator.');
+        }
+
+        // Cek 3: Validasi Tanggal (Start & End Date)
         $today = now()->format('Y-m-d');
-        if ($today < $activeSeason->start_date) return back()->withErrors('Gagal menyimpan: Periode input nilai belum dimulai.');
-        if ($today > $activeSeason->end_date) return back()->withErrors('Gagal menyimpan: Periode input nilai telah berakhir.');
+        if ($today < $activeSeason->start_date) {
+             return back()->withErrors('Gagal menyimpan: Periode input nilai belum dimulai. (Mulai: ' . date('d-m-Y', strtotime($activeSeason->start_date)) . ')');
+        }
+        if ($today > $activeSeason->end_date) {
+             return back()->withErrors('Gagal menyimpan: Periode input nilai telah berakhir. (Selesai: ' . date('d-m-Y', strtotime($activeSeason->end_date)) . ')');
+        }
 
+        // Cek 4: Kesesuaian Data Input dengan Season Aktif
+        // Pastikan semester string dari input diubah ke int dulu untuk dicocokkan
         $semesterInputInt = $this->mapSemesterToInt($request->semester);
-        if ($request->tahun_ajaran != $activeSeason->tahun_ajaran) return back()->withErrors("Gagal menyimpan: Tahun Ajaran tidak sesuai dengan Season Aktif.");
-        if ($semesterInputInt != $activeSeason->semester) return back()->withErrors("Gagal menyimpan: Semester tidak sesuai dengan Season Aktif.");
+        
+        if ($request->tahun_ajaran != $activeSeason->tahun_ajaran) {
+             return back()->withErrors("Gagal menyimpan: Tahun Ajaran yang Anda pilih ({$request->tahun_ajaran}) tidak sesuai dengan Season Aktif ({$activeSeason->tahun_ajaran}).");
+        }
+        
+        if ($semesterInputInt != $activeSeason->semester) {
+             $semAktifStr = $activeSeason->semester == 1 ? 'Ganjil' : 'Genap';
+             return back()->withErrors("Gagal menyimpan: Semester yang Anda pilih ({$request->semester}) tidak sesuai dengan Season Aktif ({$semAktifStr}).");
+        }
 
+        // ---------------------------------------------------------
+        // 2. VALIDASI INPUT FORM
+        // ---------------------------------------------------------
         $request->validate([
             'id_kelas'          => 'required',
             'id_mapel'          => 'required',
@@ -316,24 +369,38 @@ class SumatifController extends Controller
             'semester'          => 'required',
             'tahun_ajaran'      => 'required',
             'id_siswa'          => 'required|array',
-            'nilai'             => 'array',
-            'tujuan_pembelajaran' => 'array', 
+            'nilai'             => 'array',           // Boleh kosong (partial save)
+            'tujuan_pembelajaran' => 'array',         // Boleh kosong (partial save)
         ]);
 
         $semesterDB = $this->mapSemesterToInt($request->semester);
-        if (is_null($semesterDB)) return back()->withInput()->with('error', 'Gagal menyimpan: Format semester tidak valid.');
+        if (is_null($semesterDB)) {
+             return back()->withInput()->with('error', 'Gagal menyimpan: Format semester tidak valid.');
+        }
 
+        // ---------------------------------------------------------
+        // 3. PROSES PENYIMPANAN DATA (LOOP)
+        // ---------------------------------------------------------
         $savedCount = 0; 
 
         foreach ($request->id_siswa as $i => $id_siswa) {
+
+            // Ambil Input Nilai & TP
             $rawNilai = $request->nilai[$i] ?? null;
             $rawTP    = $request->tujuan_pembelajaran[$i] ?? '';
 
-            if ($rawNilai === null || $rawNilai === '') continue; 
+            // SKIP jika nilai kosong (Partial Save Logic)
+            if ($rawNilai === null || $rawNilai === '') {
+                continue; 
+            }
 
+            // --- Validasi Per Baris (Hanya yang diisi) ---
+
+            // A. Cek Urutan Sumatif (Kecuali Sumatif 1)
             $sumatifSekarang = (int) $request->sumatif;
             if ($sumatifSekarang > 1) {
                 $sumatifSebelumnya = $sumatifSekarang - 1;
+                
                 $cekSumatifSebelumnya = Sumatif::where([
                     'id_kelas'     => $request->id_kelas,
                     'id_siswa'     => $id_siswa,
@@ -343,13 +410,23 @@ class SumatifController extends Controller
                     'tahun_ajaran' => $request->tahun_ajaran,
                 ])->exists();
 
-                if (!$cekSumatifSebelumnya) return back()->with('error', "Gagal pada Siswa ID {$id_siswa}: Sumatif {$sumatifSekarang} tidak bisa diinput karena Sumatif {$sumatifSebelumnya} belum ada.");
+                if (!$cekSumatifSebelumnya) {
+                    return back()->with('error', "Gagal pada Siswa ID {$id_siswa}: Sumatif {$sumatifSekarang} tidak bisa diinput karena Sumatif {$sumatifSebelumnya} belum ada.");
+                }
             }
 
+            // B. Validasi & Sanitasi Tujuan Pembelajaran
             $tujuanPembelajaran = trim((string) $rawTP);
-            if ($tujuanPembelajaran === '') return back()->with('error', 'Gagal: Nilai diisi tetapi Tujuan Pembelajaran kosong pada baris ke-' . ($i + 1));
-            if (preg_match('/[[:punct:]]$/', $tujuanPembelajaran)) return back()->withInput()->with('error', 'Gagal pada Baris ' . ($i + 1) . ': Tujuan Pembelajaran tidak boleh diakhiri tanda baca.');
 
+            if ($tujuanPembelajaran === '') {
+                return back()->with('error', 'Gagal: Nilai diisi tetapi Tujuan Pembelajaran kosong pada baris ke-' . ($i + 1));
+            }
+
+            if (preg_match('/[[:punct:]]$/', $tujuanPembelajaran)) {
+                return back()->withInput()->with('error', 'Gagal pada Baris ' . ($i + 1) . ': Tujuan Pembelajaran tidak boleh diakhiri tanda baca.');
+            }
+
+            // C. Eksekusi Simpan ke DB
             Sumatif::updateOrCreate(
                 [
                     'id_kelas'      => $request->id_kelas,
@@ -364,10 +441,15 @@ class SumatifController extends Controller
                     'tujuan_pembelajaran' => $tujuanPembelajaran,
                 ]
             );
+            
             $savedCount++;
         }
 
+        // ---------------------------------------------------------
+        // 4. UPDATE NILAI AKHIR & RETURN
+        // ---------------------------------------------------------
         if ($savedCount > 0) {
+            // Trigger hitung ulang Nilai Akhir otomatis
             $nilaiAkhirCtrl = app(NilaiAkhirController::class);
             $nilaiAkhirCtrl->index(new Request([
                 'id_kelas'     => $request->id_kelas,
@@ -375,6 +457,7 @@ class SumatifController extends Controller
                 'semester'     => $request->semester,
                 'tahun_ajaran' => $request->tahun_ajaran,
             ]));
+            
             return back()->with('success', "Berhasil menyimpan nilai untuk {$savedCount} siswa.");
         }
 
@@ -384,6 +467,7 @@ class SumatifController extends Controller
     // === METHOD DOWNLOAD TEMPLATE ===
     public function downloadTemplate(Request $request)
     {
+        // 1. Validasi Input Modal
         $request->validate([
             'id_kelas' => 'required|exists:kelas,id_kelas',
             'id_mapel' => 'required|exists:mata_pelajaran,id_mapel',
@@ -392,45 +476,72 @@ class SumatifController extends Controller
             'sumatif' => 'required|in:1,2,3,4,5'
         ]);
 
+        // 2. Ambil data Kelas, Mapel, Siswa untuk template
         $kelas = Kelas::find($request->id_kelas);
-        $mapel = MataPelajaran::where('id_mapel', $request->id_mapel)
+        $mapel = MataPelajaran::where('id_mapel', $request->id_mapel) //agar mapel agama master dinonaktifkan
             ->where('is_active', 1)
             ->first();
 
-        if (!$mapel) return back()->with('error', 'Mapel sudah tidak aktif atau tidak tersedia.');
+        if (!$mapel) {
+            return back()->with('error', 'Mapel sudah tidak aktif atau tidak tersedia.');
+        }
 
-        $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
+        // $mapel = MataPelajaran::find($request->id_mapel);
+        // $siswa = Siswa::where('id_kelas', $request->id_kelas)
+        //     ->orderBy('nama_siswa')
+        //     ->get();
+
+        $siswaQuery = Siswa::with('detail')
+            ->where('id_kelas', $request->id_kelas);
 
         if ($mapel && $mapel->agama_khusus) {
             $agama = trim(strtolower($mapel->agama_khusus));
+
             $siswaQuery->whereHas('detail', function ($q) use ($agama) {
                 $q->whereRaw('LOWER(TRIM(agama)) = ?', [$agama]);
             });
         }
 
-        $siswa = $siswaQuery->orderBy('nama_siswa')->get();
+        $siswa = $siswaQuery
+            ->orderBy('nama_siswa')
+            ->get();
 
-        if ($siswa->isEmpty()) return back()->with('error', 'Tidak ada siswa yang ditemukan untuk filter ini. Template tidak dapat dibuat.');
+
+        if ($siswa->isEmpty()) {
+            return back()->with('error', 'Tidak ada siswa yang ditemukan untuk filter ini. Template tidak dapat dibuat.');
+        }
 
         $fileName = 'Template_Nilai_S' . $request->sumatif . '_' . $kelas->nama_kelas . '_' . $mapel->nama_mapel . '.xlsx';
         
-        return Excel::download(new SumatifTemplateExport($request->all(), $siswa, $kelas, $mapel), $fileName);
+        // 4. Panggil Class Export untuk membuat Excel
+        return Excel::download(new SumatifTemplateExport(
+            $request->all(),
+            $siswa,
+            $kelas,
+            $mapel
+        ), $fileName);
     }
     
-    // === METHOD IMPORT NILAI ===
+    // === METHOD IMPORT NILAI (FULL SEASON VALIDATION) ===
     public function import(Request $request)
     {
+        // 1. Validasi Season Ketat (Backend Security)
         $activeSeason = Season::where('is_active', 1)->first();
-        if (!$activeSeason || $activeSeason->is_open == 0) return back()->withErrors('Gagal Import: Season sedang ditutup.');
+        if (!$activeSeason || $activeSeason->is_open == 0) {
+            return back()->withErrors('Gagal Import: Season sedang ditutup.');
+        }
 
         $today = now()->format('Y-m-d');
-        if ($today < $activeSeason->start_date || $today > $activeSeason->end_date) return back()->withErrors('Gagal Import: Di luar jadwal aktif.');
+        if ($today < $activeSeason->start_date || $today > $activeSeason->end_date) {
+             return back()->withErrors('Gagal Import: Di luar jadwal aktif.');
+        }
 
         $semesterInputInt = $this->mapSemesterToInt($request->semester);
         if ($request->tahun_ajaran != $activeSeason->tahun_ajaran || $semesterInputInt != $activeSeason->semester) {
              return back()->withErrors('Gagal Import: Filter tidak sesuai dengan Season Aktif.');
         }
 
+        // 2. Lanjutkan Validasi Request
         $request->validate([
             'file_excel' => 'required|file|mimes:xlsx,xls',
             'sumatif' => 'required|in:1,2,3,4,5',
@@ -465,32 +576,16 @@ class SumatifController extends Controller
         }
     }
 
-    // === API AJAX ADMIN (Kelas -> Mapel) ===
     public function getMapelByKelas($id_kelas)
     {
+        // Mengambil mapel yang terdaftar di kelas tersebut melalui tabel pembelajaran
         $mapel = DB::table('pembelajaran')
             ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
             ->where('pembelajaran.id_kelas', $id_kelas)
             ->where('mata_pelajaran.is_active', 1)
             ->select('mata_pelajaran.id_mapel', 'mata_pelajaran.nama_mapel')
-            ->orderBy('mata_pelajaran.kategori', 'asc')
-            ->orderBy('mata_pelajaran.urutan', 'asc')
             ->get();
 
         return response()->json($mapel);
-    }
-
-    // === API AJAX BARU GURU (Mapel -> Kelas) ===
-    public function getKelasByMapelGuru($id_mapel, $id_guru)
-    {
-        $kelas = DB::table('pembelajaran')
-            ->join('kelas', 'pembelajaran.id_kelas', '=', 'kelas.id_kelas')
-            ->where('pembelajaran.id_mapel', $id_mapel)
-            ->where('pembelajaran.id_guru', $id_guru)
-            ->select('kelas.id_kelas', 'kelas.nama_kelas')
-            ->orderBy('kelas.nama_kelas', 'asc')
-            ->get();
-
-        return response()->json($kelas);
     }
 }

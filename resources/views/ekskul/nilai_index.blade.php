@@ -54,35 +54,49 @@
 
                     <div class="card-body px-0 pb-2">
                         @if (session('success'))
-                            <div class="alert bg-gradient-success mx-4 text-dark">{{ session('success') }}</div>
+                            <div class="alert bg-gradient-success mx-4 mt-3 text-dark">{{ session('success') }}</div>
                         @endif
                         @if (session('error'))
-                            <div class="alert bg-gradient-danger mx-4 text-dark">{{ session('error') }}</div>
+                            <div class="alert bg-gradient-danger mx-4 mt-3 text-dark">{{ session('error') }}</div>
                         @endif
 
-                        {{-- FILTER SECTION (POSISI KANAN) --}}
-                        <div class="px-4 py-3 border-bottom">
-                            <form action="{{ route('ekskul.nilai.index') }}" method="GET" class="d-flex justify-content-end align-items-center gap-3">
-                                
-                                <div class="d-flex flex-column">
-                                    <label class="form-label font-weight-bold text-xs mb-1">Tahun Ajaran:</label>
-                                    <select name="tahun_ajaran" class="form-select border ps-2 py-1 bg-white" style="min-width: 150px;" onchange="this.form.submit()">
-                                        @foreach ($tahunAjaranList as $ta)
-                                            <option value="{{ $ta }}" {{ $tahunAjaran == $ta ? 'selected' : '' }}>{{ $ta }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                        {{-- FILTER SECTION BERSAMA GURU (RBAC) --}}
+                        <div class="px-4 py-3 border-bottom bg-gray-100 d-block">
+                            <form action="{{ route('ekskul.nilai.index') }}" method="GET" class="mb-0">
+                                <div class="row align-items-end">
+                                    
+                                    {{-- Filter Guru --}}
+                                    {{-- Ubah 'd-block' ke 'd-none' untuk menyembunyikan box kuning ini jika selesai testing --}}
+                                    <div class="col-md-3 d-none">
+                                        <label class="form-label text-primary font-weight-bolder text-uppercase text-xs"><i class="fas fa-bug"></i> Filter Guru</label>
+                                        <select name="id_guru" class="form-select border ps-2 bg-white border-primary" onchange="this.form.submit()" {{ $isGuru ? 'disabled' : '' }}>
+                                            <option value="">Semua Guru</option>
+                                            @foreach($guruList as $g)
+                                                <option value="{{ $g->id_guru }}" {{ $id_guru_filter == $g->id_guru ? 'selected' : '' }}>{{ $g->nama_guru }}</option>
+                                            @endforeach
+                                        </select>
+                                        @if($isGuru) <input type="hidden" name="id_guru" value="{{ $id_guru_filter }}"> @endif
+                                    </div>
 
-                                <div class="d-flex flex-column">
-                                    <label class="form-label font-weight-bold text-xs mb-1">Semester:</label>
-                                    <select name="semester" class="form-select border ps-2 py-1 bg-white" style="min-width: 150px;" onchange="this.form.submit()">
-                                        @foreach($semesterList as $sem)
-                                            <option value="{{ $sem }}" {{ $semesterRaw == $sem ? 'selected' : '' }}>{{ $sem }}</option>
-                                        @endforeach
-                                    </select>
+                                    <div class="col-md-3">
+                                        <label class="form-label font-weight-bold text-xs mb-1 text-uppercase text-secondary">Tahun Ajaran:</label>
+                                        <select name="tahun_ajaran" class="form-select border ps-2 bg-white" onchange="this.form.submit()">
+                                            @foreach ($tahunAjaranList as $ta)
+                                                <option value="{{ $ta }}" {{ $tahunAjaran == $ta ? 'selected' : '' }}>{{ $ta }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-3">
+                                        <label class="form-label font-weight-bold text-xs mb-1 text-uppercase text-secondary">Semester:</label>
+                                        <select name="semester" class="form-select border ps-2 bg-white" onchange="this.form.submit()">
+                                            @foreach($semesterList as $sem)
+                                                <option value="{{ $sem }}" {{ $semesterRaw == $sem ? 'selected' : '' }}>{{ $sem }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    
                                 </div>
-                                
-                                <button type="submit" class="d-none"></button>
                             </form>
                         </div>
 

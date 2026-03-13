@@ -9,12 +9,10 @@ use App\Models\MataPelajaran;
 use App\Models\Project;
 use App\Models\Pembelajaran;
 use App\Models\Season;
-use App\Models\Guru; // Tambahan Master Guru
 use App\Exports\ProjectTemplateExport;
 use App\Imports\ProjectImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth; // Tambahan Auth
 
 class ProjectController extends Controller
 {
@@ -34,95 +32,46 @@ class ProjectController extends Controller
 
     public function index(Request $request)
     {
-        // ==================================================
-        // 1. IDENTIFIKASI ROLE & GURU FILTER (RBAC)
-        // ==================================================
-        $user = Auth::user();
-        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']); // True jika hanya guru
-        
-        if ($isGuru) {
-            $id_guru_filter = $user->id_guru;
-        } else {
-            $id_guru_filter = $request->id_guru; 
-        }
-
-        $guruList = Guru::orderBy('nama_guru')->get();
-        $seasonOpen = Season::currentOpen();
-        
-        $kelas = collect();
+        $kelas = Kelas::orderBy('nama_kelas')->get();
         $mapel = collect();
 
-        // ==================================================
-        // 2. LOGIKA CASCADING DROPDOWN BERDASARKAN ROLE
-        // ==================================================
-        if ($isGuru) {
-            // ---> ALUR GURU: MAPEL DULU BARU KELAS <---
-            $mapel = Pembelajaran::where('id_guru', $id_guru_filter)
-                ->whereHas('mapel', function ($q) { $q->where('is_active', 1); })
-                ->with(['mapel' => function ($q) { $q->where('is_active', 1); }])
-                ->get()
-                ->map(fn($p) => $p->mapel)
-                ->filter()
-                ->unique('id_mapel')
-                ->sortBy([['kategori', 'asc'], ['urutan', 'asc']])
-                ->values();
-
-            if ($request->id_mapel) {
-                $kelas = Pembelajaran::where('id_guru', $id_guru_filter)
-                    ->where('id_mapel', $request->id_mapel)
-                    ->with('kelas')
-                    ->get()
-                    ->map(fn($p) => $p->kelas)
-                    ->filter()
-                    ->unique('id_kelas')
-                    ->sortBy('nama_kelas')
-                    ->values();
-            }
-        } else {
-            // ---> ALUR ADMIN: KELAS DULU BARU MAPEL <---
-            $kelas = Kelas::orderBy('nama_kelas')->get();
-
-            if ($request->id_kelas) {
-                $queryMapel = Pembelajaran::where('id_kelas', $request->id_kelas);
-                
-                if ($id_guru_filter) {
-                    $queryMapel->where('id_guru', $id_guru_filter);
-                }
-
-                $mapel = $queryMapel->whereHas('mapel', function ($q) { $q->where('is_active', 1); })
-                    ->with(['mapel' => function ($q) { $q->where('is_active', 1); }])
-                    ->get()
-                    ->map(fn($p) => $p->mapel)
-                    ->filter()
-                    ->unique('id_mapel')
-                    ->sortBy([['kategori', 'asc'], ['urutan', 'asc']])
-                    ->values();
-            }
+        if ($request->id_kelas) {
+           $mapel = Pembelajaran::with(['mapel' => function ($q) {
+                $q->where('is_active', 1);
+            }])
+            ->where('id_kelas', $request->id_kelas)
+            ->get()
+            ->map(fn($p) => $p->mapel)
+            ->filter()
+            ->sortBy([
+                ['kategori', 'asc'],
+                ['urutan', 'asc'],
+            ])
+            ->values();
         }
 
-        // ==================================================
-        // 3. TARIK DATA SISWA & RAPOR
-        // ==================================================
         $siswa = collect();
         $rapor = collect();
+        $seasonOpen = Season::currentOpen();
 
         if ($request->id_kelas && $request->id_mapel && $request->semester && $request->tahun_ajaran) {
             $semesterDB = $this->mapSemesterToInt($request->semester);
 
             if (is_null($semesterDB)) {
-                return view('nilai.project_index', compact('kelas', 'mapel', 'siswa', 'rapor', 'seasonOpen', 'isGuru', 'id_guru_filter', 'guruList'))->with('error', 'Semester tidak valid.');
+                return view('nilai.project_index', compact('kelas', 'mapel', 'siswa', 'rapor', 'seasonOpen'))->with('error', 'Semester tidak valid.');
             }
             
             $selectedMapel = MataPelajaran::find($request->id_mapel);
-            $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
+
+            $siswa = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
 
             if ($selectedMapel && $selectedMapel->agama_khusus) {
-                $siswaQuery->whereHas('detail', function ($q) use ($selectedMapel) {
+                $siswa->whereHas('detail', function ($q) use ($selectedMapel) {
                     $q->where('agama', $selectedMapel->agama_khusus);
                 });
             }
 
-            $siswa = $siswaQuery->orderBy('nama_siswa')->get();
+            $siswa = $siswa->orderBy('nama_siswa')->get();
 
             $rapor = Project::where([
                 'id_kelas' => $request->id_kelas,
@@ -134,7 +83,7 @@ class ProjectController extends Controller
             ->keyBy('id_siswa');
         }
 
-        return view('nilai.project_index', compact('kelas', 'mapel', 'siswa', 'rapor', 'seasonOpen', 'isGuru', 'id_guru_filter', 'guruList'));
+        return view('nilai.project_index', compact('kelas', 'mapel', 'siswa', 'rapor', 'seasonOpen'));
     }
 
     public function checkPrerequisite(Request $request)
@@ -149,16 +98,20 @@ class ProjectController extends Controller
             ]);
         }
 
+        // Siapkan data detail season untuk dikirim ke frontend
         $seasonData = [
             'semester' => $season->semester == 1 ? 'Ganjil' : 'Genap',
             'tahun' => $season->tahun_ajaran,
             'status' => 'Terbuka',
+            // Format tanggal Indonesia: d-m-Y
             'start' => date('d/m/Y', strtotime($season->start_date)),
             'end' => date('d/m/Y', strtotime($season->end_date))
         ];
 
+        // Konversi input semester user ("Ganjil"/"Genap") ke Integer (1/2)
         $inputSemesterInt = $this->mapSemesterToInt($request->semester);
 
+        // Bandingkan Data Input dengan Data Database
         if ($inputSemesterInt != $season->semester || $request->tahun_ajaran != $season->tahun_ajaran) {
             return response()->json([
                 'status' => 'locked_season',
@@ -167,6 +120,7 @@ class ProjectController extends Controller
             ]);
         }
 
+        // Cek jika tanggal hari ini di luar rentang start/end
         $today = date('Y-m-d');
         if ($today < $season->start_date || $today > $season->end_date) {
             return response()->json([
@@ -243,13 +197,10 @@ class ProjectController extends Controller
             return back()->with('error', 'Mapel sudah tidak aktif atau tidak tersedia.');
         }
 
-        $siswa = Siswa::with('detail')->where('id_kelas', $request->id_kelas)->orderBy('nama_siswa')->get();
+        $siswa = Siswa::where('id_kelas', $request->id_kelas)->orderBy('nama_siswa')->get();
         
         if ($mapel->agama_khusus) {
-            $agama = trim(strtolower($mapel->agama_khusus));
-            $siswa = $siswa->filter(function($s) use ($agama) {
-                return strtolower(trim(optional($s->detail)->agama)) === $agama;
-            });
+            $siswa = $siswa->filter(fn($s) => optional($s->detail)->agama == $mapel->agama_khusus);
         }
 
         if ($siswa->isEmpty()) {
@@ -299,24 +250,8 @@ class ProjectController extends Controller
             ->where('pembelajaran.id_kelas', $id_kelas)
             ->where('mata_pelajaran.is_active', 1)
             ->select('mata_pelajaran.id_mapel', 'mata_pelajaran.nama_mapel')
-            ->orderBy('mata_pelajaran.kategori', 'asc')
-            ->orderBy('mata_pelajaran.urutan', 'asc')
             ->get();
 
         return response()->json($mapel);
-    }
-
-    // === API AJAX BARU GURU (Mapel -> Kelas) ===
-    public function getKelasByMapelGuru($id_mapel, $id_guru)
-    {
-        $kelas = DB::table('pembelajaran')
-            ->join('kelas', 'pembelajaran.id_kelas', '=', 'kelas.id_kelas')
-            ->where('pembelajaran.id_mapel', $id_mapel)
-            ->where('pembelajaran.id_guru', $id_guru)
-            ->select('kelas.id_kelas', 'kelas.nama_kelas')
-            ->orderBy('kelas.nama_kelas', 'asc')
-            ->get();
-
-        return response()->json($kelas);
     }
 }

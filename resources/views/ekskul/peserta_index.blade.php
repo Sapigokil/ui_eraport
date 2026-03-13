@@ -28,7 +28,6 @@
                                         Kelola anggota dan peserta kegiatan ekstrakurikuler
                                     </p>
                                 </div>
-                                {{-- Jika ada tombol aksi tambahan bisa ditaruh di sini --}}
                             </div>
                         </div>
                     </div>
@@ -37,15 +36,40 @@
                         
                         {{-- 2. ALERT SYSTEM --}}
                         @if(session('success'))
-                            <div class="alert bg-gradient-success alert-dismissible text-white mx-4 fade show" role="alert">
+                            <div class="alert bg-gradient-success alert-dismissible text-white mx-4 mt-3 fade show" role="alert">
                                 <span class="text-sm"><strong>Sukses!</strong> {{ session('success') }}</span>
                                 <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert" aria-label="Close">&times;</button>
                             </div>
                         @endif
+                        @if(session('error'))
+                            <div class="alert bg-gradient-danger alert-dismissible text-white mx-4 mt-3 fade show" role="alert">
+                                <span class="text-sm"><strong>Gagal!</strong> {{ session('error') }}</span>
+                                <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert" aria-label="Close">&times;</button>
+                            </div>
+                        @endif
 
-                        {{-- 3. TABEL DATA --}}
+                        {{-- 3. FORM FILTER GURU (RBAC) --}}
+                        {{-- Ubah 'd-block' ke 'd-none' untuk menyembunyikan --}}
+                        <div class="px-4 py-3 border-bottom bg-gray-100 d-none">
+                            <form action="{{ route('ekskul.peserta.index') }}" method="GET" class="mb-0">
+                                <div class="row align-items-end">
+                                    <div class="col-md-3">
+                                        <label class="form-label text-primary font-weight-bolder text-uppercase text-xs"><i class="fas fa-bug"></i> Filter Guru Pembimbing</label>
+                                        <select name="id_guru" class="form-select border ps-2 bg-white border-primary" onchange="this.form.submit()" {{ $isGuru ? 'disabled' : '' }}>
+                                            <option value="">Semua Guru</option>
+                                            @foreach($guruList as $g)
+                                                <option value="{{ $g->id_guru }}" {{ $id_guru_filter == $g->id_guru ? 'selected' : '' }}>{{ $g->nama_guru }}</option>
+                                            @endforeach
+                                        </select>
+                                        @if($isGuru) <input type="hidden" name="id_guru" value="{{ $id_guru_filter }}"> @endif
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        {{-- 4. TABEL DATA --}}
                         <div class="table-responsive p-0">
-                            <table class="table align-items-center mb-0">
+                            <table class="table align-items-center mb-0 table-hover">
                                 <thead class="bg-light">
                                     <tr>
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="5%">No</th>
@@ -98,7 +122,7 @@
                             </table>
                         </div>
 
-                        {{-- 4. PAGINATION --}}
+                        {{-- 5. PAGINATION --}}
                         <div class="px-4 py-3 d-flex justify-content-end">
                             {{ $ekskuls->links() }}
                         </div>

@@ -502,12 +502,14 @@
                     <ul class="nav">
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.system.users.index') ? 'active' : '' }}" href="{{ route('settings.system.users.index') }}"><span class="sidenav-normal"> Manajemen User </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.system.roles.index') ? 'active' : '' }}" href="{{ route('settings.system.roles.index') }}"><span class="sidenav-normal"> Role & Permission </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.backup.index') ? 'active' : '' }}" href="{{ route('settings.backup.index') }}"><span class="sidenav-normal"> Backup & Restore </span></a></li>
+                        
                     </ul>
                 </div>
             </li>
 
             {{-- Backup & Restore --}}
-            @php 
+            {{-- @php 
                 $backupRestoreRoutes = ['settings.backup.*'];
                 $isBackupRestoreActive = request()->routeIs($backupRestoreRoutes);
             @endphp
@@ -521,11 +523,10 @@
                 <div class="collapse {{ $isBackupRestoreActive ? 'show' : '' }}" id="settingBackupRestoreMenu">
                     <ul class="nav">
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.backup.index') ? 'active' : '' }}" href="{{ route('settings.backup.index') }}"><span class="sidenav-normal"> Backup & Restore </span></a></li>
-                        {{-- <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.restore.index') ? 'active' : '' }}" href="{{ route('settings.restore.index') }}"><span class="sidenav-normal"> Restore Data </span></a></li> --}}
                     </ul>
                 </div>
-            </li>
-            @endcan
+            </li> --}}
+            @endcan 
 
             <hr class="horizontal light my-2">
 

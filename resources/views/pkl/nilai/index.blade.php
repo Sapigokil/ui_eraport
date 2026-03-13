@@ -52,6 +52,31 @@
             </div>
         </div>
 
+        {{-- ========================================================= --}}
+        {{-- DEBUGGING INFO (Nanti bisa dihapus atau di-comment)       --}}
+        {{-- ========================================================= --}}
+        {{-- <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert shadow-sm text-dark mb-0" role="alert" style="background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px;">
+                    <strong><i class="fas fa-bug text-warning me-2"></i> CEK DEBUG DATA GURU:</strong><br>
+                    <ul class="mb-0 mt-2 text-sm">
+                        <li>Nama Akun Login: <strong>{{ auth()->user()->name ?? 'Tidak Ada' }}</strong></li>
+                        <li>Roles Akun Ini: <strong>{{ auth()->user()->getRoleNames()->implode(', ') }}</strong></li>
+                        <li>
+                            ID Guru Tertaut (users.id_guru): 
+                            @if(auth()->user()->id_guru)
+                                <span class="badge bg-success">{{ auth()->user()->id_guru }}</span>
+                            @else
+                                <span class="badge bg-danger">KOSONG (NULL)</span> 
+                                <em class="text-xs text-danger ms-2"><- Jika ini merah/kosong, wajar jika data siswa tidak muncul!</em>
+                            @endif
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div> --}}
+        {{-- ========================================================= --}}
+
         <div class="row">
             <div class="col-12">
                 <div class="card my-4 border shadow-xs">
@@ -87,23 +112,40 @@
                                 </select>
                             </div>
                             
-                            <div class="col-md-3 mb-2 mb-md-0">
-                                <label class="form-label text-xs font-weight-bolder text-uppercase">Pembimbing</label>
-                                <select name="id_guru" class="form-select border ps-2 bg-white" onchange="this.form.submit()">
-                                    <option value="">-- Semua Guru --</option>
-                                    @foreach($guruList as $g)
-                                        <option value="{{ $g->id_guru }}" {{ $id_guru == $g->id_guru ? 'selected' : '' }}>{{ $g->nama_guru }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+                            {{-- PERCABANGAN ROLE UNTUK FILTER PEMBIMBING --}}
+                            @hasanyrole('developer|admin_erapor|guru_erapor')
+                                <div class="col-md-2 mb-2 mb-md-0">
+                                    <label class="form-label text-xs font-weight-bolder text-uppercase">Pembimbing</label>
+                                    <select name="id_guru" class="form-select border ps-2 bg-white" onchange="this.form.submit()">
+                                        <option value="">-- Semua Guru --</option>
+                                        @foreach($guruList as $g)
+                                            <option value="{{ $g->id_guru }}" {{ $id_guru == $g->id_guru ? 'selected' : '' }}>{{ $g->nama_guru }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @else
+                                {{-- Jika user adalah Guru biasa, sembunyikan dropdown dan gunakan input hidden --}}
+                                <input type="hidden" name="id_guru" value="{{ auth()->user()->id_guru }}">
+                            @endhasanyrole
                             
-                            <div class="col-md-3 mb-2 mb-md-0">
+                            <div class="col-md-2 mb-2 mb-md-0">
                                 <label class="form-label text-xs font-weight-bolder text-uppercase">Tempat PKL</label>
                                 <select name="id_tempat" class="form-select border ps-2 bg-white" onchange="this.form.submit()">
                                     <option value="">-- Semua Tempat --</option>
                                     @foreach($tempatList as $tpt)
-                                        <option value="{{ $tpt->id }}" {{ $id_tempat == $tpt->id ? 'selected' : '' }}>{{ Str::limit($tpt->nama_perusahaan, 35) }}</option>
+                                        <option value="{{ $tpt->id }}" {{ $id_tempat == $tpt->id ? 'selected' : '' }}>{{ Str::limit($tpt->nama_perusahaan, 25) }}</option>
                                     @endforeach
+                                </select>
+                            </div>
+
+                            {{-- FILTER BARU: STATUS PENILAIAN --}}
+                            <div class="col-md-2 mb-2 mb-md-0">
+                                <label class="form-label text-xs font-weight-bolder text-uppercase text-primary">Status Nilai</label>
+                                <select name="status_penilaian" class="form-select border ps-2 bg-white border-primary" onchange="this.form.submit()">
+                                    <option value="">-- Semua Status --</option>
+                                    <option value="belum" {{ isset($status_penilaian) && $status_penilaian === 'belum' ? 'selected' : '' }}>Belum Dinilai</option>
+                                    <option value="0" {{ isset($status_penilaian) && $status_penilaian === '0' ? 'selected' : '' }}>Draft</option>
+                                    <option value="1" {{ isset($status_penilaian) && $status_penilaian === '1' ? 'selected' : '' }}>Final</option>
                                 </select>
                             </div>
 

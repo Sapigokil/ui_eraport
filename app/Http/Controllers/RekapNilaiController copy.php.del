@@ -8,9 +8,7 @@ use App\Models\MataPelajaran;
 use App\Models\BobotNilai;
 use App\Models\NilaiAkhir;
 use App\Models\Season;
-use App\Models\Pembelajaran; // Tambahan untuk query Mapel/Kelas
-use App\Models\Guru;         // Tambahan untuk Master Guru
-use App\Helpers\NilaiCalculator;
+use App\Helpers\NilaiCalculator; // Helper untuk konsistensi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -41,19 +39,11 @@ class RekapNilaiController extends Controller
         $tahun_ajaran = $request->tahun_ajaran ?? $taDefault;
         $semesterInt  = (strtoupper($semesterRaw) == 'GENAP' || $semesterRaw == '2') ? 2 : 1;
 
-        // ==================================================
-        // 2. IDENTIFIKASI ROLE & GURU FILTER (RBAC)
-        // ==================================================
-        $user = Auth::user();
-        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']); 
-        
-        if ($isGuru) {
-            $id_guru_filter = $user->id_guru;
-        } else {
-            $id_guru_filter = $request->id_guru; 
-        }
-
-        $guruList = Guru::orderBy('nama_guru')->get();
+        // 2. DATA MASTER
+        $kelas = \App\Models\Kelas::orderBy('nama_kelas', 'asc')->get();
+        $mapelList = [];
+        $dataSiswa = [];
+        $bobotInfo = null;
 
         // 3. CEK SEASON
         $seasonStatus = $this->checkSeason($tahun_ajaran, $semesterInt);
@@ -64,63 +54,19 @@ class RekapNilaiController extends Controller
             ->where('semester', $semesterInt)
             ->first();
 
-        // ==================================================
-        // 4. LOGIKA CASCADING DROPDOWN BERDASARKAN ROLE
-        // ==================================================
-        $kelas = collect();
-        $mapelList = collect();
-
-        if ($isGuru) {
-            // ---> ALUR GURU: MAPEL DULU BARU KELAS <---
-            $mapelList = Pembelajaran::where('id_guru', $id_guru_filter)
-                ->whereHas('mapel', function ($q) { $q->where('is_active', 1); })
-                ->with(['mapel' => function ($q) { $q->where('is_active', 1); }])
-                ->get()
-                ->map(fn($p) => $p->mapel)
-                ->filter()
-                ->unique('id_mapel')
-                ->sortBy([['kategori', 'asc'], ['urutan', 'asc']])
-                ->values();
-
-            if ($id_mapel) {
-                $kelas = Pembelajaran::where('id_guru', $id_guru_filter)
-                    ->where('id_mapel', $id_mapel)
-                    ->with('kelas')
-                    ->get()
-                    ->map(fn($p) => $p->kelas)
-                    ->filter()
-                    ->unique('id_kelas')
-                    ->sortBy('nama_kelas')
-                    ->values();
-            }
-        } else {
-            // ---> ALUR ADMIN: KELAS DULU BARU MAPEL <---
-            $kelas = Kelas::orderBy('nama_kelas', 'asc')->get();
-
-            if ($id_kelas) {
-                $queryMapel = Pembelajaran::where('id_kelas', $id_kelas);
-                
-                if ($id_guru_filter) {
-                    $queryMapel->where('id_guru', $id_guru_filter);
-                }
-
-                $mapelList = $queryMapel->whereHas('mapel', function ($q) { $q->where('is_active', 1); })
-                    ->with(['mapel' => function ($q) { $q->where('is_active', 1); }])
-                    ->get()
-                    ->map(fn($p) => $p->mapel)
-                    ->filter()
-                    ->unique('id_mapel')
-                    ->sortBy([['kategori', 'asc'], ['urutan', 'asc']])
-                    ->values();
-            }
+        // 4. AMBIL MAPEL
+        if ($id_kelas) {
+            $mapelList = DB::table('pembelajaran')
+                ->join('mata_pelajaran', 'pembelajaran.id_mapel', '=', 'mata_pelajaran.id_mapel')
+                ->where('pembelajaran.id_kelas', $id_kelas)
+                ->where('mata_pelajaran.is_active', 1) 
+                ->select('mata_pelajaran.id_mapel', 'mata_pelajaran.nama_mapel', 'mata_pelajaran.kategori', 'mata_pelajaran.urutan', 'mata_pelajaran.agama_khusus')
+                ->orderBy('mata_pelajaran.kategori', 'asc')
+                ->orderBy('mata_pelajaran.urutan', 'asc')
+                ->get();
         }
 
-        // ==================================================
-        // 5. PROSES DATA SISWA & KALKULASI NILAI
-        // ==================================================
-        $dataSiswa = [];
-        $bobotInfo = null;
-
+        // 5. PROSES DATA
         if ($id_kelas && $id_mapel) {
             $bobot = \App\Models\BobotNilai::where('tahun_ajaran', $tahun_ajaran)
                 ->where('semester', strtoupper($semesterRaw))
@@ -128,15 +74,18 @@ class RekapNilaiController extends Controller
             
             $bobotInfo = $bobot;
 
+            // Ambil Detail Mapel terpilih untuk filter agama
             $mapelActive = DB::table('mata_pelajaran')->where('id_mapel', $id_mapel)->first();
             $syaratAgama = $mapelActive->agama_khusus;
 
+            // Query Siswa
             $querySiswa = DB::table('siswa')
                 ->join('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
                 ->where('siswa.id_kelas', $id_kelas)
                 ->select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nisn', 'detail_siswa.agama')
                 ->orderBy('siswa.nama_siswa', 'asc');
 
+            // Filter Siswa berdasarkan agama jika mapel tersebut spesifik agama
             if (!empty($syaratAgama)) {
                 $querySiswa->where(DB::raw('LOWER(detail_siswa.agama)'), strtolower(trim($syaratAgama)));
             }
@@ -144,24 +93,29 @@ class RekapNilaiController extends Controller
             $siswa = $querySiswa->get();
 
             foreach ($siswa as $s) {
+                // Ambil Data Mentah Sumatif
                 $sumatifCollection = DB::table('sumatif')->where([
                     'id_siswa' => $s->id_siswa, 'id_mapel' => $id_mapel,
                     'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
                 ])->get();
 
+                // Ambil Data Mentah Project
                 $projectRow = DB::table('project')->where([
                     'id_siswa' => $s->id_siswa, 'id_mapel' => $id_mapel,
                     'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
                 ])->first();
                 $nilaiP = $projectRow ? $projectRow->nilai : 0;
 
+                // --- HITUNG MENGGUNAKAN HELPER (KONSISTENSI) ---
                 $hasil = NilaiCalculator::process($sumatifCollection, $nilaiP, $bobot);
 
+                // Cek data yang sudah tersimpan di database
                 $saved = DB::table('nilai_akhir')->where([
                     'id_siswa' => $s->id_siswa, 'id_mapel' => $id_mapel,
                     'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
                 ])->first();
 
+                // Gunakan nilai dari DB jika sudah ada, jika belum gunakan hitungan rumus
                 $nilaiFinal = $hasil['nilai_akhir'];
                 $deskripsi = $saved ? $saved->capaian_akhir : $this->generateDeskripsi($s->id_siswa, $id_mapel, $semesterInt, $tahun_ajaran);
 
@@ -208,7 +162,7 @@ class RekapNilaiController extends Controller
             'kelas', 'mapelList', 'dataSiswa', 'bobotInfo', 
             'id_kelas', 'id_mapel', 'semesterRaw', 'tahun_ajaran', 
             'semesterList', 'tahunAjaranList', 'seasonOpen', 'seasonMessage', 'seasonDetail',
-            'isLocked', 'isGuru', 'id_guru_filter', 'guruList'
+            'isLocked'
         ));
     }
 
@@ -236,13 +190,15 @@ class RekapNilaiController extends Controller
             return redirect()->back()->with('error', 'Gagal Simpan: ' . $seasonCheck['message']);
         }
 
-        // Gatekeeper Status
+        // =========================================================================
+        // 2. NEW: Gatekeeper Status (Mencegah update jika data sudah Final/Cetak)
+        // =========================================================================
         $isLocked = DB::table('nilai_akhir')
             ->where('id_kelas', $id_kelas)
             ->where('id_mapel', $id_mapel)
             ->where('semester', $semesterInt)
             ->where('tahun_ajaran', $tahun_ajaran)
-            ->where('status_data', '!=', 'draft') 
+            ->where('status_data', '!=', 'draft') // Cek apakah ada yang selain draft
             ->exists();
 
         if ($isLocked) {
@@ -281,6 +237,7 @@ class RekapNilaiController extends Controller
             $dataInput = $request->input('data', []);
 
             foreach ($dataInput as $id_siswa => $val) {
+                // Ambil Data Mentah
                 $sumatifCollection = DB::table('sumatif')->where([
                     'id_siswa' => $id_siswa, 'id_mapel' => $id_mapel,
                     'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
@@ -292,8 +249,10 @@ class RekapNilaiController extends Controller
                 ])->first();
                 $nilaiP = $projectRow ? $projectRow->nilai : 0;
 
+                // --- HITUNG MENGGUNAKAN HELPER ---
                 $hasil = NilaiCalculator::process($sumatifCollection, $nilaiP, $bobot);
 
+                // Override nilai jika ada input manual dari form
                 $nilaiFinal = (isset($val['nilai_akhir']) && is_numeric($val['nilai_akhir'])) 
                     ? (int) $val['nilai_akhir'] 
                     : $hasil['nilai_akhir'];
