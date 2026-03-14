@@ -525,6 +525,19 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/restore/{file_name}', 'restore')->name('restore');
             Route::delete('/delete/{file_name}', 'delete')->name('delete');
         });
+
+        //SIMULASI MODE (Untuk Testing Fitur Baru Tanpa Merusak Data Asli)
+        Route::get('/toggle-simulasi', function () {
+            // Balikkan state session simulasi
+            $currentState = session('mode_simulasi', false);
+            session(['mode_simulasi' => !$currentState]);
+            
+            // Kirim sinyal khusus ke view untuk mentrigger pop-up modal
+            $status = session('mode_simulasi') ? 'on' : 'off';
+            
+            // Menggunakan nama session 'simulasi_toggled' agar mudah ditangkap oleh modal
+            return back()->with('simulasi_toggled', $status);
+        })->name('toggle.simulasi');
     });
 
 });

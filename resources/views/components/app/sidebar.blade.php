@@ -128,6 +128,48 @@
             border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
             background: none !important;
         }
+
+        /* --- STYLING KHUSUS TOMBOL SIMULASI --- */
+        .btn-simulasi-on {
+            background: linear-gradient(87deg, #f5365c 0%, #f56036 100%) !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 6px rgba(245, 54, 92, 0.2) !important;
+            margin: 0.5rem 0.5rem !important;
+            padding: 0.7rem 0.5rem !important;
+        }
+        
+        .btn-simulasi-on:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px rgba(245, 54, 92, 0.3) !important;
+        }
+
+        .btn-simulasi-on .icon i {
+            color: #ffffff !important;
+            opacity: 1 !important;
+            animation: pulse-small 2s infinite;
+        }
+
+        .btn-simulasi-off {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border: 1px dashed rgba(255, 255, 255, 0.2) !important;
+            color: rgba(255, 255, 255, 0.6) !important;
+            border-radius: 8px !important;
+            margin: 0.5rem 0.5rem !important;
+            padding: 0.7rem 0.5rem !important;
+        }
+        
+        .btn-simulasi-off:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            border-color: rgba(255, 255, 255, 0.4) !important;
+            color: #ffffff !important;
+        }
+
+        @keyframes pulse-small {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
     </style>
 
     <div class="collapse navbar-collapse px-0 w-auto" id="sidenav-collapse-main" style="height: calc(100vh - 100px); overflow-x: hidden;">
@@ -488,7 +530,7 @@
 
             {{-- System & User --}}
             @php 
-                $systemSettingRoutes = ['settings.system.*'];
+                $systemSettingRoutes = ['settings.system.*', 'settings.backup.*'];
                 $isSystemSetActive = request()->routeIs($systemSettingRoutes);
             @endphp
             <li class="nav-item">
@@ -503,29 +545,33 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.system.users.index') ? 'active' : '' }}" href="{{ route('settings.system.users.index') }}"><span class="sidenav-normal"> Manajemen User </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.system.roles.index') ? 'active' : '' }}" href="{{ route('settings.system.roles.index') }}"><span class="sidenav-normal"> Role & Permission </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.backup.index') ? 'active' : '' }}" href="{{ route('settings.backup.index') }}"><span class="sidenav-normal"> Backup & Restore </span></a></li>
-                        
                     </ul>
                 </div>
             </li>
 
-            {{-- Backup & Restore --}}
-            {{-- @php 
-                $backupRestoreRoutes = ['settings.backup.*'];
-                $isBackupRestoreActive = request()->routeIs($backupRestoreRoutes);
-            @endphp
+            {{-- 👇 TOMBOL TOGGLE SIMULASI DI SIDEBAR 👇 --}}
+            <li class="nav-item mt-4">
+                <div class="sidenav-category text-uppercase">Lingkungan Sistem</div>
+            </li>
+
             <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#settingBackupRestoreMenu" class="nav-link {{ $isBackupRestoreActive ? 'active' : '' }}" aria-controls="settingBackupRestoreMenu" role="button" aria-expanded="{{ $isBackupRestoreActive ? 'true' : 'false' }}">
-                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                        <i class="fas fa-database text-sm"></i>
-                    </div>
-                    <span class="nav-link-text">Backup & Restore</span>
-                </a>
-                <div class="collapse {{ $isBackupRestoreActive ? 'show' : '' }}" id="settingBackupRestoreMenu">
-                    <ul class="nav">
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.backup.index') ? 'active' : '' }}" href="{{ route('settings.backup.index') }}"><span class="sidenav-normal"> Backup & Restore </span></a></li>
-                    </ul>
-                </div>
-            </li> --}}
+                @if(session('mode_simulasi') === true)
+                    <a href="{{ route('settings.toggle.simulasi') }}" class="nav-link btn-simulasi-on">
+                        <div class="me-3 icon d-flex align-items-center justify-content-center" style="width: 25px;">
+                            <i class="fas fa-power-off text-sm"></i>
+                        </div>
+                        <span class="nav-link-text fw-bold">Akhiri Simulasi</span>
+                    </a>
+                @else
+                    <a href="{{ route('settings.toggle.simulasi') }}" class="nav-link btn-simulasi-off">
+                        <div class="me-3 icon d-flex align-items-center justify-content-center" style="width: 25px;">
+                            <i class="fas fa-vial text-sm"></i>
+                        </div>
+                        <span class="nav-link-text fw-bold">Mulai Simulasi</span>
+                    </a>
+                @endif
+            </li>
+            {{-- 👆 END TOMBOL SIDEBAR 👆 --}}
             @endcan 
 
             <hr class="horizontal light my-2">

@@ -17,6 +17,17 @@ return [
 
     'changelog' => [
         [
+            'version' => '1.0.14beta',
+            'date'    => '2026-03-13',
+            'notes'   => [
+                'Menambahkan Mode Simulasi kedalam sistem',
+                'Menambahkan Database simulasi untuk testing fitur baru tanpa mengganggu data utama',
+                'Menambahkan Middleware untuk switch database secara otomatis berdasarkan session mode_simulasi',
+                'Menambahkan tombol toggle mode simulasi di sidebar untuk memudahkan pengujian fitur baru',
+                'Dengan mode simulasi, admin dapat menguji fitur baru dengan data dummy tanpa risiko',
+            ],
+        ],
+        [
             'version' => '1.0.13',
             'date'    => '2026-03-13',
             'notes'   => [

@@ -56,6 +56,70 @@
 </head>
 
 <body class="g-sidenav-show bg-gray-100">
+    {{-- 👇 PITA MODE SIMULASI MODERN 👇 --}}
+    @if(session('mode_simulasi') === true)
+        <div class="simulasi-banner d-flex justify-content-center align-items-center">
+            <div class="pulse-icon me-2 me-md-3"><i class="fas fa-flask"></i></div>
+            <div class="banner-text text-center text-md-start">
+                <span class="fw-bolder text-sm tracking-wide">MODE SIMULASI AKTIF</span>
+                <span class="mx-2 d-none d-md-inline opacity-6">|</span>
+                <span class="fw-normal text-xs d-none d-md-inline opacity-8">Semua perubahan hanya tersimpan di database demo (tidak merusak data asli).</span>
+            </div>
+            <a href="{{ route('settings.toggle.simulasi') }}" class="btn-exit-simulasi ms-3 ms-md-4">
+                <span class="d-none d-md-inline">KEMBALI KE ASLI</span>
+                <span class="d-inline d-md-none">KELUAR</span>
+                <i class="fas fa-sign-out-alt ms-1"></i>
+            </a>
+        </div>
+
+        <style>
+            /* Menurunkan body agar navbar tidak tertutup pita */
+            body { padding-top: 46px !important; }
+            
+            /* Styling Modern Banner */
+            .simulasi-banner {
+                position: fixed;
+                top: 0; left: 0; width: 100%;
+                background: linear-gradient(87deg, #f5365c 0%, #f56036 100%);
+                color: #ffffff;
+                z-index: 999999;
+                padding: 8px 15px;
+                box-shadow: 0 4px 15px -3px rgba(245, 54, 92, 0.4);
+                backdrop-filter: blur(5px);
+            }
+            .tracking-wide { letter-spacing: 1.5px; }
+            
+            /* Styling Tombol Keluar yang Elegan */
+            .btn-exit-simulasi {
+                background: rgba(255, 255, 255, 0.15);
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                color: #ffffff !important;
+                padding: 4px 14px;
+                border-radius: 50px;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+                text-decoration: none;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                white-space: nowrap;
+            }
+            .btn-exit-simulasi:hover {
+                background: #ffffff;
+                color: #f5365c !important;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            }
+
+            /* Animasi Berdetak untuk Ikon Flask */
+            .pulse-icon { animation: pulse 2s infinite; font-size: 1.1rem; }
+            @keyframes pulse {
+                0% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.2); opacity: 0.7; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+        </style>
+    @endif
+    {{-- 👆 END PITA SIMULASI 👆 --}}
     @php
         $topSidenavArray = ['wallet', 'profile'];
         $topSidenavTransparent = ['signin', 'signup'];
@@ -176,6 +240,76 @@
             </div>
         </div>
     </div>
+
+    {{-- 👇 MODAL INFO SIMULASI (POP-UP TENGAH) 👇 --}}
+    @if(session('simulasi_toggled'))
+    <div class="modal fade" id="simulasiInfoModal" tabindex="-1" aria-labelledby="simulasiInfoModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" style="z-index: 9999999;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                
+                @if(session('simulasi_toggled') == 'on')
+                    {{-- TAMPILAN JIKA SIMULASI MENYALA --}}
+                    <div class="modal-header bg-gradient-warning p-3">
+                        <h5 class="modal-title text-white font-weight-bold" id="simulasiInfoModalLabel">
+                            <i class="fas fa-flask me-2"></i> Mode Simulasi Diaktifkan
+                        </h5>
+                        <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center p-4">
+                        <div class="icon icon-shape icon-xl bg-gradient-warning shadow text-center border-radius-md mb-4 mx-auto d-flex justify-content-center align-items-center" style="width: 70px; height: 70px;">
+                            <i class="fas fa-database text-white" style="font-size: 1.8rem;"></i>
+                        </div>
+                        <h5 class="mb-3 text-dark font-weight-bolder">Anda memasuki lingkungan Sandbox!</h5>
+                        <p class="text-sm text-secondary mb-0" style="text-align: justify; line-height: 1.6;">
+                            Mulai saat ini, seluruh aktivitas Anda (Tambah, Edit, Hapus data) akan diarahkan ke <strong>Database Simulasi</strong>. 
+                            <br><br>
+                            Anda bebas melakukan uji coba, pelatihan, atau menguji fitur baru tanpa perlu khawatir merusak atau mengubah data Rapor yang asli. Pita indikator di atas layar akan terus muncul sebagai pengingat.
+                        </p>
+                    </div>
+                    <div class="modal-footer justify-content-center p-3 border-top-0">
+                        <button type="button" class="btn bg-gradient-warning w-100 mb-0 btn-lg shadow-sm" data-bs-dismiss="modal">SAYA MENGERTI, LANJUTKAN</button>
+                    </div>
+
+                @else
+                    {{-- TAMPILAN JIKA SIMULASI DIMATIKAN --}}
+                    <div class="modal-header bg-gradient-info p-3">
+                        <h5 class="modal-title text-white font-weight-bold" id="simulasiInfoModalLabel">
+                            <i class="fas fa-power-off me-2"></i> Mode Simulasi Dimatikan
+                        </h5>
+                        <button type="button" class="btn-close text-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center p-4">
+                        <div class="icon icon-shape icon-xl bg-gradient-info shadow text-center border-radius-md mb-4 mx-auto d-flex justify-content-center align-items-center" style="width: 70px; height: 70px;">
+                            <i class="fas fa-check-circle text-white" style="font-size: 1.8rem;"></i>
+                        </div>
+                        <h5 class="mb-3 text-dark font-weight-bolder">Kembali ke Database Utama</h5>
+                        <p class="text-sm text-secondary mb-0" style="text-align: justify; line-height: 1.6;">
+                            Anda telah keluar dari mode simulasi. Sistem sekarang terhubung kembali dengan <strong>Database Asli E-Rapor</strong>.
+                            <br><br>
+                            <span class="text-danger font-weight-bold"><i class="fas fa-exclamation-triangle me-1"></i> Perhatian:</span> Segala perubahan data yang Anda lakukan mulai dari sekarang akan langsung berdampak pada sistem akademik sekolah secara permanen.
+                        </p>
+                    </div>
+                    <div class="modal-footer justify-content-center p-3 border-top-0">
+                        <button type="button" class="btn bg-gradient-info w-100 mb-0 btn-lg shadow-sm" data-bs-dismiss="modal">TUTUP & BEKERJA DENGAN HATI-HATI</button>
+                    </div>
+                @endif
+
+            </div>
+        </div>
+    </div>
+    
+    {{-- Trigger Modal dengan Javascript Murni (Tanpa jQuery agar tidak konflik) --}}
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var simulasiModalElement = document.getElementById('simulasiInfoModal');
+            if(simulasiModalElement) {
+                var simulasiModal = new bootstrap.Modal(simulasiModalElement);
+                simulasiModal.show();
+            }
+        });
+    </script>
+    @endif
+    {{-- 👆 END MODAL INFO SIMULASI 👆 --}}
 
     {{-- ========================================================== --}}
     {{-- CORE JS FILES (JANGAN DIHAPUS ATAU DIKOMENTAR) --}}
