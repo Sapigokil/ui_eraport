@@ -13,6 +13,7 @@ use App\Exports\CatatanTemplateExport;
 use App\Imports\CatatanImport;         
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class CatatanController extends Controller
 {
@@ -45,10 +46,8 @@ class CatatanController extends Controller
      */
     public function checkPrerequisite(Request $request)
     {
-        // Ambil season yang sedang aktif
         $activeSeason = Season::where('is_active', 1)->first();
 
-        // 1. Cek Keberadaan Season
         if (!$activeSeason) {
             return response()->json([
                 'status' => 'locked_season',
@@ -57,7 +56,6 @@ class CatatanController extends Controller
             ]);
         }
 
-        // Data Season untuk ditampilkan di Frontend
         $seasonData = [
             'semester' => $activeSeason->semester == 1 ? 'Ganjil' : 'Genap',
             'tahun' => $activeSeason->tahun_ajaran,
@@ -67,7 +65,6 @@ class CatatanController extends Controller
             'end' => date('d/m/Y', strtotime($activeSeason->end_date))
         ];
 
-        // 2. Cek Status Open Manual (Switch Admin)
         if ($activeSeason->is_open == 0) {
             return response()->json([
                 'status' => 'locked_season',
@@ -76,7 +73,6 @@ class CatatanController extends Controller
             ]);
         }
 
-        // 3. Cek Rentang Tanggal (Start - End)
         $today = now()->format('Y-m-d');
         if ($today < $activeSeason->start_date) {
             return response()->json([
@@ -93,8 +89,6 @@ class CatatanController extends Controller
             ]);
         }
 
-        // 4. Cek Kesesuaian Input User dengan Season Aktif
-        // Validasi Tahun Ajaran
         if ($request->tahun_ajaran != $activeSeason->tahun_ajaran) {
             return response()->json([
                 'status' => 'locked_season',
@@ -103,7 +97,6 @@ class CatatanController extends Controller
             ]);
         }
 
-        // Validasi Semester
         $semesterInputInt = $this->mapSemesterToInt($request->semester);
         if ($semesterInputInt != $activeSeason->semester) {
             return response()->json([
@@ -113,7 +106,6 @@ class CatatanController extends Controller
             ]);
         }
 
-        // Jika semua lolos, status Safe
         return response()->json([
             'status' => 'safe',
             'season' => $seasonData
@@ -127,7 +119,27 @@ class CatatanController extends Controller
      */
     public function inputCatatan(Request $request)
     {
-        $kelas = Kelas::orderBy('nama_kelas')->get();
+        // ==================================================
+        // 1. IDENTIFIKASI ROLE (RBAC)
+        // ==================================================
+        $user = Auth::user();
+        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']);
+
+        // 2. QUERY KELAS BERDASARKAN WALI KELAS
+        $queryKelas = Kelas::orderBy('nama_kelas');
+        if ($isGuru) {
+            // Jika Guru, cukup tampilkan kelas yang id_guru nya adalah dia sendiri
+            $queryKelas->where('id_guru', $user->id_guru);
+        }
+        $kelas = $queryKelas->get();
+
+        // Security Lock: Mencegah guru iseng masuk ke kelas guru lain via URL
+        if ($isGuru && $request->id_kelas) {
+            $cekKelasValid = Kelas::where('id_kelas', $request->id_kelas)->where('id_guru', $user->id_guru)->exists();
+            if (!$cekKelasValid) {
+                return redirect()->route('walikelas.catatan.input')->with('error', 'Akses Ditolak! Anda bukan Wali Kelas untuk kelas tersebut.');
+            }
+        }
         
         // Inisialisasi variabel view
         $set_kokurikuler = collect(); 
@@ -139,12 +151,11 @@ class CatatanController extends Controller
 
         $semesterInt = $this->mapSemesterToInt($request->semester);
 
-        // 1. Load List Siswa (Untuk Sidebar Monitoring)
+        // 3. Load List Siswa (Untuk Sidebar Monitoring)
         if ($request->id_kelas) {
             $siswa = Siswa::where('id_kelas', $request->id_kelas)
                 ->orderBy('nama_siswa');
             
-            // Jika ada filter tahun/semester, load relasi untuk cek status sudah diisi/belum
             if($request->tahun_ajaran && $semesterInt) {
                 $siswa->with(['catatan' => function($q) use ($semesterInt, $request) {
                     $q->where('semester', $semesterInt)
@@ -154,7 +165,7 @@ class CatatanController extends Controller
             $siswa = $siswa->get();
         }
 
-        // 2. Jika Siswa Dipilih -> Load Data Detail untuk Form Input
+        // 4. Jika Siswa Dipilih -> Load Data Detail untuk Form Input
         if ($request->id_kelas && $request->id_siswa && $request->tahun_ajaran && $semesterInt) {
             
             $siswaTerpilih = Siswa::with('kelas')->find($request->id_siswa);
@@ -162,12 +173,12 @@ class CatatanController extends Controller
             
             // A. Ambil Template Kokurikuler Sesuai Tingkat Kelas
             if ($siswaTerpilih && $siswaTerpilih->kelas) {
-                $id_guru_login = auth()->user()->guru->id_guru ?? -1;
+                $id_guru_login = auth()->user()->id_guru ?? -1;
                 $set_kokurikuler = SetKokurikuler::where('tingkat', $siswaTerpilih->kelas->tingkat)
                     ->where('aktif', 1)
                     ->where(function($query) use ($id_guru_login) {
-                        $query->where('id_guru', 0)                 // Ambil punya Admin (Global)
-                              ->orWhere('id_guru', $id_guru_login); // Ambil punya Guru yang login
+                        $query->where('id_guru', 0)                 
+                              ->orWhere('id_guru', $id_guru_login); 
                     })
                     ->get();
             }
@@ -195,7 +206,6 @@ class CatatanController extends Controller
                 ->first();
 
             // D. Ambil Data Ekskul (READ ONLY dari nilai_ekskul)
-            // Mengambil data yang diinput oleh Guru Ekskul
             $dataEkskulTersimpan = DB::table('nilai_ekskul')
                 ->join('ekskul', 'nilai_ekskul.id_ekskul', '=', 'ekskul.id_ekskul')
                 ->where('nilai_ekskul.id_siswa', $request->id_siswa)
@@ -213,7 +223,6 @@ class CatatanController extends Controller
                 ->toArray();
         } 
 
-        // Kembali ke view asli 'nilai.catatan'
         return view('nilai.catatan', compact(
             'kelas', 
             'siswa', 
@@ -221,13 +230,11 @@ class CatatanController extends Controller
             'siswaTerpilih', 
             'dataEkskulTersimpan',
             'templateKokurikuler', 
-            'set_kokurikuler'
+            'set_kokurikuler',
+            'isGuru'
         ));
     }
 
-    /**
-     * AJAX Helper: Get Siswa (Opsional jika masih dipakai ajax select)
-     */
     public function getSiswa($id_kelas)
     {
         return Siswa::where('id_kelas', $id_kelas)->orderBy('nama_siswa')->get();
@@ -235,20 +242,17 @@ class CatatanController extends Controller
 
     /**
      * ==========================================
-     * 3. SIMPAN CATATAN (MURNI ABSENSI & NARASI)
+     * 3. SIMPAN CATATAN
      * ==========================================
      */
     public function simpanCatatan(Request $request)
     {
-        // 🔒 VALIDASI SEASON KETAT (Backend Guard)
         if (!Season::currentOpen()) {
             return back()->with('error', '⛔ Gagal Simpan: Season Input Data Sedang Ditutup atau Tidak Sesuai.');
         }
 
         $semesterInt = $this->mapSemesterToInt($request->semester);
         
-        // Simpan ke DB (Tabel 'catatan')
-        // Hanya update/insert kolom Absensi, Kokurikuler, dan Catatan Wali Kelas.
         DB::table('catatan')->updateOrInsert(
             [
                 'id_siswa'     => $request->id_siswa,
@@ -271,7 +275,7 @@ class CatatanController extends Controller
 
     /**
      * ==========================================
-     * 4. MONITORING PROGRESS (Dashboard Progress)
+     * 4. MONITORING PROGRESS
      * ==========================================
      */
     public function indexProgressCatatan(Request $request)
@@ -348,12 +352,11 @@ class CatatanController extends Controller
     
     /**
      * ==========================================
-     * 6. IMPORT EXCEL (SERVER-SIDE LOCK)
+     * 6. IMPORT EXCEL
      * ==========================================
      */
     public function importExcel(Request $request)
     {
-        // 🔒 VALIDASI SEASON SERVER-SIDE
         if (!Season::currentOpen()) {
             return back()->with('error', '⛔ Gagal Import: Season Input Data Sedang Ditutup.');
         }
@@ -369,11 +372,6 @@ class CatatanController extends Controller
 
         try {
             Excel::import(new CatatanImport($filters), $request->file('file_excel'));
-
-            // Redirect kembali ke route yang benar (master.catatan.input)
-            // Sesuai kode asli Anda di bagian view: route('walikelas.catatan.input') atau master.catatan.input
-            // Pastikan nama route ini sesuai dengan web.php Anda. 
-            // Defaultnya saya pakai 'master.catatan.input' mengikuti return view('nilai.catatan')
             return redirect()->route('walikelas.catatan.input', $request->query())
                              ->with('success', 'Import Catatan Wali Kelas berhasil diproses!');
 

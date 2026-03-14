@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth; // Tambahan untuk mengecek user login
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\Pembelajaran;
@@ -24,20 +25,55 @@ class MonitoringWaliController extends Controller
     {
         $periode = $this->getPeriode($request);
         
-        $kelasList = Kelas::orderBy('nama_kelas', 'asc')->get();
+        // ==================================================
+        // 1. IDENTIFIKASI ROLE & FILTER KELAS (RBAC)
+        // ==================================================
+        $user = Auth::user();
+        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']); // True jika hanya guru biasa
 
-        // 1. Tentukan Kelas Target
+        $queryKelas = Kelas::orderBy('nama_kelas', 'asc');
+        
+        if ($isGuru) {
+            // Jika Guru, hanya tampilkan kelas yang ia bina (sebagai wali kelas)
+            $queryKelas->where('id_guru', $user->id_guru);
+        }
+        
+        $kelasList = $queryKelas->get();
+
+        // 2. Tentukan Kelas Target
         if ($request->has('id_kelas') && $request->id_kelas != '') {
+            
+            // SECURITY LOCK: Cek apakah guru berhak mengakses kelas ini
+            if ($isGuru) {
+                $cekAksesKelas = $kelasList->where('id_kelas', $request->id_kelas)->first();
+                if (!$cekAksesKelas) {
+                    return redirect()->route('walikelas.monitoring.wali')->with('error', 'Akses Ditolak! Anda bukan Wali Kelas untuk kelas tersebut.');
+                }
+            }
+
             $kelasTarget = Kelas::find($request->id_kelas);
         } else {
+            // Auto-select kelas pertama jika belum memilih filter
             $kelasTarget = $kelasList->first();
         }
 
+        // Jika guru login tapi dia bukan wali kelas sama sekali
         if (!$kelasTarget) {
-             return redirect()->back()->with('error', 'Data Kelas Kosong. Silakan hubungi admin.');
+             return view('monitoring.kesiapan_rapor.index_wali', array_merge(
+                [
+                    'dataKelas' => null,
+                    'kelasList' => $kelasList, 
+                    'selected_kelas_id' => null,
+                    'gate' => null,
+                    'bobotInfo' => null,
+                    'isGuru' => $isGuru
+                ], 
+                $periode,
+                ['stats' => null]
+            ))->with('error', 'Data Kelas Kosong atau Anda tidak terdaftar sebagai Wali Kelas.');
         }
 
-        // --- TAMBAHAN BARU: AMBIL INFO BOBOT ---
+        // --- AMBIL INFO BOBOT ---
         $semesterRaw = $periode['semester'];
         $tahun_ajaran = $periode['tahun_ajaran'];
         $semesterInt = (strtoupper($semesterRaw) == 'GENAP' || $semesterRaw == '2') ? 2 : 1;
@@ -48,11 +84,11 @@ class MonitoringWaliController extends Controller
                       ->orWhere('semester', ucfirst($semesterRaw));
             })->first();
 
-        // 2. Hitung Data (Logic Internal Wali)
+        // 3. Hitung Data (Logic Internal Wali)
         $result = $this->hitungMonitoringData(collect([$kelasTarget]), $periode);
         $singleData = $result['monitoringData'][0] ?? null;
 
-        // 3. Cek Prasyarat (Gatekeeper)
+        // 4. Cek Prasyarat (Gatekeeper)
         $gate = $this->checkPrerequisites($periode, $singleData);
 
         return view('monitoring.kesiapan_rapor.index_wali', array_merge(
@@ -61,7 +97,8 @@ class MonitoringWaliController extends Controller
                 'kelasList' => $kelasList, 
                 'selected_kelas_id' => $kelasTarget->id_kelas,
                 'gate' => $gate,
-                'bobotInfo' => $bobotInfo // Kirim info bobot ke view
+                'bobotInfo' => $bobotInfo, // Kirim info bobot ke view
+                'isGuru' => $isGuru // Kirim status role ke view
             ], 
             $periode,
             ['stats' => $result['stats']]
@@ -73,7 +110,10 @@ class MonitoringWaliController extends Controller
      */
     public function generateRaporWalikelas(Request $request)
     {
-        // 1. VALIDASI
+        $user = Auth::user();
+        $isGuru = !$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor']);
+
+        // 1. VALIDASI DASAR
         $request->validate([
             'id_kelas' => 'required',
             'semester' => 'required',
@@ -85,7 +125,15 @@ class MonitoringWaliController extends Controller
         $semesterRaw = $request->semester;
         $semesterInt = (strtoupper($semesterRaw) == 'GENAP' || $semesterRaw == '2') ? 2 : 1;
 
-        // --- TAMBAHAN BARU: GATEKEEPER STATUS CETAK ---
+        // SECURITY LOCK: Cegah guru generate kelas orang lain via inspect element
+        if ($isGuru) {
+            $cekHakAkses = Kelas::where('id_kelas', $id_kelas)->where('id_guru', $user->id_guru)->exists();
+            if (!$cekHakAkses) {
+                return back()->with('error', 'Akses Ditolak: Anda tidak memiliki wewenang memfinalisasi kelas ini.');
+            }
+        }
+
+        // --- GATEKEEPER STATUS CETAK ---
         // Cegah proses jika Wali Kelas iseng klik saat rapor sudah dicetak/dikunci.
         $isLocked = DB::table('nilai_akhir_rapor')
             ->where('id_kelas', $id_kelas)
@@ -166,7 +214,6 @@ class MonitoringWaliController extends Controller
 
                     if ($existingNilai) {
                         // KONDISI 1: Guru sudah input -> Kita hanya perlu melegalkan/mengubah statusnya jadi FINAL
-                        // Ini memastikan nilai yang mungkin diedit manual oleh guru TIDAK TERTEMPA.
                         DB::table('nilai_akhir')->where('id', $existingNilai->id)->update([
                             'status_data' => 'final',
                             'updated_at'  => now()
@@ -349,7 +396,6 @@ class MonitoringWaliController extends Controller
         // ==========================================================
         // 2. CEK STATUS CETAK (BLOKIR JIKA SUDAH TERCETAK)
         // ==========================================================
-        // Jika ada satu saja item (mapel atau catatan) yang berstatus 'cetak', KUNCI tombol!
         $hasCetak = collect($dataKelas->detail)->merge($dataKelas->detail_catatan)
             ->contains(function($item) {
                 return $item['status'] == 'cetak';
@@ -360,7 +406,7 @@ class MonitoringWaliController extends Controller
                 'allowed' => false, 
                 'message' => 'Akses Terkunci: Rapor kelas ini sudah masuk tahap CETAK.', 
                 'icon' => 'fas fa-lock', 
-                'color' => 'dark' // Menggunakan warna gelap untuk memberi kesan TERKUNCI MUTLAK
+                'color' => 'dark' 
             ];
         }
 
@@ -397,8 +443,6 @@ class MonitoringWaliController extends Controller
         // ==========================================================
         // 5. JIKA SEMUA SUDAH 'FINAL' DAN TIDAK ADA 'UPDATE'
         // ==========================================================
-        // Kita ubah allowed jadi FALSE agar Wali Kelas tidak perlu menekan 
-        // tombol generate berulang-ulang tanpa alasan yang jelas.
         return [
             'allowed' => false, 
             'message' => 'Semua data rapor sudah berstatus FINAL. Tidak ada perubahan yang perlu digenerate.', 

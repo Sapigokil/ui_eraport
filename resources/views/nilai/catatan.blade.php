@@ -85,39 +85,42 @@
                             @endif
                         </div>
 
-                        {{-- 3. FILTER DATA --}}
+                        {{-- 3. FILTER DATA DINAMIS BERDASARKAN ROLE --}}
                         <div class="p-4 border-bottom bg-gray-100">
-                            {{-- Route Input Utama --}}
-                            <form method="GET" action="{{ route('walikelas.catatan.input') }}" class="row align-items-end mb-0">
-                                <div class="col-md-3 mb-3">
+                            <form id="mainFilterForm" method="GET" action="{{ route('walikelas.catatan.input') }}" class="row align-items-end mb-0">
+                                
+                                <div class="col-md-4 mb-3">
                                     <label for="kelasSelect" class="form-label font-weight-bold text-xs text-uppercase mb-1">Pilih Kelas:</label>
-                                    <select name="id_kelas" id="kelasSelect" required class="form-select border ps-2 bg-white" onchange="this.form.submit()">
+                                    <select name="id_kelas" id="kelasSelect" required class="form-select border ps-2 bg-white" onchange="showLoading('kelas')">
                                         <option value="">- Pilih Kelas -</option>
                                         @foreach ($kelas as $k)
                                             <option value="{{ $k->id_kelas }}" {{ $request->id_kelas == $k->id_kelas ? 'selected' : '' }}>{{ $k->nama_kelas }}</option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-2 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label font-weight-bold text-xs text-uppercase mb-1">Semester:</label>
-                                    <select name="semester" id="input_semester" required class="form-select border ps-2 bg-white" onchange="this.form.submit()">
+                                    <select name="semester" id="input_semester" required class="form-select border ps-2 bg-white" onchange="showLoading('semester')">
                                         @foreach ($semesterList as $sem)
                                             <option value="{{ $sem }}" {{ request('semester', $defaultSemester) == $sem ? 'selected' : '' }}>{{ $sem }}</option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-2 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label font-weight-bold text-xs text-uppercase mb-1">Tahun Ajaran:</label>
-                                    <select name="tahun_ajaran" id="input_tahun_ajaran" required class="form-select border ps-2 bg-white" onchange="this.form.submit()">
+                                    <select name="tahun_ajaran" id="input_tahun_ajaran" required class="form-select border ps-2 bg-white" onchange="showLoading('tahun')">
                                         @foreach ($tahunAjaranList as $ta)
                                             <option value="{{ $ta }}" {{ request('tahun_ajaran', $defaultTahunAjaran) == $ta ? 'selected' : '' }}>{{ $ta }}</option>
                                         @endforeach
                                     </select>
                                 </div>
+                                
                                 {{-- Hidden Input untuk menjaga siswa terpilih saat ganti semester/tahun --}}
                                 @if($request->id_siswa)
-                                    <input type="hidden" name="id_siswa" value="{{ $request->id_siswa }}">
+                                    <input type="hidden" name="id_siswa" id="hidden_id_siswa" value="{{ $request->id_siswa }}">
                                 @endif
+                                
+                                <button type="submit" class="d-none"></button>
                             </form>
                         </div>
 
@@ -153,7 +156,7 @@
 
                         {{-- 6. KONTEN UTAMA (Hanya Muncul Jika Kelas Dipilih) --}}
                         @if($request->id_kelas)
-                            <div class="row px-4 mt-4 pb-5">
+                            <div class="row px-4 mt-4 pb-5" id="input-form-container">
                                 
                                 {{-- TABEL MONITORING SISWA (KIRI) --}}
                                 <div class="col-lg-4 mb-4">
@@ -172,15 +175,13 @@
                                                 <tbody>
                                                     @foreach($siswa as $s)
                                                         @php
-                                                            // Cek apakah siswa ini punya data catatan di semester terpilih
-                                                            // Asumsi: relasi 'catatan' sudah diload di controller
                                                             $catatanSiswa = $s->catatan->first(); 
                                                             $isActive = $request->id_siswa == $s->id_siswa;
                                                             $hasData = $catatanSiswa && ($catatanSiswa->sakit !== 0 || $catatanSiswa->ijin !== 0 || $catatanSiswa->alpha !== 0 || !empty($catatanSiswa->catatan_wali_kelas));
                                                         @endphp
                                                         <tr class="{{ $isActive ? 'bg-primary-soft border-start border-4 border-primary' : '' }} cursor-pointer" 
-                                                            {{-- Route Klik Baris Tabel --}}
-                                                            onclick="window.location.href='{{ route('walikelas.catatan.input', array_merge($request->query(), ['id_siswa' => $s->id_siswa])) }}'">
+                                                            {{-- Route Klik Baris Tabel + Menyalakan Loader --}}
+                                                            onclick="showLoadingSiswa('{{ route('walikelas.catatan.input', array_merge($request->query(), ['id_siswa' => $s->id_siswa])) }}')">
                                                             <td class="text-xs font-weight-bold px-3 py-3 {{ $isActive ? 'text-primary' : 'text-dark' }}">
                                                                 {{ $s->nama_siswa }}
                                                                 <br>
@@ -202,7 +203,7 @@
                                 </div>
 
                                 {{-- FORM INPUT (KANAN) --}}
-                                <div class="col-lg-8" id="input-form-container">
+                                <div class="col-lg-8">
                                     @if($request->id_siswa && $siswaTerpilih)
                                         <div class="card border border-primary shadow-sm h-100">
                                             <div class="card-header bg-gradient-primary p-3 d-flex justify-content-between align-items-center">
@@ -210,42 +211,8 @@
                                             </div>
                                             <div class="card-body p-4">
                                                 
-                                                {{-- A. REFERENSI NILAI EKSKUL (READ ONLY) --}}
-                                                {{-- <div class="alert bg-gray-100 border border-light mb-4 p-3 shadow-none rounded-3">
-                                                    <h6 class="text-dark text-xs font-weight-bold text-uppercase mb-2">
-                                                        <i class="fas fa-star text-warning me-1"></i> Referensi Nilai Ekstrakurikuler (Read Only)
-                                                    </h6>
-                                                    @if(count($dataEkskulTersimpan) > 0)
-                                                        <div class="table-responsive">
-                                                            <table class="table table-sm mb-0">
-                                                                <thead class="text-xs text-secondary text-uppercase bg-white">
-                                                                    <tr>
-                                                                        <th class="ps-2">Nama Ekskul</th>
-                                                                        <th>Predikat</th>
-                                                                        <th>Keterangan</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    @foreach($dataEkskulTersimpan as $eks)
-                                                                        <tr>
-                                                                            <td class="text-xs font-weight-bold text-dark ps-2">{{ $eks['nama_ekskul'] }}</td>
-                                                                            <td class="text-xs"><span class="badge bg-gradient-info">{{ $eks['predikat'] }}</span></td>
-                                                                            <td class="text-xs text-secondary text-wrap fst-italic" style="max-width: 200px;">{{ $eks['keterangan'] ?? '-' }}</td>
-                                                                        </tr>
-                                                                    @endforeach
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    @else
-                                                        <div class="text-center py-2">
-                                                            <p class="text-xs text-secondary mb-0 fst-italic">Belum ada nilai ekstrakurikuler yang masuk dari Guru Pembina.</p>
-                                                        </div>
-                                                    @endif
-                                                </div> --}}
-
                                                 {{-- B. FORM INPUT WALI KELAS --}}
-                                                {{-- Route Simpan Data --}}
-                                                <form action="{{ route('walikelas.catatan.simpan') }}" method="POST">
+                                                <form id="formSimpanCatatan" action="{{ route('walikelas.catatan.simpan') }}" method="POST">
                                                     @csrf
                                                     <input type="hidden" name="id_kelas" value="{{ $request->id_kelas }}">
                                                     <input type="hidden" name="id_siswa" value="{{ $request->id_siswa }}">
@@ -347,7 +314,6 @@
                 <h5 class="modal-title font-weight-normal"><i class="fas fa-file-import me-2 text-success"></i>Import Catatan</h5>
                 <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            {{-- Route Import --}}
             <form action="{{ route('walikelas.catatan.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
@@ -380,7 +346,6 @@
                 <h5 class="modal-title font-weight-normal"><i class="fas fa-file-excel me-2 text-success"></i>Download Template</h5>
                 <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            {{-- Route Template --}}
             <form action="{{ route('walikelas.catatan.template') }}" method="GET">
                 <div class="modal-body">
                     <p class="text-sm text-secondary">Download template Excel untuk pengisian massal.</p>
@@ -402,6 +367,14 @@
     </div>
 </div>
 
+{{-- OVERLAY LOADING (BARU & ELEGAN) --}}
+<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 999999;">
+    <div class="d-flex flex-column align-items-center">
+        <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status"></div> 
+        <span id="loadingText">Sedang memproses data...</span>
+    </div>
+</div>
+
 <style>
     .bg-primary-soft { background-color: #e3f2fd !important; }
     .cursor-pointer { cursor: pointer; }
@@ -412,6 +385,24 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+    // FUNGSI LOADING UNTUK FILTER (Mencegah Salah Persepsi)
+    function showLoading(source) {
+        if (source === 'kelas') {
+            $('#hidden_id_siswa').val(''); // Reset Siswa jika kelas diganti
+        }
+
+        $('#loadingText').text('Memuat data...');
+        $('#loadingOverlay').css('display', 'flex');
+        $('#mainFilterForm').submit();
+    }
+
+    // FUNGSI LOADING KLIK NAMA SISWA
+    function showLoadingSiswa(url) {
+        $('#loadingText').text('Membuka data siswa...');
+        $('#loadingOverlay').css('display', 'flex');
+        window.location.href = url;
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // 1. Template Kokurikuler Auto-Fill
         const selectJudul = document.getElementById('select-judul-kok');
@@ -427,13 +418,20 @@
             });
         }
 
-        // 2. AJAX Prerequisite Check
+        // 2. Loading saat Simpan/Import Form
+        $('form').not('#mainFilterForm').on('submit', function() {
+            if($(this).attr('method') === 'POST'){
+                $('#loadingText').text('Menyimpan data...');
+                $('#loadingOverlay').css('display', 'flex');
+            }
+        });
+
+        // 3. AJAX Prerequisite Check
         function checkCatatanPrerequisite() {
             let semester = $('#input_semester').val();
             let tahunAjaran = $('#input_tahun_ajaran').val();
 
             if(semester && tahunAjaran) {
-                // Route Check Prerequisite
                 $.ajax({
                     url: "{{ route('walikelas.catatan.check_prerequisite') }}",
                     method: "GET",
@@ -447,7 +445,6 @@
                         let btnImport = $('.btn-import-trigger');
                         let btnProsesImport = $('.btn-proses-import');
 
-                        // Info Season Box
                         if(response.season) {
                             $('#info-semester').text(response.season.semester);
                             $('#info-tahun').text(response.season.tahun);
@@ -464,7 +461,6 @@
                             $('#season-info-box').hide();
                         }
 
-                        // Lock Logic
                         if(response.status === 'locked_season') {
                             $('#prerequisite-message').html(response.message);
                             alertContainer.removeClass('alert-warning alert-danger text-dark').addClass('alert-danger text-dark');
@@ -472,14 +468,12 @@
                             $('#alert-title').text('AKSES DITOLAK').addClass('text-danger');
                             
                             $('#prerequisite-alert').slideDown();
-                            $('#input-form-container').slideUp(); // Sembunyikan form input
+                            $('#input-form-container').slideUp(); 
                             
-                            // Disable buttons
                             btnSimpan.prop('disabled', true).addClass('opacity-5');
                             btnImport.prop('disabled', true).addClass('opacity-5');
                             btnProsesImport.prop('disabled', true);
                         } else {
-                            // Safe
                             $('#prerequisite-alert').slideUp();
                             $('#input-form-container').slideDown();
                             btnSimpan.prop('disabled', false).removeClass('opacity-5');
@@ -491,7 +485,6 @@
             }
         }
 
-        // Run check on load
         checkCatatanPrerequisite();
     });
 </script>

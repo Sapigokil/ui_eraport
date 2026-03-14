@@ -21,7 +21,7 @@
                         <div class="row align-items-center text-white">
                             <div class="col-md-7">
                                 <h3 class="text-white font-weight-bold mb-1">Dashboard Penilaian PKL</h3>
-                                <p class="text-white opacity-8 mb-2"><i class="fas fa-filter me-2"></i> Filter otomatis menyimpan. Pilih parameter untuk melihat data spesifik.</p>
+                                {{-- <p class="text-white opacity-8 mb-2"><i class="fas fa-filter me-2"></i> Filter otomatis menyimpan. Pilih parameter untuk melihat data spesifik.</p> --}}
                                 <span class="badge border border-white text-white fw-bold bg-transparent">
                                     Tahun Ajaran {{ $tahun_ajaran }} - Semester {{ $semester }}
                                 </span>
