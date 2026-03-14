@@ -538,6 +538,12 @@ Route::middleware(['auth'])->group(function () {
             // Menggunakan nama session 'simulasi_toggled' agar mudah ditangkap oleh modal
             return back()->with('simulasi_toggled', $status);
         })->name('toggle.simulasi');
+
+        // D. Manajemen Database Simulasi
+        Route::group(['prefix' => 'simulasi', 'as' => 'simulasi.'], function () {
+            Route::get('/', [\App\Http\Controllers\SimulasiSettingController::class, 'index'])->name('index');
+            Route::post('/sync', [\App\Http\Controllers\SimulasiSettingController::class, 'syncDatabase'])->name('sync');
+        });
     });
 
 });

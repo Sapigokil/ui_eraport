@@ -11,20 +11,22 @@ return [
     |
     */
 
-    'current_version' => '1.0.13',
+    'current_version' => '1.0.14',
     
-    'last_updated' => '2026-03-13',
+    'last_updated' => '2026-03-14',
 
     'changelog' => [
         [
-            'version' => '1.0.14beta',
-            'date'    => '2026-03-13',
+            'version' => '1.0.14',
+            'date'    => '2026-03-14',
             'notes'   => [
                 'Menambahkan Mode Simulasi kedalam sistem',
                 'Menambahkan Database simulasi untuk testing fitur baru tanpa mengganggu data utama',
                 'Menambahkan Middleware untuk switch database secara otomatis berdasarkan session mode_simulasi',
                 'Menambahkan tombol toggle mode simulasi di sidebar untuk memudahkan pengujian fitur baru',
                 'Dengan mode simulasi, admin dapat menguji fitur baru dengan data dummy tanpa risiko',
+                'Menambahkan menu pengaturan simulasi untuk mengelola data dummy dan melihat status sinkronisasi terakhir',
+                'Memidahkan Backup & Restore ke menu terpisah agar lebih fokus pada fitur simulasi',
             ],
         ],
         [
