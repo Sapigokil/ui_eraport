@@ -14,13 +14,41 @@ use App\Models\Notifikasi;
 use App\Models\Season;
 
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        // =========================================================
+        // 🚪 PINTU PENYELEKSI UNTUK SISWA
+        // =========================================================
+        $user = Auth::user();
+        
+        // Cek apakah user yang login memiliki role 'siswa' atau level 'siswa'
+        // Sesuaikan parameter 'siswa' ini dengan nama role di Spatie Anda
+        if ($user->hasRole('siswa') || $user->level == 'siswa') {
+            
+            // Ambil data siswa (Asumsi username = nisn, atau gunakan id_siswa)
+            $siswa = Siswa::where('nisn', $user->username)->orWhere('id_siswa', $user->id_siswa ?? null)->first();
+            
+            // Ambil Season Aktif
+            $activeSeason = Season::where('is_active', 1)->first();
+            
+            // Ambil Pengumuman / Event (Tampilkan semua event yang akan datang & hari ini)
+            $pengumuman = Event::where('tanggal', '>=', Carbon::today())
+                               ->orderBy('tanggal', 'asc')
+                               ->get();
+
+            // Arahkan langsung ke view dashboard siswa
+            return view('dashboardsiswa', compact('user', 'siswa', 'activeSeason', 'pengumuman'));
+        }
+        // =========================================================
+        // END OF PORTAL SISWA. KODE DI BAWAH INI KHUSUS ADMIN/GURU
+        // =========================================================
+
+
         $rentangNilai = $request->rentang_nilai ?? 'lt78';
 
         // =====================

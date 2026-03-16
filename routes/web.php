@@ -97,6 +97,7 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/dashboard/event/{id}', [DashboardController::class, 'update'])->name('dashboard.event.update');
     Route::delete('/dashboard/event/{id}', [DashboardController::class, 'destroy'])->name('dashboard.event.destroy');
 
+    require __DIR__.'/siswa.php';
 
     // ==========================================================================
     // MODULE: DATA UTAMA / MASTER DATA 

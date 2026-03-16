@@ -17,6 +17,13 @@ return [
 
     'changelog' => [
         [
+            'version' => '1.0.16',
+            'date'    => '2026-03-16',
+            'notes'   => [
+                'Portal Siswa',
+            ],
+        ],
+        [
             'version' => '1.0.15',
             'date'    => '2026-03-16',
             'notes'   => [

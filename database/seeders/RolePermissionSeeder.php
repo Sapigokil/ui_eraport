@@ -72,6 +72,12 @@ class RolePermissionSeeder extends Seeder
                 // Menggunakan 1 Pintu sesuai permintaan
                 'setting.menu' => 'Akses Penuh Seluruh Menu Pengaturan (Erapor, PKL, User, Role)', 
             ],
+
+            // H. SYSTEM SETTINGS (Siswa Only)
+            '08. Pengaturan Siswa' => [
+                // Menggunakan 1 Pintu sesuai permintaan
+                'siswa.menu' => 'Akses bagi siswa untuk melihat data diri, nilai, rapor, dll di portal siswa', 
+            ],
         ];
 
         foreach ($permissions as $group => $perms) {
@@ -123,11 +129,18 @@ class RolePermissionSeeder extends Seeder
             'pkl.nilai.menu',
         ]);
 
-        // --- ROLE 4: SISWA ---
+        // --- ROLE 4: SISWA (BACKUP / SUPER SISWA) ---
+        $roleSiswa = Role::create(['name' => 'siswa_erapor']);
+        $roleSiswa->givePermissionTo([
+            'dashboard.view',
+            'siswa.menu', // Nanti untuk akses portal siswa (profil, nilai, rapor, dll)
+        ]);
+        
+        // --- ROLE 4b: SISWA ---
         $roleSiswa = Role::create(['name' => 'siswa']);
         $roleSiswa->givePermissionTo([
             'dashboard.view',
-            'rapor.menu' // Asumsi: Siswa hanya bisa lihat/download rapor sendiri (dibatasi via query controller)
+            'siswa.menu', // Nanti untuk akses portal siswa (profil, nilai, rapor, dll)
         ]);
 
 
@@ -188,9 +201,23 @@ class RolePermissionSeeder extends Seeder
         );
         $guruEkskulUser->assignRole($roleGuruEkskul);
 
+        // USER 3: SISWA (BACKUP / SUPER SISWA)
+        $siswaUser = User::firstOrCreate(
+            ['username' => 'siswa.erapor'], 
+            [
+                'name'      => 'Siswa E-Rapor (Backup)',
+                'username'  => 'siswa.erapor',
+                'email'     => 'siswa@smkn1salatiga.sch.id',
+                'password'  => Hash::make('siswasmkn1'),
+                'role'      => 'siswa_erapor',
+            ]
+        );
+        $siswaUser->assignRole($roleSiswa);
+
         $this->command->info('SUKSES! User Spesial telah dibuat:');
         $this->command->info('1. Admin: admin.erapor / adminerapor#');
         $this->command->info('2. Guru: guru.erapor / gurusmkn1');
         $this->command->info('3. Guru Ekskul: guru.ekskul / ekskulsmkn1');
+        $this->command->info('4. Siswa: siswa.erapor / siswasmkn1');
     }
 }

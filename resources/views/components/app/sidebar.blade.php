@@ -1,5 +1,6 @@
-<aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 fixed-start shadow-sm" id="sidenav-main" style="background-color: #25183b; border-right: 1px solid rgba(255,255,255,0.05) !important;">
+<aside class="sidenav navbar navbar-vertical navbar-expand-xs border-0 fixed-start shadow-sm" id="sidenav-main" style="background-color: #25183b; border-right: 1px solid rgba(255,255,255,0.05) !important; overflow: hidden !important;">
 
+    {{-- HEADER KEMBALI NORMAL (Tidak butuh sticky karena aside sudah dikunci) --}}
     <div class="sidenav-header mb-3">
         <i class="fas fa-times p-3 cursor-pointer text-secondary opacity-5 position-absolute end-0 top-0 d-none d-xl-none" id="iconSidenav"></i>
 
@@ -23,11 +24,15 @@
     <style>
         /* === MINIMALIST CLASSIC DARK PURPLE SIDEBAR CSS === */
         
-        /* Custom Scrollbar */
+        /* Custom Scrollbar Diterapkan Hanya Pada Container Menu */
+        #sidenav-collapse-main {
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+        }
         #sidenav-collapse-main::-webkit-scrollbar { width: 4px; }
         #sidenav-collapse-main::-webkit-scrollbar-track { background: transparent; }
-        #sidenav-collapse-main::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
-        #sidenav-collapse-main::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        #sidenav-collapse-main::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+        #sidenav-collapse-main::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
 
         /* Mencegah default padding UL bawaan Bootstrap */
         .sidenav .navbar-nav {
@@ -39,8 +44,8 @@
             color: rgba(255, 255, 255, 0.7) !important;
             font-weight: 500 !important;
             border-radius: 6px !important;
-            margin: 0.15rem 0.25rem !important; /* Margin luar sangat tipis */
-            padding: 0.65rem 0.5rem !important; /* Padding dalam (kiri) ditipiskan */
+            margin: 0.15rem 0.25rem !important;
+            padding: 0.65rem 0.5rem !important;
             transition: all 0.2s ease;
             position: relative;
         }
@@ -59,11 +64,11 @@
             box-shadow: none !important;
         }
 
-        /* Indikator Garis Kiri untuk Menu Induk Aktif - Ditempelkan ke ujung kiri */
+        /* Indikator Garis Kiri untuk Menu Induk Aktif */
         .navbar-nav > .nav-item > .nav-link.active::before {
             content: '';
             position: absolute;
-            left: -0.25rem; /* Menyesuaikan margin luar agar pas di tepi */
+            left: -0.25rem;
             top: 15%;
             height: 70%;
             width: 4px;
@@ -84,10 +89,10 @@
             display: none;
         }
 
-        /* Sub-Menu Dropdown Styling - SUPER RAPAT KIRI */
+        /* Sub-Menu Dropdown Styling */
         #sidenav-main .collapse .nav-link {
-            margin: 0.15rem 0.25rem 0.15rem 1.5rem !important; /* Jarak indent kiri dikurangi dari 2.8rem jadi 1.5rem */
-            padding: 0.5rem 0.5rem !important; /* Padding dalam (kiri) dikurangi */
+            margin: 0.15rem 0.25rem 0.15rem 1.5rem !important;
+            padding: 0.5rem 0.5rem !important;
             font-size: 0.85rem !important;
         }
 
@@ -112,7 +117,7 @@
             opacity: 1;
         }
 
-        /* Label Kategori - SUPER RAPAT KIRI */
+        /* Label Kategori */
         .sidenav-category {
             font-size: 0.7rem;
             font-weight: 700;
@@ -120,7 +125,7 @@
             letter-spacing: 0.5px;
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
-            padding-left: 0.75rem; /* Teks label kategori digeser mentok kiri */
+            padding-left: 0.75rem;
         }
 
         /* Garis Pemisah (Divider) */
@@ -130,26 +135,25 @@
         }
     </style>
 
-    <div class="collapse navbar-collapse px-0 w-auto" id="sidenav-collapse-main" style="height: calc(100vh - 100px); overflow-x: hidden;">
-        <ul class="navbar-nav">
+    {{-- Penyesuaian Tinggi Container Menu agar pas dan mentok bawah --}}
+    <div class="collapse navbar-collapse px-0 w-auto" id="sidenav-collapse-main" style="height: calc(100vh - 95px); padding-bottom: 40px;">
+        <ul class="navbar-nav mt-2">
 
             {{-- ========================================================= --}}
-            {{-- 1. DASHBOARD --}}
+            {{-- 1. DASHBOARD (ALL USER) --}}
             {{-- ========================================================= --}}
-            @can('dashboard.view')
             <li class="nav-item">
-                @php $isDashboardActive = request()->routeIs('dashboard'); @endphp 
-                <a class="nav-link {{ $isDashboardActive ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                @php $isDashboardActive = request()->routeIs('dashboard') || request()->routeIs('siswa.dashboard'); @endphp 
+                <a class="nav-link {{ $isDashboardActive ? 'active' : '' }}" href="{{ auth()->user()->hasRole('siswa') || auth()->user()->level == 'siswa' ? route('siswa.dashboard') : route('dashboard') }}">
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
                         <i class="fas fa-chart-line text-sm"></i>
                     </div>
                     <span class="nav-link-text">Dashboard</span>
                 </a>
             </li>
-            @endcan
 
             {{-- ========================================================= --}}
-            {{-- 2. DATA POKOK (Master, PKL, Mutasi) --}}
+            {{-- 2. DATA POKOK (Master, PKL, Mutasi) - ADMIN & GURU --}}
             {{-- ========================================================= --}}
             @canany(['master.menu', 'pkl.data.menu', 'mutasi.menu'])
             <li class="nav-item mt-3">
@@ -268,7 +272,12 @@
             </li>
             @endcan
             
-            <hr class="horizontal light my-2">
+            @canany(['master.menu', 'pkl.data.menu', 'mutasi.menu'])
+            <li class="nav-item mt-3">
+                <hr class="horizontal light my-2">
+            </li>
+            @endcanany
+            
 
             {{-- ========================================================= --}}
             {{-- 4. AKADEMIK (GURU & WALI KELAS) --}}
@@ -380,7 +389,12 @@
             </li>
             @endcanany
 
-            <hr class="horizontal light my-2">
+            @canany(['nilai.menu', 'ekskul.menu', 'rapor.menu', 'ledger.menu'])
+            <li class="nav-item mt-3">
+                <hr class="horizontal light my-2">
+            </li>
+            @endcanany
+            
 
             {{-- ========================================================= --}}
             {{-- 5. PRAKERIN / PKL --}}
@@ -434,7 +448,12 @@
             </li>
             @endcan
             
-            <hr class="horizontal light my-2">
+            @canany(['pkl.nilai.menu', 'rapor.menu'])
+            <li class="nav-item mt-3">
+                <hr class="horizontal light my-2">
+            </li>
+            @endcanany
+            
             
             {{-- ========================================================= --}}
             {{-- 6. PENGATURAN (Admin 1 Pintu) --}}
@@ -534,7 +553,6 @@
             <li class="nav-item">
                 <a class="nav-link {{ request()->routeIs('settings.simulasi.*') ? 'active' : '' }}" href="{{ route('settings.backup.index') }}">
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                        {{-- <i class="fas fa-cogs text-sm"></i> --}}
                         <i class="fas fa-floppy-disk"></i>
                     </div>
                     <span class="nav-link-text">Backup & Restore</span>
@@ -544,7 +562,122 @@
 
             @endcan 
 
-            <hr class="horizontal light my-2">
+            @can('setting.menu')
+            <li class="nav-item mt-3">
+                <hr class="horizontal light my-2">
+            </li>
+            @endcan
+            
+
+            {{-- ========================================================= --}}
+            {{-- MENU KHUSUS SISWA --}}
+            {{-- ========================================================= --}}
+            @can('siswa.menu')
+                @if(auth()->user()->hasRole('siswa') || auth()->user()->level == 'siswa')
+                    
+                    {{-- FLAT DESIGN KHUSUS UNTUK ROLE SISWA ASLI --}}
+                    <li class="nav-item mt-3">
+                        <div class="sidenav-category text-uppercase">Profil Saya</div>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                                <i class="fas fa-id-card text-sm"></i>
+                            </div>
+                            <span class="nav-link-text">Biodata Diri</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item mt-3">
+                        <div class="sidenav-category text-uppercase">Hasil Belajar</div>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                                <i class="fas fa-marker text-sm"></i>
+                            </div>
+                            <span class="nav-link-text">Capaian Nilai</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                                <i class="fas fa-clipboard-list text-sm"></i>
+                            </div>
+                            <span class="nav-link-text">Absensi & Ekskul</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item mt-3">
+                        <div class="sidenav-category text-uppercase">Prakerin (PKL)</div>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                                <i class="fas fa-building text-sm"></i>
+                            </div>
+                            <span class="nav-link-text">Penempatan PKL</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                                <i class="fas fa-star text-sm"></i>
+                            </div>
+                            <span class="nav-link-text">Nilai PKL</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item mt-3">
+                        <div class="sidenav-category text-uppercase">Dokumen</div>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                                <i class="fas fa-file-pdf text-sm text-danger"></i>
+                            </div>
+                            <span class="nav-link-text">Unduh E-Rapor</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item mt-3">
+                        <hr class="horizontal light my-2">
+                    </li>
+
+                @else
+
+                    {{-- COLLAPSIBLE DESIGN UNTUK ADMIN (PREVIEW) --}}
+                    <li class="nav-item mt-3">
+                        <div class="sidenav-category text-uppercase">Portal Siswa</div>
+                    </li>
+                    <li class="nav-item">
+                        <a data-bs-toggle="collapse" href="#previewSiswaMenu" class="nav-link" aria-controls="previewSiswaMenu" role="button" aria-expanded="false">
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                                <i class="fas fa-mobile-alt text-sm"></i>
+                            </div>
+                            <span class="nav-link-text">Menu Siswa (Preview)</span>
+                        </a>
+                        <div class="collapse" id="previewSiswaMenu">
+                            <ul class="nav">
+                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Biodata Diri </span></a></li>
+                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Capaian Nilai </span></a></li>
+                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Absensi & Ekskul </span></a></li>
+                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Penempatan PKL </span></a></li>
+                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Nilai PKL </span></a></li>
+                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Unduh E-Rapor </span></a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <hr class="horizontal light my-2">
+                    </li>
+
+                @endif
+            @endcan
+            {{-- ========================================================= --}}
+            {{-- END OF MENU SISWA --}}
+            {{-- ========================================================= --}}
+
 
             {{-- ========================================================= --}}
             {{-- 7. PERSONAL --}}
@@ -558,10 +691,11 @@
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
                         <i class="fas fa-user text-sm"></i>
                     </div>
-                    <span class="nav-link-text">Profil Saya</span>
+                    <span class="nav-link-text">Ubah Password</span>
                 </a>
             </li>
 
+            @can('setting.menu')
             <li class="nav-item">
                 <a class="nav-link {{ Request::routeIs('changelog.index') ? 'active' : '' }}" href="{{ route('changelog.index') }}">
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
@@ -570,7 +704,7 @@
                     <span class="nav-link-text">ChangeLog</span>
                 </a>
             </li>
-
+            @endcan
         </ul>
     </div>
 </aside>
