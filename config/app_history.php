@@ -11,11 +11,18 @@ return [
     |
     */
 
-    'current_version' => '1.0.14',
+    'current_version' => '1.0.15',
     
-    'last_updated' => '2026-03-14',
+    'last_updated' => '2026-03-16',
 
     'changelog' => [
+        [
+            'version' => '1.0.15',
+            'date'    => '2026-03-16',
+            'notes'   => [
+                'Perbaikan Template PDF Rapor PKL untuk penyesuaian format baru',
+            ],
+        ],
         [
             'version' => '1.0.14',
             'date'    => '2026-03-14',
