@@ -361,6 +361,54 @@ Route::middleware(['auth'])->group(function () {
     // MODULE: LAPORAN & RAPOR 
     // Permission: rapor.view (Guru & Admin Erapor)
     // ==========================================================================
+    // Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.', 'middleware' => ['can:rapor.menu']], function () {
+        
+    //     // 3. Nilai Akhir pindah sini
+    //     Route::group(['prefix' => 'akhir', 'as' => 'nilaiakhir.', 'controller' => NilaiAkhirController::class], function () {
+    //         Route::get('/', 'index')->name('index');
+    //         Route::post('hitung', 'hitung')->name('hitung')->middleware('can:nilai.menu');
+    //     });
+    
+    //     // Monitoring
+    //     Route::get('/monitoring/kesiapan-rapor', [MonitoringController::class, 'index'])->name('monitoring.index');
+
+    //     // Rapor
+    //     Route::post('/sinkronkan', [RaporController::class, 'sinkronkanKelas'])->name('sinkronkan');
+    //     Route::post('/sinkronkan-kelas', [RaporController::class, 'sinkronkanKelas'])->name('sinkronkan_kelas');
+    //     Route::get('/detail-siswa', [RaporController::class, 'getDetailSiswa'])->name('detail_siswa');
+    //     Route::get('/detail-progress', [RaporController::class, 'getDetailProgress'])->name('detail_progress');
+        
+    //     // Cetak
+    //     Route::get('/cetak', [RaporController::class, 'cetakIndex'])->name('cetak');
+        
+    //     // Aksi Download (Butuh permission cetak)
+    //     Route::middleware('can:rapor.cetak')->group(function() {
+    //         Route::get('/print/{id_siswa}', [RaporController::class, 'cetak_proses'])->name('cetak_proses');
+    //         Route::get('/cetak-massal', [RaporController::class, 'cetak_massal'])->name('cetak_massal');
+    //         Route::get('/download-satuan/{id_siswa}', [RaporController::class, 'download_satuan'])->name('download_satuan');
+    //         Route::get('/download-massal', [RaporController::class, 'download_massal'])->name('download_massal');
+    //         Route::get('/download-massal-pdf', [RaporController::class, 'download_massal_pdf'])->name('download_massal_pdf');
+    //         Route::get('/download-massal-merge', [RaporController::class, 'download_massal_merge'])->name('download_massal_merge');
+    //         Route::post('/generate', [RaporController::class, 'generateRapor'])->name('generate_rapor');
+    //         Route::post('/unlock', [RaporController::class, 'unlockRapor'])->name('unlock_rapor');
+    //         Route::post('/finalisasi', [RaporController::class, 'finalisasiRapor'])->name('finalisasi_rapor');
+        
+    //     });
+
+        
+        
+    //     // Aksi Download PDF Cover (Butuh permission cetak)
+    //     Route::middleware('can:rapor.cetak')->group(function() {
+    //         Route::get('/cover', [\App\Http\Controllers\RaporCoverController::class, 'index'])->name('cover.index');
+    //         Route::get('/cover/print/{id_siswa}', [\App\Http\Controllers\RaporCoverController::class, 'cetak_satuan'])->name('cover.cetak_satuan');
+    //         Route::get('/cover/print-massal', [\App\Http\Controllers\RaporCoverController::class, 'cetak_massal'])->name('cover.cetak_massal');
+    //     });
+    // });
+
+    // ==========================================================================
+    // MODULE: LAPORAN & RAPOR 
+    // Permission: rapor.view (Guru & Admin Erapor)
+    // ==========================================================================
     Route::group(['prefix' => 'rapor', 'as' => 'rapornilai.', 'middleware' => ['can:rapor.menu']], function () {
         
         // 3. Nilai Akhir pindah sini
@@ -388,13 +436,21 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/download-satuan/{id_siswa}', [RaporController::class, 'download_satuan'])->name('download_satuan');
             Route::get('/download-massal', [RaporController::class, 'download_massal'])->name('download_massal');
             Route::get('/download-massal-pdf', [RaporController::class, 'download_massal_pdf'])->name('download_massal_pdf');
+            
+            // Route Download Merge (Dimodifikasi untuk bisa menerima array ID)
             Route::get('/download-massal-merge', [RaporController::class, 'download_massal_merge'])->name('download_massal_merge');
+            
+            // Eksekusi Satuan
             Route::post('/generate', [RaporController::class, 'generateRapor'])->name('generate_rapor');
             Route::post('/unlock', [RaporController::class, 'unlockRapor'])->name('unlock_rapor');
+            Route::post('/finalisasi', [RaporController::class, 'finalisasiRapor'])->name('finalisasi_rapor');
+
+            // Eksekusi Massal (Smart Bulk Action)
+            Route::post('/generate-massal', [RaporController::class, 'generateRaporMassal'])->name('generate_rapor_massal');
+            Route::post('/unlock-massal', [RaporController::class, 'unlockRaporMassal'])->name('unlock_rapor_massal');
+            Route::post('/finalisasi-massal', [RaporController::class, 'finalisasiRaporMassal'])->name('finalisasi_rapor_massal');
         });
 
-        
-        
         // Aksi Download PDF Cover (Butuh permission cetak)
         Route::middleware('can:rapor.cetak')->group(function() {
             Route::get('/cover', [\App\Http\Controllers\RaporCoverController::class, 'index'])->name('cover.index');

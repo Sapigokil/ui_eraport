@@ -11,16 +11,17 @@ return [
     |
     */
 
-    'current_version' => '1.0.15',
+    'current_version' => '1.0.16',
     
-    'last_updated' => '2026-03-16',
+    'last_updated' => '2026-03-27',
 
     'changelog' => [
         [
             'version' => '1.0.16',
-            'date'    => '2026-03-16',
+            'date'    => '2026-03-27',
             'notes'   => [
-                'Portal Siswa',
+                'Perbaikan Bug pada halaman cetak Rapor',
+                'Portal Siswa (on progress) untuk memudahkan siswa melihat nilai dan rapor mereka secara online',
             ],
         ],
         [
