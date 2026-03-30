@@ -97,11 +97,12 @@
                                             </div>
                                         @elseif($mode == 'industri')
                                             <div class="col-md-4">
-                                                <select name="bidang_usaha" class="form-select form-select-sm" onchange="this.form.submit()">
-                                                    <option value="">-- Filter Bidang Usaha --</option>
-                                                    @foreach($bidang_usaha_list as $bu)
-                                                        <option value="{{ $bu }}" {{ $bidang_usaha == $bu ? 'selected' : '' }}>
-                                                            {{ $bu }}
+                                                {{-- REVISI: Dropdown Filter menggunakan Nama Tempat PKL --}}
+                                                <select name="id_pkltempat" class="form-select form-select-sm" onchange="this.form.submit()">
+                                                    <option value="">-- Filter Tempat PKL --</option>
+                                                    @foreach($tempat_list as $t)
+                                                        <option value="{{ $t->id }}" {{ $id_pkltempat == $t->id ? 'selected' : '' }}>
+                                                            {{ $t->nama_perusahaan }}
                                                         </option>
                                                     @endforeach
                                                 </select>
@@ -109,7 +110,8 @@
                                         @endif
 
                                         <div class="col-md-2">
-                                            @if(request()->hasAny(['tahun_ajaran', 'semester', 'id_kelas', 'bidang_usaha']))
+                                            {{-- REVISI: Perbarui rule hasAny agar membaca parameter id_pkltempat --}}
+                                            @if(request()->hasAny(['tahun_ajaran', 'semester', 'id_kelas', 'id_pkltempat']))
                                                 <a href="{{ route('pkl.penempatan.index', ['mode' => $mode]) }}" class="btn btn-icon btn-sm btn-outline-secondary w-100 mb-0" title="Reset Filter">
                                                     <i class="fas fa-undo me-1"></i> Reset
                                                 </a>

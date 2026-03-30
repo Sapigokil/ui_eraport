@@ -20,6 +20,7 @@ return [
             'version' => '1.0.16',
             'date'    => '2026-03-30',
             'notes'   => [
+                'Perbaikan Bug pada halaman Penempatan PKL',
                 'Perbaikan Bug pada halaman cetak Rapor',
                 'Perbaikan Bug pada fitur Import Excel untuk Tempat PKL',
                 'Perbaikan proses generate Rapor agar melakukan pengecekan data lebih ketat untuk menghindari error saat generate',

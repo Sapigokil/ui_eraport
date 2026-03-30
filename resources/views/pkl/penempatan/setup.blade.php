@@ -14,7 +14,14 @@
                     <div class="card my-4 border shadow-xs">
                         <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
                             <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 d-flex justify-content-between align-items-center">
-                                <h6 class="text-white text-capitalize ps-3"><i class="fas fa-industry me-2"></i> Atur Penempatan Industri PKL</h6>
+                                
+                                <div class="d-flex align-items-center">
+                                    <h6 class="text-white text-capitalize ps-3 mb-0"><i class="fas fa-industry me-2"></i> Atur Penempatan Industri PKL</h6>
+                                    <span class="badge bg-white text-primary ms-3 shadow-sm" style="font-size: 0.75rem;">
+                                        <i class="fas fa-calendar-alt me-1"></i> TA: {{ $tahun_ajaran }} | Semester: {{ $semester == 1 ? 'Ganjil' : 'Genap' }}
+                                    </span>
+                                </div>
+
                                 <div class="pe-3">
                                     <a href="{{ route('pkl.penempatan.index', ['mode' => 'industri', 'tahun_ajaran' => $tahun_ajaran, 'semester' => $semester]) }}" class="btn btn-sm btn-light mb-0">
                                         <i class="fas fa-arrow-left me-1"></i> Kembali
@@ -53,10 +60,11 @@
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="mb-0 text-dark">Daftar Siswa Magang</h6>
+                                    {{-- REVISI TEKS AGAR ADMIN TIDAK BINGUNG --}}
+                                    <h6 class="mb-0 text-dark">Daftar Siswa Yang Ditempatkan di Sini</h6>
                                     
                                     <button type="button" class="btn btn-sm btn-info mb-0" data-bs-toggle="modal" data-bs-target="#modalTambahSiswa">
-                                        <i class="fas fa-user-plus me-1"></i> Tambah Siswa
+                                        <i class="fas fa-search-plus me-1"></i> Cari & Tambah Siswa
                                     </button>
                                 </div>
 
@@ -98,7 +106,7 @@
                                             @empty
                                                 <tr id="row_kosong">
                                                     <td colspan="6" class="text-center py-4 text-secondary text-sm">
-                                                        Belum ada siswa yang ditempatkan. Silakan klik tombol "Tambah Siswa".
+                                                        Belum ada siswa di industri ini. Silakan klik tombol "Cari & Tambah Siswa" untuk memulai penempatan.
                                                     </td>
                                                 </tr>
                                             @endforelse
@@ -152,7 +160,7 @@
                                     </th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Nama Siswa</th>
                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">NISN</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Status Tempat</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start">Status Tempat</th>
                                 </tr>
                             </thead>
                             <tbody id="bodyModalSiswa">
@@ -176,7 +184,8 @@
         function changeTempat(id_pkltempat) {
             let ta = $('#tahun_ajaran_input').val();
             let sm = $('#semester_input').val();
-            let url = "{{ route('pkl.penempatan.setup') }}?tahun_ajaran=" + ta + "&semester=" + sm;
+            // REVISI JS: Encode Tahun Ajaran agar URL tidak rusak karena garis miring (/)
+            let url = "{{ route('pkl.penempatan.setup') }}?tahun_ajaran=" + encodeURIComponent(ta) + "&semester=" + sm;
             if(id_pkltempat) url += "&id_pkltempat=" + id_pkltempat;
             window.location.href = url;
         }
@@ -212,17 +221,20 @@
                     data.forEach(siswa => {
                         let isDisabled = '';
                         let statusBadge = '<span class="badge bg-gradient-success text-xxs">Tersedia</span>';
+                        let classRow = '';
                         
                         if (existingIds.includes(siswa.id_siswa)) {
                             isDisabled = 'disabled checked';
-                            statusBadge = '<span class="badge bg-gradient-info text-xxs">Sudah di List</span>';
+                            statusBadge = '<span class="badge bg-gradient-info text-xxs">Ada di List Ini</span>';
                         } else if (siswa.is_used) {
-                            isDisabled = 'disabled';
-                            statusBadge = '<span class="badge bg-gradient-warning text-xxs">Di Tempat Lain</span>';
+                            isDisabled = ''; // Force Update tetap bisa
+                            classRow = 'bg-light';
+                            statusBadge = `<span class="badge bg-gradient-warning text-xxs mb-1">Ditempatkan Di:</span><br>
+                                           <span class="text-xs font-weight-bold text-dark"><i class="fas fa-building text-primary me-1"></i> ${siswa.nama_tempat_lain}</span>`;
                         }
 
                         htmlContent += `
-                            <tr>
+                            <tr class="${classRow}">
                                 <td class="text-center align-middle">
                                     <div class="form-check d-flex justify-content-center m-0">
                                         <input class="form-check-input border-secondary check-siswa" type="checkbox" value="${siswa.id_siswa}" 
@@ -235,7 +247,7 @@
                                 </td>
                                 <td class="align-middle"><h6 class="mb-0 text-sm">${siswa.nama_siswa}</h6></td>
                                 <td class="text-center align-middle text-xs">${siswa.nisn ?? '-'}</td>
-                                <td class="text-center align-middle">${statusBadge}</td>
+                                <td class="text-start align-middle">${statusBadge}</td>
                             </tr>
                         `;
                     });
@@ -302,7 +314,7 @@
             if($('#tabelSiswaUtama tbody tr').length === 0) {
                 $('#tabelSiswaUtama tbody').html(`
                     <tr id="row_kosong">
-                        <td colspan="6" class="text-center py-4 text-secondary text-sm">Belum ada siswa yang ditempatkan.</td>
+                        <td colspan="6" class="text-center py-4 text-secondary text-sm">Belum ada siswa di industri ini. Silakan klik tombol "Cari & Tambah Siswa" untuk memulai penempatan.</td>
                     </tr>
                 `);
             }

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PklPenempatan;
-use App\Models\PklTempat; // Pastikan model ini sesuai dengan model tempat PKL Anda
+use App\Models\PklTempat; 
 use App\Models\Kelas;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +28,9 @@ class PklPenempatanController extends Controller
         
         $mode = $request->mode ?? 'kelas'; // Default mode
         $id_kelas = $request->id_kelas;
-        $bidang_usaha = $request->bidang_usaha;
+        
+        // REVISI: Menggunakan id_pkltempat sebagai filter pengganti bidang usaha
+        $id_pkltempat = $request->id_pkltempat;
 
         $tahunAjaranList = [];
         for ($t = $tahunSekarang - 3; $t <= $tahunSekarang + 3; $t++) {
@@ -40,7 +42,6 @@ class PklPenempatanController extends Controller
         $dataIndustri = collect();
         $kelas_list = Kelas::orderBy('tingkat', 'asc')->orderBy('nama_kelas', 'asc')->get();
         $tempat_list = DB::table('pkl_tempat')->orderBy('nama_perusahaan', 'asc')->get();
-        $bidang_usaha_list = DB::table('pkl_tempat')->whereNotNull('bidang_usaha')->distinct()->pluck('bidang_usaha');
 
         // ==========================================
         // LOGIKA MODE 1: VIEW BY KELAS (Edit Massal)
@@ -94,8 +95,9 @@ class PklPenempatanController extends Controller
                 ->where('pkl_penempatan.tahun_ajaran', $tahun_ajaran)
                 ->where('pkl_penempatan.semester', $semester);
 
-            if ($bidang_usaha) {
-                $query->where('pkl_tempat.bidang_usaha', $bidang_usaha);
+            // REVISI: Filter spesifik berdasarkan ID Tempat PKL
+            if ($id_pkltempat) {
+                $query->where('pkl_tempat.id', $id_pkltempat);
             }
 
             $rawData = $query->select(
@@ -126,9 +128,9 @@ class PklPenempatanController extends Controller
         }
 
         return view('pkl.penempatan.index', compact(
-            'mode', 'id_kelas', 'bidang_usaha',
+            'mode', 'id_kelas', 'id_pkltempat',
             'dataSiswa', 'dataIndustri',
-            'kelas_list', 'tempat_list', 'bidang_usaha_list',
+            'kelas_list', 'tempat_list',
             'tahun_ajaran', 'semester', 'tahunAjaranList'
         ));
     }
@@ -167,7 +169,7 @@ class PklPenempatanController extends Controller
                     'id_pkltempat' => $id_pkltempat,
                     'id_guru' => $relasiGuru->id_guru ?? null,
                     'id_gurusiswa' => $relasiGuru->id ?? null,
-                    'status' => 1 // Status otomatis aktif
+                    'status' => 1 
                 ]
             );
         }
@@ -220,13 +222,14 @@ class PklPenempatanController extends Controller
             ->get();
         
         $siswa_sudah_penempatan = DB::table('pkl_penempatan')
-            ->where('tahun_ajaran', $tahun_ajaran)
-            ->where('semester', $semester)
-            ->pluck('id_pkltempat', 'id_siswa')
+            ->join('pkl_tempat', 'pkl_penempatan.id_pkltempat', '=', 'pkl_tempat.id')
+            ->where('pkl_penempatan.tahun_ajaran', $tahun_ajaran)
+            ->where('pkl_penempatan.semester', $semester)
+            ->pluck('pkl_tempat.nama_perusahaan', 'pkl_penempatan.id_siswa')
             ->toArray();
 
         $data = $siswa->map(function($s) use ($siswa_sudah_penempatan) {
-            $is_used = array_key_exists($s->id_siswa, $siswa_sudah_penempatan);
+            $nama_tempat_lain = $siswa_sudah_penempatan[$s->id_siswa] ?? null;
             return [
                 'id_siswa' => $s->id_siswa,
                 'nama_siswa' => $s->nama_siswa,
@@ -234,7 +237,8 @@ class PklPenempatanController extends Controller
                 'nama_kelas' => $s->nama_kelas,
                 'tingkat' => $s->tingkat,
                 'jurusan' => $s->jurusan,
-                'is_used' => $is_used,
+                'is_used' => $nama_tempat_lain ? true : false,
+                'nama_tempat_lain' => $nama_tempat_lain 
             ];
         });
 
@@ -261,7 +265,6 @@ class PklPenempatanController extends Controller
 
         if (count($siswa_ids) > 0) {
             foreach ($siswa_ids as $id_siswa) {
-                // Hapus jika siswa ini sudah ada di tempat lain
                 PklPenempatan::where('id_siswa', $id_siswa)
                     ->where('tahun_ajaran', $tahun_ajaran)
                     ->where('semester', $semester)
