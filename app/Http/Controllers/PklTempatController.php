@@ -7,6 +7,7 @@ use App\Models\Guru;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\PklTempatExport;
+use App\Imports\PklTempatImport; // <-- INI YANG DITAMBAHKAN
 
 class PklTempatController extends Controller
 {
@@ -124,10 +125,19 @@ class PklTempatController extends Controller
 
     public function destroy($id)
     {
-        $tempat = PklTempat::findOrFail($id);
-        $tempat->delete();
+        // DITAMBAHKAN TRY-CATCH UNTUK PENGAMAN FOREIGN KEY
+        try {
+            $tempat = PklTempat::findOrFail($id);
+            $tempat->delete();
 
-        return redirect()->route('pkl.tempat.index')->with('success', 'Data Tempat PKL berhasil dihapus.');
+            return redirect()->route('pkl.tempat.index')->with('success', 'Data Tempat PKL berhasil dihapus.');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Error code 23000 biasanya adalah Integrity constraint violation (Foreign Key Constraint)
+            if($e->getCode() == "23000"){
+                return redirect()->route('pkl.tempat.index')->with('error', 'Data gagal dihapus! Tempat PKL ini masih digunakan/berelasi dengan data siswa PKL.');
+            }
+            return redirect()->route('pkl.tempat.index')->with('error', 'Terjadi kesalahan sistem saat menghapus data.');
+        }
     }
 
     // =====================================================================
@@ -167,9 +177,15 @@ class PklTempatController extends Controller
             return back()->with('error', 'Sistem mendeteksi bahwa Package Maatwebsite/Laravel-Excel belum diinstal. Fitur pemrosesan file Excel (.xlsx) murni membutuhkan package ini.');
         }
 
-        // Jika package sudah ada, proses import dijalankan di sini.
-        // Excel::import(new PklTempatImport, $request->file('file_import'));
-        
-        return back()->with('success', 'Fungsi Import Excel sedang dalam tahap simulasi.');
+        // PROSES IMPORT TELAH DIHIDUPKAN
+        try {
+            Excel::import(new PklTempatImport, $request->file('file_import'));
+            return back()->with('success', 'Data Tempat PKL berhasil diimpor!');
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+             $failures = $e->failures();
+             return back()->with('error', 'Gagal import! Periksa kembali format baris Excel Anda.');
+        } catch (\Exception $e) {
+             return back()->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
+        }
     }
 }

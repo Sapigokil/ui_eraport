@@ -580,9 +580,9 @@
                         <div class="sidenav-category text-uppercase">Profil Saya</div>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link {{ request()->routeIs('sis.biodata') ? 'active' : '' }}" href="{{ route('sis.biodata') }}">
                             <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-id-card text-sm"></i>
+                                <i class="fas fa-id-card text-sm {{ request()->routeIs('sis.biodata') ? 'text-white' : '' }}"></i>
                             </div>
                             <span class="nav-link-text">Biodata Diri</span>
                         </a>
@@ -651,15 +651,19 @@
                         <div class="sidenav-category text-uppercase">Portal Siswa</div>
                     </li>
                     <li class="nav-item">
-                        <a data-bs-toggle="collapse" href="#previewSiswaMenu" class="nav-link" aria-controls="previewSiswaMenu" role="button" aria-expanded="false">
+                        <a data-bs-toggle="collapse" href="#previewSiswaMenu" class="nav-link {{ request()->routeIs('sis.*') ? 'active' : '' }}" aria-controls="previewSiswaMenu" role="button" aria-expanded="{{ request()->routeIs('sis.*') ? 'true' : 'false' }}">
                             <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-mobile-alt text-sm"></i>
+                                <i class="fas fa-mobile-alt text-sm {{ request()->routeIs('sis.*') ? 'text-white' : '' }}"></i>
                             </div>
                             <span class="nav-link-text">Menu Siswa (Preview)</span>
                         </a>
-                        <div class="collapse" id="previewSiswaMenu">
+                        <div class="collapse {{ request()->routeIs('sis.*') ? 'show' : '' }}" id="previewSiswaMenu">
                             <ul class="nav">
-                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Biodata Diri </span></a></li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('sis.biodata') ? 'active' : '' }}" href="{{ route('sis.biodata') }}">
+                                        <span class="sidenav-normal"> Biodata Diri </span>
+                                    </a>
+                                </li>
                                 <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Capaian Nilai </span></a></li>
                                 <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Absensi & Ekskul </span></a></li>
                                 <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Penempatan PKL </span></a></li>
@@ -677,7 +681,6 @@
             {{-- ========================================================= --}}
             {{-- END OF MENU SISWA --}}
             {{-- ========================================================= --}}
-
 
             {{-- ========================================================= --}}
             {{-- 7. PERSONAL --}}

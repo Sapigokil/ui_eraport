@@ -605,6 +605,18 @@ Route::middleware(['auth'])->group(function () {
 
 });
 
+// ==========================================================================
+    // MODULE: PORTAL SISWA 
+    // Prefix: sis
+    // Akses: Menggunakan permission 'siswa.menu'
+    // ==========================================================================
+    Route::group(['prefix' => 'sis', 'as' => 'sis.', 'middleware' => ['auth', 'can:siswa.menu']], function () {
+        
+        // Halaman Biodata Diri
+        Route::get('/biodata', [\App\Http\Controllers\SisbioController::class, 'index'])->name('biodata');
+        
+    });
+
 Route::get('/fix-wali-kelas', function() {
     $kelas = \App\Models\Kelas::all();
     $updated = 0;

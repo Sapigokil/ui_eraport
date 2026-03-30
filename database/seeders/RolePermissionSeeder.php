@@ -74,7 +74,7 @@ class RolePermissionSeeder extends Seeder
             ],
 
             // H. SYSTEM SETTINGS (Siswa Only)
-            '08. Pengaturan Siswa' => [
+            '08. Menu Siswa' => [
                 // Menggunakan 1 Pintu sesuai permintaan
                 'siswa.menu' => 'Akses bagi siswa untuk melihat data diri, nilai, rapor, dll di portal siswa', 
             ],
