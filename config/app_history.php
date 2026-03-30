@@ -22,6 +22,7 @@ return [
             'notes'   => [
                 'Perbaikan Bug pada halaman cetak Rapor',
                 'Perbaikan Bug pada fitur Import Excel untuk Tempat PKL',
+                'Perbaikan proses generate Rapor agar melakukan pengecekan data lebih ketat untuk menghindari error saat generate',
                 'Portal Siswa (on progress) untuk memudahkan siswa melihat nilai dan rapor mereka secara online',
             ],
         ],

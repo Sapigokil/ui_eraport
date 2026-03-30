@@ -243,22 +243,40 @@ class RaporController extends Controller
             'id_siswa' => $id_siswa, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
         ])->first();
 
-        $listEkskulSiswa = DB::table('nilai_ekskul')
-            ->join('ekskul', 'nilai_ekskul.id_ekskul', '=', 'ekskul.id_ekskul')
-            ->where('nilai_ekskul.id_siswa', $id_siswa)
-            ->where('nilai_ekskul.semester', $semesterInt)
-            ->where('nilai_ekskul.tahun_ajaran', $tahun_ajaran)
-            ->select('ekskul.nama_ekskul', 'nilai_ekskul.predikat', 'nilai_ekskul.keterangan')
+        // ---------------------------------------------------------------------
+        // REVISI VALIDASI SILANG EKSKUL (DOUBLE CHECK PENDAFTARAN & NILAI)
+        // ---------------------------------------------------------------------
+        
+        // a. Ambil list ekskul di mana siswa berstatus sebagai anggota aktif saat ini
+        $activeEkskuls = DB::table('ekskul_siswa')
+            ->join('ekskul', 'ekskul_siswa.id_ekskul', '=', 'ekskul.id_ekskul')
+            ->where('ekskul_siswa.id_siswa', $id_siswa)
+            ->select('ekskul.id_ekskul', 'ekskul.nama_ekskul')
             ->get();
 
+        // b. Ambil semua nilai ekskul yang pernah diinput untuk siswa ini
+        $nilaiEkskuls = DB::table('nilai_ekskul')
+            ->where('id_siswa', $id_siswa)
+            ->where('semester', $semesterInt)
+            ->where('tahun_ajaran', $tahun_ajaran)
+            ->get()
+            ->keyBy('id_ekskul');
+
         $ekskulSnapshot = [];
-        foreach($listEkskulSiswa as $eks) {
+        
+        // c. Looping HANYA berdasarkan Ekskul yang aktif diikuti siswa
+        foreach($activeEkskuls as $ae) {
+            $nilai = $nilaiEkskuls->get($ae->id_ekskul);
+            
             $ekskulSnapshot[] = [
-                'nama'       => $eks->nama_ekskul, 
-                'predikat'   => $eks->predikat ?? '-', 
-                'keterangan' => $eks->keterangan ?? '-'
+                'nama'       => $ae->nama_ekskul, 
+                'predikat'   => $nilai->predikat ?? '-',   // Skenario 1: Jika belum dinilai, beri strip (-)
+                'keterangan' => $nilai->keterangan ?? '-'  // Skenario 1: Jika belum ada keterangan, beri strip (-)
             ];
         }
+        // Skenario 2 otomatis tertangani: Jika siswa dicoret dari ekskul (tidak ada di $activeEkskuls),
+        // maka data nilainya diabaikan dan tidak akan masuk ke $ekskulSnapshot, tanpa menghapus data aslinya.
+        // ---------------------------------------------------------------------
 
         DB::table('nilai_akhir_rapor')->updateOrInsert(
             [

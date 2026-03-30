@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth; // Tambahan untuk mengecek user login
+use Illuminate\Support\Facades\Auth;
 use App\Models\Kelas;
 use App\Models\Siswa;
 use App\Models\Pembelajaran;
@@ -284,23 +284,36 @@ class MonitoringWaliController extends Controller
                     'tahun_ajaran' => $tahun_ajaran
                 ])->first();
 
-                // 2. Ambil Data Ekskul
-                $listEkskulSiswa = DB::table('nilai_ekskul')
-                    ->join('ekskul', 'nilai_ekskul.id_ekskul', '=', 'ekskul.id_ekskul')
-                    ->where('nilai_ekskul.id_siswa', $siswa->id_siswa)
-                    ->where('nilai_ekskul.semester', $semesterInt)
-                    ->where('nilai_ekskul.tahun_ajaran', $tahun_ajaran)
-                    ->select('ekskul.nama_ekskul', 'nilai_ekskul.predikat', 'nilai_ekskul.keterangan')
+                // 2. AMBIL DATA EKSKUL (REVISI: VALIDASI SILANG PENDAFTARAN)
+                // a. Ambil list ekskul di mana siswa berstatus sebagai anggota aktif saat ini
+                $activeEkskuls = DB::table('ekskul_siswa')
+                    ->join('ekskul', 'ekskul_siswa.id_ekskul', '=', 'ekskul.id_ekskul')
+                    ->where('ekskul_siswa.id_siswa', $siswa->id_siswa)
+                    ->select('ekskul.id_ekskul', 'ekskul.nama_ekskul')
                     ->get();
 
+                // b. Ambil semua nilai ekskul yang pernah diinput untuk siswa ini
+                $nilaiEkskuls = DB::table('nilai_ekskul')
+                    ->where('id_siswa', $siswa->id_siswa)
+                    ->where('semester', $semesterInt)
+                    ->where('tahun_ajaran', $tahun_ajaran)
+                    ->get()
+                    ->keyBy('id_ekskul');
+
                 $ekskulSnapshot = [];
-                foreach($listEkskulSiswa as $eks) {
+                
+                // c. Looping HANYA berdasarkan Ekskul yang aktif diikuti siswa
+                foreach($activeEkskuls as $ae) {
+                    $nilai = $nilaiEkskuls->get($ae->id_ekskul);
+                    
                     $ekskulSnapshot[] = [
-                        'nama'       => $eks->nama_ekskul, 
-                        'predikat'   => $eks->predikat ?? '-', 
-                        'keterangan' => $eks->keterangan ?? '-'
+                        'nama'       => $ae->nama_ekskul, 
+                        'predikat'   => $nilai->predikat ?? '-',   // Jika belum ada nilai, beri strip (-)
+                        'keterangan' => $nilai->keterangan ?? '-'  // Jika belum ada keterangan, beri strip (-)
                     ];
                 }
+                // Catatan: Jika ada nilai ekskul di database tapi siswa sudah bukan anggota (keluar ekskul), 
+                // nilai tersebut tidak akan terambil ke dalam $ekskulSnapshot ini. Data aman dilewati.
 
                 // 3. Simpan ke Header Rapor
                 DB::table('nilai_akhir_rapor')->updateOrInsert(
@@ -332,7 +345,7 @@ class MonitoringWaliController extends Controller
                         'catatan_wali_kelas' => $catatan->catatan_wali_kelas ?? '-',
                         'status_kenaikan'    => $catatan->status_kenaikan ?? 'proses',
                         
-                        // DATA EKSKUL (DARI TABEL NILAI_EKSKUL)
+                        // DATA EKSKUL (YANG SUDAH DIVALIDASI SILANG)
                         'data_ekskul'   => json_encode($ekskulSnapshot),
 
                         'tanggal_cetak' => now(),
