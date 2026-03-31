@@ -1,110 +1,148 @@
 @extends('layouts.app') 
 
-@section('page-title', 'Edit Pengguna: ' . $user->name)
+@section('page-title', 'Edit Pengguna Sistem')
 
 @section('content')
-    {{-- START: Pembungkus Main Content --}}
     <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
         
-        {{-- Panggil Navbar agar tampil di halaman ini --}}
         <x-app.navbar />
         
-        {{-- Konten Formulir dimulai --}}
-        <div class="container-fluid py-4 px-5"> {{-- Tambahkan px-5 agar padding horizontal konsisten dengan Dashboard --}}
-            
-            <div class="row">
-                <div class="col-lg-8 col-md-10 mx-auto">
-                    <div class="card my-4">
+        <div class="container-fluid py-4 px-5">
+            <div class="row justify-content-center">
+                <div class="col-lg-8 col-md-10 col-12">
+                    
+                    <div class="card my-4 border shadow-xs">
                         <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                            <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3">
-                                <h6 class="text-white text-capitalize ps-3">Formulir Edit Role & Status Pengguna</h6>
+                            <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 d-flex justify-content-between align-items-center">
+                                <h6 class="text-white text-capitalize ps-4"><i class="fas fa-user-edit me-2"></i> Edit Data Pengguna</h6>
+                                <div class="pe-3">
+                                    <a href="{{ route('settings.system.users.index') }}" class="btn btn-sm btn-light mb-0">
+                                        <i class="fas fa-arrow-left me-1"></i> Kembali
+                                    </a>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="card-body pb-2 px-4">
+                        <div class="card-body px-4 pt-4 pb-4">
                             
-                            {{-- Notifikasi Error Validasi --}}
                             @if ($errors->any())
-                                <div class="alert alert-danger text-white mb-4" role="alert">
+                                <div class="alert bg-gradient-danger text-white alert-dismissible fade show" role="alert">
                                     <ul class="mb-0">
                                         @foreach ($errors->all() as $error)
                                             <li>{{ $error }}</li>
                                         @endforeach
                                     </ul>
+                                    <button type="button" class="btn-close text-white" data-bs-dismiss="alert" aria-label="Close"></button>
                                 </div>
                             @endif
 
-                            <form method="POST" action="{{ route('settings.system.users.update', $user->id) }}">
+                            @if (session('error'))
+                                <div class="alert bg-gradient-danger text-white alert-dismissible fade show" role="alert">
+                                    {{ session('error') }}
+                                    <button type="button" class="btn-close text-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            @endif
+
+                            <form action="{{ route('settings.system.users.update', $user->id) }}" method="POST">
                                 @csrf
                                 @method('PUT')
-                                
-                                <h6 class="text-sm font-weight-bolder mb-3 text-info">Informasi Dasar Akun</h6>
-                                
-                                {{-- 1. Input Nama --}}
-                                <div class="mb-3">
-                                    <label for="inputName" class="form-label">Nama Lengkap</label>
-                                    <input type="text" id="inputName" name="name" 
-                                           value="{{ old('name', $user->name) }}" 
-                                           class="form-control border px-3 py-2" required>
-                                </div>
-                                
-                                {{-- 2. Input Email --}}
-                                <div class="mb-3"> 
-                                    <label for="inputEmail" class="form-label">Email</label>
-                                    <input type="email" id="inputEmail" name="email" 
-                                           value="{{ old('email', $user->email) }}" 
-                                           class="form-control border px-3 py-2" required>
+
+                                {{-- OPSI PENAUTAN AKUN (READ-ONLY) --}}
+                                <div class="p-4 bg-light border rounded mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="text-dark font-weight-bold mb-0"><i class="fas fa-link me-1 text-primary"></i> Status Penautan Akun</h6>
+                                        <span class="badge bg-gradient-secondary shadow-sm"><i class="fas fa-lock me-1"></i> Terkunci</span>
+                                    </div>
+                                    
+                                    <div class="alert alert-info text-dark text-sm mb-0 border-0" role="alert">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <i class="fas fa-info-circle fa-2x me-3"></i>
+                                            <div>
+                                                <strong>Informasi Integritas Data:</strong><br>
+                                                Akun ini telah terdaftar secara permanen sebagai:
+                                            </div>
+                                        </div>
+                                        <hr class="horizontal light my-2">
+                                        <div class="ps-5">
+                                            @if($jenis_akun == 'guru')
+                                                <ul class="mb-2">
+                                                    <li>Tipe: <b>Data Guru</b></li>
+                                                    <li>Tertaut dengan: <b>{{ $user->guru->nama_guru ?? 'Data Induk Guru Telah Terhapus' }}</b></li>
+                                                </ul>
+                                            @elseif($jenis_akun == 'siswa')
+                                                <ul class="mb-2">
+                                                    <li>Tipe: <b>Data Siswa</b></li>
+                                                    <li>Tertaut dengan: <b>{{ $user->siswa->nama_siswa ?? 'Data Induk Siswa Telah Terhapus' }}</b></li>
+                                                </ul>
+                                            @else
+                                                <ul class="mb-2">
+                                                    <li>Tipe: <b>Admin / Non-Staff (Manual)</b></li>
+                                                    <li>Status: <i>Tidak ada penautan ke data fisik Guru maupun Siswa.</i></li>
+                                                </ul>
+                                            @endif
+                                            
+                                            <i class="opacity-8 text-xs">*SOP Sistem: Jika terjadi kesalahan penautan di masa lalu, mohon jangan diubah di sini. Silakan <b>Hapus</b> akun ini dan buat akun baru. Pengubahan Nama Lengkap tidak merubah pada data induk.</i>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {{-- TAMBAHAN: 3. Input Password (Opsional) --}}
-                                <div class="mb-3">
-                                    <label for="inputPassword" class="form-label">Password Baru <span class="text-xs text-muted fw-normal">(Kosongkan jika tidak ingin mengubah password)</span></label>
-                                    <input type="password" id="inputPassword" name="password" 
-                                           class="form-control border px-3 py-2" 
-                                           placeholder="Minimal 8 Karakter">
-                                </div>
-                                
-                                <hr class="my-4">
+                                <hr class="horizontal dark my-4">
 
-                                <h6 class="text-sm font-weight-bolder mb-3 text-danger">Pengaturan Role & Status</h6>
-
-                                {{-- 4. PILIHAN ROLE (Select) --}}
-                                <div class="mb-3">
-                                    <label for="role_select" class="form-label">Role Pengguna</label>
-                                    <select class="form-select border px-3 py-2" id="role_select" name="role_name" required>
-                                        <option value="">-- Pilih Role --</option>
-                                        @foreach ($roles as $role)
-                                            <option value="{{ $role->name }}" 
-                                                    {{ $user->hasRole($role->name) ? 'selected' : '' }}>
-                                                {{ Str::title(str_replace('_', ' ', $role->name)) }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                
-                                {{-- 5. STATUS AKTIF/NONAKTIF --}}
-                                <div class="form-check form-switch d-flex align-items-center mb-4 ps-0 mt-4">
-                                    <input class="form-check-input ms-0" type="checkbox" id="is_active" name="is_active" value="1" {{ $user->is_active ? 'checked' : '' }}>
-                                    <label class="form-check-label mb-0 ms-3" for="is_active">
-                                        Status Akun Aktif (Izinkan Login)
-                                    </label>
+                                {{-- FORM UTAMA --}}
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <label for="name" class="form-label font-weight-bold text-secondary text-xs">Nama Lengkap Pengguna <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control border px-3" style="height: 40px;" id="name" name="name" value="{{ old('name', $user->name) }}" placeholder="Contoh: Budi Santoso" required>
+                                    </div>
                                 </div>
 
-                                <div class="text-end mt-4">
-                                    <a href="{{ route('settings.system.users.index') }}" class="btn btn-outline-secondary me-2">Batal</a>
-                                    <button type="submit" class="btn bg-gradient-primary">Simpan Perubahan</button>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="email" class="form-label font-weight-bold text-secondary text-xs">Alamat Email <span class="text-danger">*</span></label>
+                                        <input type="email" class="form-control border px-3" style="height: 40px;" id="email" name="email" value="{{ old('email', $user->email) }}" placeholder="Contoh: budi@sekolah.com" required>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <label for="password" class="form-label font-weight-bold text-secondary text-xs">Password Baru (Opsional)</label>
+                                        <input type="password" class="form-control border px-3" style="height: 40px;" id="password" name="password" placeholder="Kosongkan jika tidak mengubah password">
+                                    </div>
                                 </div>
+
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <label for="role_name" class="form-label font-weight-bold text-secondary text-xs">Hak Akses (Role) <span class="text-danger">*</span></label>
+                                        <select name="role_name" id="role_name" class="form-select border px-3" style="height: 40px;" required>
+                                            <option value="">-- Pilih Hak Akses --</option>
+                                            @foreach($roles as $role)
+                                                <option value="{{ $role->name }}" {{ old('role_name', $user->roles->first()->name ?? '') == $role->name ? 'selected' : '' }}>
+                                                    {{ \Illuminate\Support\Str::title($role->name) }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <div class="form-check form-switch d-flex align-items-center px-0">
+                                            <input class="form-check-input ms-0 me-3" type="checkbox" id="is_active" name="is_active" {{ old('is_active', $user->is_active) ? 'checked' : '' }}>
+                                            <label class="form-check-label mb-0 font-weight-bold text-secondary text-sm" for="is_active">Status Akun Aktif</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-end mt-4">
+                                    <button type="submit" class="btn bg-gradient-primary">
+                                        <i class="fas fa-save me-1"></i> Simpan Perubahan
+                                    </button>
+                                </div>
+
                             </form>
-                            
+
                         </div>
                     </div>
                 </div>
             </div>
             
-            {{-- Panggil Footer agar tampil --}}
             <x-app.footer />
         </div>
-        
     </main>
-    {{-- END: Pembungkus Main Content --}}
 @endsection

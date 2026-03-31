@@ -87,7 +87,6 @@ class UserController extends Controller
 
     public function create()
     {
-        // REVISI: Menyembunyikan opsi guru_erapor dan guru_ekskul di halaman Create
         if (Auth::user()->hasRole('developer')) {
             $roles = Role::whereNotIn('name', ['guru_erapor', 'guru_ekskul'])->get();
         } else {
@@ -149,17 +148,34 @@ class UserController extends Controller
     {
         $currentUser = Auth::user();
 
+        // 1. PROTEKSI AKSES
         if (!$currentUser->hasRole('developer') && $user->hasRole('developer')) {
             abort(403, 'Akses Ditolak: Restricted User');
         }
 
+        // 2. LOGIKA ROLE
         if ($currentUser->hasRole('developer')) {
             $roles = Role::all();
         } else {
             $roles = Role::where('name', '!=', 'developer')->get();
         }
 
-        return view('user.users.edit', compact('user', 'roles'));
+        $userRoleNames = $user->roles->pluck('name')->toArray();
+        $hiddenRoles = ['guru_erapor', 'guru_ekskul'];
+        
+        if (empty(array_intersect($hiddenRoles, $userRoleNames))) {
+            $roles = $roles->reject(function($role) use ($hiddenRoles) {
+                return in_array($role->name, $hiddenRoles);
+            });
+        }
+
+        // 3. TENTUKAN JENIS AKUN SAAT INI UNTUK INFORMASI READ-ONLY
+        $jenis_akun = 'admin';
+        if ($user->id_guru) $jenis_akun = 'guru';
+        elseif ($user->id_siswa) $jenis_akun = 'siswa';
+
+        // Tidak perlu lagi mengambil seluruh data $gurus dan $siswas karena form bersifat Read-Only
+        return view('user.users.edit', compact('user', 'roles', 'jenis_akun'));
     }
     
     public function update(Request $request, User $user)
@@ -168,32 +184,43 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk mengubah data Developer.');
         }
 
+        // VALIDASI DISESUAIKAN: Hapus validasi penautan karena fitur tersebut kini Read-Only
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id, 
-            'password' => ['nullable', 'string', Password::min(8)], 
-            'role_name' => 'required|exists:roles,name',
+            'name'       => 'required|string|max:255',
+            'email'      => 'required|string|email|max:255|unique:users,email,' . $user->id, 
+            'password'   => ['nullable', 'string', Password::min(8)], 
+            'role_name'  => 'required|exists:roles,name',
         ]);
 
         if (!Auth::user()->hasRole('developer') && $request->role_name == 'developer') {
             return redirect()->back()->with('error', 'Anda tidak diizinkan menetapkan role Developer.');
         }
         
-        $user->name = $request->name;
-        $user->email = $request->email; 
-        $user->is_active = $request->has('is_active'); 
-        
-        if ($request->filled('password')) {
-            $user->password = Hash::make($request->password);
-        }
+        DB::beginTransaction();
+        try {
+            // 1. UPDATE DETAIL USER (Tanpa menyentuh id_guru / id_siswa)
+            $user->name = $request->name;
+            $user->email = $request->email; 
+            $user->is_active = $request->has('is_active') ? 1 : 0; 
+            
+            if ($request->filled('password')) {
+                $user->password = Hash::make($request->password);
+            }
 
-        $user->save();
-        
-        $user->syncRoles([]); 
-        $user->assignRole($request->role_name);
-        
-        return redirect()->route('settings.system.users.index')
-                         ->with('success', 'Data pengguna dan role berhasil diperbarui.');
+            $user->save();
+            
+            // 2. UPDATE ROLE
+            $user->syncRoles([]); 
+            $user->assignRole($request->role_name);
+
+            DB::commit();
+            return redirect()->route('settings.system.users.index')
+                             ->with('success', 'Data pengguna berhasil diperbarui.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
+        }
     }
 
     public function destroy(User $user)
