@@ -3,94 +3,156 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Kelas; 
+use App\Models\Guru;
+use App\Models\Siswa;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $currentUser = Auth::user();
         
-        // 1. Query Dasar
+        $tab = $request->tab ?? 'admin'; 
+        $search = $request->search;
+        $id_kelas = $request->id_kelas; 
+        $perPage = $request->input('per_page', 10);
+
         $query = User::with('roles')->orderBy('id', 'DESC');
 
-        // 2. LOGIKA STEALTH MODE (Filter List User)
-        // Jika yang login BUKAN developer, sembunyikan semua user yang punya role 'developer'
         if (!$currentUser->hasRole('developer')) {
             $query->whereDoesntHave('roles', function ($q) {
                 $q->where('name', 'developer');
             });
         }
 
-        $users = $query->paginate(15); 
+        if ($tab == 'admin') {
+            $query->whereHas('roles', function($q) {
+                $q->where('name', 'like', '%admin%')
+                  ->orWhere('name', 'developer');
+            });
+        } 
+        elseif ($tab == 'guru') {
+            $query->whereHas('roles', function($q) {
+                $q->where('name', 'like', '%guru%');
+            });
+        } 
+        elseif ($tab == 'siswa') {
+            $query->whereHas('roles', function($q) {
+                $q->where('name', 'siswa');
+            });
+            
+            if ($id_kelas) {
+                $query->whereHas('siswa', function($q) use ($id_kelas) {
+                    $q->where('id_kelas', $id_kelas);
+                });
+            }
+        }
 
-        // 3. Filter List Role (Untuk filter di view jika ada)
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('username', 'like', "%{$search}%");
+            });
+        }
+
+        if ($perPage === 'all') {
+            $totalCount = $query->count();
+            $users = $query->paginate($totalCount > 0 ? $totalCount : 1)->withQueryString();
+        } else {
+            $users = $query->paginate((int) $perPage)->withQueryString();
+        }
+        
+        $kelas_list = collect();
+        if ($tab == 'siswa') {
+            $kelas_list = Kelas::orderBy('tingkat', 'asc')->orderBy('nama_kelas', 'asc')->get();
+        }
+
         if ($currentUser->hasRole('developer')) {
             $roles = Role::all();
         } else {
             $roles = Role::where('name', '!=', 'developer')->get();
         }
         
-        return view('user.users.index', compact('users', 'roles'));
+        return view('user.users.index', compact('users', 'roles', 'search', 'tab', 'id_kelas', 'kelas_list', 'perPage'));
     }
 
     public function create()
     {
-        // LOGIKA STEALTH MODE (Dropdown Role)
-        // User biasa tidak boleh melihat opsi 'developer' saat membuat user baru
+        // REVISI: Menyembunyikan opsi guru_erapor dan guru_ekskul di halaman Create
         if (Auth::user()->hasRole('developer')) {
-            $roles = Role::all();
+            $roles = Role::whereNotIn('name', ['guru_erapor', 'guru_ekskul'])->get();
         } else {
-            $roles = Role::where('name', '!=', 'developer')->get();
+            $roles = Role::whereNotIn('name', ['developer', 'guru_erapor', 'guru_ekskul'])->get();
         }
 
-        return view('user.users.create', compact('roles'));
+        $gurus = Guru::whereNull('id_user')->orderBy('nama_guru', 'asc')->get();
+        $siswas = Siswa::with('kelas')->whereNull('id_user')->where('status', 'aktif')->orderBy('nama_siswa', 'asc')->get();
+
+        return view('user.users.create', compact('roles', 'gurus', 'siswas'));
     }
     
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => ['required', 'string', Password::min(8)], 
-            'role_name' => 'required|exists:roles,name',
+            'jenis_akun' => 'required|in:admin,guru,siswa',
+            'name'       => 'required|string|max:255',
+            'email'      => 'required|string|email|max:255|unique:users',
+            'password'   => ['required', 'string', Password::min(8)], 
+            'role_name'  => 'required|exists:roles,name',
+            'id_guru'    => 'nullable|required_if:jenis_akun,guru|exists:guru,id_guru',
+            'id_siswa'   => 'nullable|required_if:jenis_akun,siswa|exists:siswa,id_siswa',
         ]);
         
-        // PROTEKSI: Mencegah user non-developer memberikan role 'developer'
         if (!Auth::user()->hasRole('developer') && $request->role_name == 'developer') {
             return redirect()->back()->with('error', 'Anda tidak diizinkan membuat user dengan role Developer.');
         }
 
-        // 1. Buat User Baru
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password), 
-            'is_active' => $request->has('is_active'),
-        ]);
-        
-        // 2. Assign Role
-        $user->assignRole($request->role_name);
-        
-        return redirect()->route('settings.system.users.index')
-                         ->with('success', 'Akun pengguna baru berhasil dibuat.');
+        DB::beginTransaction();
+        try {
+            $user = User::create([
+                'name'      => $request->name,
+                'email'     => $request->email,
+                'password'  => Hash::make($request->password), 
+                'is_active' => $request->has('is_active') ? 1 : 0,
+                'id_guru'   => $request->jenis_akun == 'guru' ? $request->id_guru : null,
+                'id_siswa'  => $request->jenis_akun == 'siswa' ? $request->id_siswa : null,
+            ]);
+            
+            $user->assignRole($request->role_name);
+
+            if ($request->jenis_akun == 'guru' && $request->id_guru) {
+                DB::table('guru')->where('id_guru', $request->id_guru)->update(['id_user' => $user->id]);
+            } elseif ($request->jenis_akun == 'siswa' && $request->id_siswa) {
+                DB::table('siswa')->where('id_siswa', $request->id_siswa)->update(['id_user' => $user->id]);
+            }
+
+            DB::commit();
+            return redirect()->route('settings.system.users.index')
+                             ->with('success', 'Akun pengguna baru berhasil dibuat dan ditautkan.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->withInput()->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
+        }
     }
 
     public function edit(User $user)
     {
         $currentUser = Auth::user();
 
-        // PROTEKSI AKSES: Non-developer tidak boleh edit user Developer
         if (!$currentUser->hasRole('developer') && $user->hasRole('developer')) {
             abort(403, 'Akses Ditolak: Restricted User');
         }
 
-        // LOGIKA STEALTH MODE (Dropdown Role)
         if ($currentUser->hasRole('developer')) {
             $roles = Role::all();
         } else {
@@ -102,37 +164,31 @@ class UserController extends Controller
     
     public function update(Request $request, User $user)
     {
-        // PROTEKSI AWAL: Cek hak akses terhadap target user
         if (!Auth::user()->hasRole('developer') && $user->hasRole('developer')) {
             return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk mengubah data Developer.');
         }
 
-        // Validasi, perhatikan password sekarang 'nullable'
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id, 
-            'password' => ['nullable', 'string', Password::min(8)], // <-- Tambahan Validasi Password
+            'password' => ['nullable', 'string', Password::min(8)], 
             'role_name' => 'required|exists:roles,name',
         ]);
 
-        // PROTEKSI INPUT ROLE: Jangan biarkan user diubah jadi developer oleh non-dev
         if (!Auth::user()->hasRole('developer') && $request->role_name == 'developer') {
             return redirect()->back()->with('error', 'Anda tidak diizinkan menetapkan role Developer.');
         }
         
-        // 1. Update Detail User
         $user->name = $request->name;
         $user->email = $request->email; 
         $user->is_active = $request->has('is_active'); 
         
-        // Cek apakah kolom password diisi, jika ya, maka update passwordnya
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
         }
 
         $user->save();
         
-        // 2. Update Role
         $user->syncRoles([]); 
         $user->assignRole($request->role_name);
         
@@ -142,30 +198,23 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
-        // 1. Cek: Jangan biarkan user menghapus akunnya sendiri yang sedang login
         if (Auth::id() === $user->id) {
             return back()->with('error', 'Anda tidak dapat menghapus akun Anda sendiri saat sedang login.');
         }
 
-        // 2. PROTEKSI STEALTH: Non-developer tidak boleh menghapus user Developer
         if (!Auth::user()->hasRole('developer') && $user->hasRole('developer')) {
             return back()->with('error', 'Akses ditolak: Anda tidak dapat menghapus akun Developer.');
         }
 
-        // 3. PROTEKSI USER DENGAN ROLE KRUSIAL (PERMINTAAN BARU)
-        // User yang memiliki role Developer, Admin, atau Guru tidak boleh dihapus.
         if ($user->hasAnyRole(['developer', 'admin', 'guru'])) {
-             // Ambil nama role pertama yang dimiliki user untuk pesan error
              $roleName = $user->roles->first()->name ?? 'Utama'; 
              return back()->with('error', 'Pengguna dengan role sistem (' . Str::title($roleName) . ') dilindungi dan tidak dapat dihapus.');
         }
 
-        // 4. (Opsional) Cek ID 1 (Super Admin Hardcoded)
         if ($user->id == 1) { 
              return back()->with('error', 'Akun Super Admin utama tidak boleh dihapus.');
         }
 
-        // 5. Hapus User
         $user->delete();
 
         return redirect()->route('settings.system.users.index')

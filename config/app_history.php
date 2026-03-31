@@ -13,13 +13,14 @@ return [
 
     'current_version' => '1.0.16',
     
-    'last_updated' => '2026-03-30',
+    'last_updated' => '2026-03-31',
 
     'changelog' => [
         [
             'version' => '1.0.16',
-            'date'    => '2026-03-30',
+            'date'    => '2026-03-31',
             'notes'   => [
+                'Perbaikan Halaman User untuk opsi menambah pengguna baru dengan role guru dan siswa agar bisa langsung menautkan ke data guru/siswa yang sudah ada',
                 'Perbaikan Bug pada halaman Penempatan PKL',
                 'Perbaikan Bug pada halaman cetak Rapor',
                 'Perbaikan Bug pada fitur Import Excel untuk Tempat PKL',

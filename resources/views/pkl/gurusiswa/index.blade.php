@@ -45,15 +45,15 @@
                             <div class="nav-wrapper position-relative end-0 mb-4">
                                 <ul class="nav nav-pills nav-fill p-1 bg-light border" role="tablist" style="border-radius: 0.5rem;">
                                     <li class="nav-item">
-                                        <a class="nav-link mb-0 px-0 py-2 {{ $mode == 'guru' ? 'active bg-primary text-white shadow-sm' : 'text-dark' }}" 
-                                           href="{{ route('pkl.gurusiswa.index', ['mode' => 'guru', 'tahun_ajaran' => $tahun_ajaran, 'semester' => $semester]) }}">
-                                            <i class="fas fa-user-tie me-2"></i> Mode Guru Pembimbing
-                                        </a>
-                                    </li>
-                                    <li class="nav-item">
                                         <a class="nav-link mb-0 px-0 py-2 {{ $mode == 'kelas' ? 'active bg-primary text-white shadow-sm' : 'text-dark' }}" 
                                            href="{{ route('pkl.gurusiswa.index', ['mode' => 'kelas', 'tahun_ajaran' => $tahun_ajaran, 'semester' => $semester]) }}">
                                             <i class="fas fa-chalkboard-teacher me-2"></i> Mode Kelas Siswa
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link mb-0 px-0 py-2 {{ $mode == 'guru' ? 'active bg-primary text-white shadow-sm' : 'text-dark' }}" 
+                                           href="{{ route('pkl.gurusiswa.index', ['mode' => 'guru', 'tahun_ajaran' => $tahun_ajaran, 'semester' => $semester]) }}">
+                                            <i class="fas fa-user-tie me-2"></i> Mode Guru Pembimbing
                                         </a>
                                     </li>
                                 </ul>
