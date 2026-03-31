@@ -382,18 +382,13 @@
                 if (validInputs.length >= 2) {
                     let d1 = lcfirst(validInputs[0].desc.trim());
                     let d2 = lcfirst(validInputs[1].desc.trim());
-                    gabungan = "Ananda " + d1 + " dan " + d2 + ".";
+                    gabungan = "Ananda " + d1 + "; " + d2 + ".";
                 } else {
                     gabungan = "Ananda " + dMax + ".";
                 }
             } else {
-                if (maxVal >= 80 && minVal >= 80) {
-                    gabungan = "Ananda " + dMax + " dan " + dMin + ".";
-                } else if (maxVal >= 80 && minVal < 80) {
-                    gabungan = "Ananda " + dMax + " namun " + dMin + ".";
-                } else {
-                    gabungan = "Ananda " + dMax + " dan " + dMin + ".";
-                }
+                // Perubahan: Menggunakan pemisah titik koma secara langsung
+                gabungan = "Ananda " + dMax + "; " + dMin + ".";
             }
 
             previewBox.val(gabungan);

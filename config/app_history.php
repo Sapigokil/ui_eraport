@@ -20,6 +20,7 @@ return [
             'version' => '1.0.16',
             'date'    => '2026-03-31',
             'notes'   => [
+                'Penambahan Fitur Import Pada Input Nilai Prakerin untuk memudahkan input nilai dari file Excel',
                 'Perbaikan Halaman User untuk opsi menambah pengguna baru dengan role guru dan siswa agar bisa langsung menautkan ke data guru/siswa yang sudah ada',
                 'Perbaikan Bug pada halaman Penempatan PKL',
                 'Perbaikan Bug pada halaman cetak Rapor',

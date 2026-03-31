@@ -317,6 +317,10 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/input', 'input')->name('input'); // Halaman Form Split Screen
             Route::get('/get-siswa/{id_penempatan}', 'getSiswaData')->name('get_siswa'); // AJAX Ajax
             Route::post('/simpan', 'store')->name('store'); // AJAX Post
+            // Fitur Export & Import Excel
+        Route::get('/export', 'downloadTemplateExcel')->name('export');
+        Route::post('/import', 'importExcel')->name('import');
+        Route::get('/export-rekap', 'exportRekapExcel')->name('export_rekap');
         });
     });
 
@@ -531,6 +535,9 @@ Route::middleware(['auth'])->group(function () {
                 Route::post('/', 'store')->name('store');
                 Route::put('/{id}', 'update')->name('update');
                 Route::delete('/{id}', 'destroy')->name('destroy');
+                Route::get('/pkl/nilai/export', [PklNilaiController::class, 'downloadTemplateExcel'])->name('pkl.nilai.export');
+                Route::post('/pkl/nilai/import', [PklNilaiController::class, 'importExcel'])->name('pkl.nilai.import');
+                
             });
 
             // MODULE: SEASON

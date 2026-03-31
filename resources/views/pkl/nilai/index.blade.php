@@ -21,7 +21,6 @@
                         <div class="row align-items-center text-white">
                             <div class="col-md-7">
                                 <h3 class="text-white font-weight-bold mb-1">Dashboard Penilaian PKL</h3>
-                                {{-- <p class="text-white opacity-8 mb-2"><i class="fas fa-filter me-2"></i> Filter otomatis menyimpan. Pilih parameter untuk melihat data spesifik.</p> --}}
                                 <span class="badge border border-white text-white fw-bold bg-transparent">
                                     Tahun Ajaran {{ $tahun_ajaran }} - Semester {{ $semester }}
                                 </span>
@@ -51,31 +50,6 @@
                 </div>
             </div>
         </div>
-
-        {{-- ========================================================= --}}
-        {{-- DEBUGGING INFO (Nanti bisa dihapus atau di-comment)       --}}
-        {{-- ========================================================= --}}
-        {{-- <div class="row mb-4">
-            <div class="col-12">
-                <div class="alert shadow-sm text-dark mb-0" role="alert" style="background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px;">
-                    <strong><i class="fas fa-bug text-warning me-2"></i> CEK DEBUG DATA GURU:</strong><br>
-                    <ul class="mb-0 mt-2 text-sm">
-                        <li>Nama Akun Login: <strong>{{ auth()->user()->name ?? 'Tidak Ada' }}</strong></li>
-                        <li>Roles Akun Ini: <strong>{{ auth()->user()->getRoleNames()->implode(', ') }}</strong></li>
-                        <li>
-                            ID Guru Tertaut (users.id_guru): 
-                            @if(auth()->user()->id_guru)
-                                <span class="badge bg-success">{{ auth()->user()->id_guru }}</span>
-                            @else
-                                <span class="badge bg-danger">KOSONG (NULL)</span> 
-                                <em class="text-xs text-danger ms-2"><- Jika ini merah/kosong, wajar jika data siswa tidak muncul!</em>
-                            @endif
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div> --}}
-        {{-- ========================================================= --}}
 
         <div class="row">
             <div class="col-12">
@@ -124,7 +98,6 @@
                                     </select>
                                 </div>
                             @else
-                                {{-- Jika user adalah Guru biasa, sembunyikan dropdown dan gunakan input hidden --}}
                                 <input type="hidden" name="id_guru" value="{{ auth()->user()->id_guru }}">
                             @endhasanyrole
                             
@@ -138,7 +111,6 @@
                                 </select>
                             </div>
 
-                            {{-- FILTER BARU: STATUS PENILAIAN --}}
                             <div class="col-md-2 mb-2 mb-md-0">
                                 <label class="form-label text-xs font-weight-bolder text-uppercase text-primary">Status Nilai</label>
                                 <select name="status_penilaian" class="form-select border ps-2 bg-white border-primary" onchange="this.form.submit()">
@@ -150,6 +122,43 @@
                             </div>
 
                         </form>
+                    </div>
+
+                    {{-- ALERTS NOTIFIKASI IMPORT --}}
+                    @if (session('success'))
+                        <div class="alert bg-gradient-success alert-dismissible text-white fade show mx-4 mt-3 mb-0" role="alert">
+                            {{ session('success') }}
+                            <button type="button" class="btn-close text-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+                    @if (session('error'))
+                        <div class="alert bg-gradient-danger alert-dismissible text-white fade show mx-4 mt-3 mb-0" role="alert">
+                            {{ session('error') }}
+                            <button type="button" class="btn-close text-white" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
+
+                    {{-- TOOLBAR EXPORT / IMPORT EXCEL --}}
+                    <div class="d-flex justify-content-between align-items-center p-3 px-4 border-bottom flex-wrap">
+                        <h6 class="mb-0 text-dark">Data Bimbingan PKL</h6>
+                        <div class="d-flex gap-2 flex-wrap">
+                            
+                            {{-- TOMBOL EXPORT DATA (Bebas dari Filter Guru) --}}
+                            <a href="{{ route('pkl.nilai.export_rekap', request()->query()) }}" class="btn btn-sm btn-dark mb-0 shadow-sm" data-toggle="tooltip" title="Download Excel Laporan sesuai filter saat ini">
+                                <i class="fas fa-download me-1"></i> Export Data
+                            </a>
+
+                            {{-- TOMBOL IMPORT EXCEL (MEMBUKA MODAL) --}}
+                            @if($id_guru)
+                                <button type="button" class="btn btn-sm btn-info mb-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportExcel">
+                                    <i class="fas fa-upload me-1"></i> Import Nilai Excel
+                                </button>
+                            @else
+                                <button class="btn btn-sm btn-secondary mb-0" disabled data-toggle="tooltip" title="Pilih spesifik 1 Pembimbing di Filter terlebih dahulu untuk melakukan Import Nilai">
+                                    <i class="fas fa-upload me-1"></i> Import Nilai Excel
+                                </button>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- TABEL SISWA --}}
@@ -185,7 +194,6 @@
                                                 @endif
                                             </td>
                                             <td class="align-middle text-center">
-                                                {{-- TOMBOL SAKTI: Membawa id_guru dan id_penempatan ke halaman input --}}
                                                 <a href="{{ route('pkl.nilai.input', ['tahun_ajaran' => $tahun_ajaran, 'semester' => $semester, 'id_guru' => $siswa->id_guru, 'id_penempatan' => $siswa->id_penempatan]) }}" class="btn btn-sm btn-outline-primary mb-0 px-3 py-1">
                                                     <i class="fas fa-edit me-1"></i> Input Nilai
                                                 </a>
@@ -210,4 +218,70 @@
         <x-app.footer />
     </div>
 </main>
+
+{{-- MODAL IMPORT EXCEL BERTINGKAT --}}
+<div class="modal fade" id="modalImportExcel" tabindex="-1" aria-labelledby="modalImportExcelLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ route('pkl.nilai.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="tahun_ajaran" value="{{ $tahun_ajaran }}">
+                <input type="hidden" name="semester" value="{{ $semester }}">
+                <input type="hidden" name="id_guru" value="{{ $id_guru }}">
+                
+                <div class="modal-header bg-light border-bottom-0 pb-2">
+                    <h5 class="modal-title text-dark" id="modalImportExcelLabel"><i class="fas fa-file-excel text-success me-2"></i> Import Nilai PKL</h5>
+                    <button type="button" class="btn-close text-dark" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body pt-2">
+                    
+                    {{-- LANGKAH 1: DOWNLOAD TEMPLATE --}}
+                    <div class="mb-4 p-3 bg-gray-100 border rounded">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-dark rounded-circle me-2 d-flex justify-content-center align-items-center" style="width: 24px; height: 24px; font-size: 10px;">1</span>
+                            <h6 class="text-sm font-weight-bold mb-0 text-dark">Unduh Template Excel</h6>
+                        </div>
+                        <p class="text-xs text-secondary mb-3 ms-4">Unduh template Excel yang telah berisi daftar nama siswa bimbingan Anda. Jangan mengubah format kolom terutama <code>ID_SISTEM</code>.</p>
+                        <div class="ms-4">
+                            <a href="{{ route('pkl.nilai.export', ['tahun_ajaran' => $tahun_ajaran, 'semester' => $semester, 'id_guru' => $id_guru]) }}" class="btn btn-sm btn-success mb-0 shadow-sm w-100">
+                                <i class="fas fa-download me-1"></i> Unduh Template Excel
+                            </a>
+                        </div>
+                    </div>
+
+                    {{-- LANGKAH 2: UPLOAD HASIL --}}
+                    <div class="p-3 border rounded shadow-none">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-dark rounded-circle me-2 d-flex justify-content-center align-items-center" style="width: 24px; height: 24px; font-size: 10px;">2</span>
+                            <h6 class="text-sm font-weight-bold mb-0 text-dark">Unggah Hasil Pengisian</h6>
+                        </div>
+                        <p class="text-xs text-secondary mb-3 ms-4">Pilih file Excel yang telah Anda isi nilainya, lalu tekan tombol <b>Mulai Import</b>.</p>
+                        
+                        <div class="ms-4">
+                            <label for="file_import" class="form-label font-weight-bold text-xs d-none">Upload File</label>
+                            <input class="form-control border px-3 py-2 text-sm" type="file" id="file_import" name="file_import" accept=".xlsx, .xls, .csv" required>
+                        </div>
+                    </div>
+
+                </div>
+                
+                <div class="modal-footer bg-light border-top-0 pt-0">
+                    <button type="button" class="btn btn-secondary mb-0" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary mb-0"><i class="fas fa-upload me-1"></i> Mulai Import</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Tooltip Script --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
 @endsection

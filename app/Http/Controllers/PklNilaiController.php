@@ -14,6 +14,9 @@ use App\Models\PklTempat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PklNilaiExport;
+use App\Imports\PklNilaiImport;
 
 class PklNilaiController extends Controller
 {
@@ -39,7 +42,7 @@ class PklNilaiController extends Controller
 
         $id_kelas = $request->id_kelas;
         $id_tempat = $request->id_tempat;
-        $status_penilaian = $request->status_penilaian; // Tangkap request status
+        $status_penilaian = $request->status_penilaian; 
 
         // ==========================================
         // LOGIKA FILTER ROLE (DATA ISOLATION)
@@ -76,7 +79,6 @@ class PklNilaiController extends Controller
         if ($user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor'])) {
             if ($id_guru) $query->where('pkl_gurusiswa.id_guru', $id_guru);
         } else {
-            // PENGAMANAN ABSOLUT
             $query->where('pkl_gurusiswa.id_guru', $id_guru ?: 0);
         }
 
@@ -127,11 +129,10 @@ class PklNilaiController extends Controller
     {
         $user = Auth::user();
         
-        // PENGAMANAN LAPIS DUA UNTUK HALAMAN INPUT
         if ($user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor'])) {
             $id_guru = $request->id_guru ?? $user->id_guru;
         } else {
-            $id_guru = $user->id_guru; // Kunci paksa
+            $id_guru = $user->id_guru; 
         }
         
         $tahunSekarang = date('Y');
@@ -301,19 +302,14 @@ class PklNilaiController extends Controller
                             $keys = array_rand($validInputs, 2);
                             $d1 = lcfirst(trim($validInputs[$keys[0]]['deskripsi']));
                             $d2 = lcfirst(trim($validInputs[$keys[1]]['deskripsi']));
-                            $gabungan = "Ananda $d1 dan $d2.";
+                            $gabungan = "Ananda $d1; $d2.";
                         } else {
                             $d1 = lcfirst(trim($validInputs[0]['deskripsi']));
                             $gabungan = "Ananda $d1.";
                         }
                     } else {
-                        if ($maxVal >= 80 && $minVal >= 80) {
-                            $gabungan = "Ananda $dMax dan $dMin.";
-                        } elseif ($maxVal >= 80 && $minVal < 80) {
-                            $gabungan = "Ananda $dMax namun $dMin.";
-                        } else { 
-                            $gabungan = "Ananda $dMax dan $dMin.";
-                        }
+                        // Perubahan menggunakan pemisah titik koma
+                        $gabungan = "Ananda $dMax; $dMin.";
                     }
 
                     PklNilaiSiswa::updateOrCreate(
@@ -335,5 +331,79 @@ class PklNilaiController extends Controller
             DB::rollBack();
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
+    }
+
+    // ==============================================================
+    // FUNGSI EXPORT & IMPORT EXCEL (NILAI PKL)
+    // ==============================================================
+
+    public function downloadTemplateExcel(Request $request)
+    {
+        $id_guru = $request->id_guru;
+        $tahun_ajaran = $request->tahun_ajaran;
+        $semester = $request->semester;
+
+        if (!$id_guru || !$tahun_ajaran || !$semester) {
+            return back()->with('error', 'Parameter Tahun Ajaran, Semester, dan Guru Pembimbing tidak lengkap.');
+        }
+
+        $guru = Guru::find($id_guru);
+        $namaFile = 'Template_Nilai_PKL_' . str_replace(' ', '_', $guru->nama_guru ?? 'Guru') . '.xlsx';
+
+        return Excel::download(new PklNilaiExport($id_guru, $tahun_ajaran, $semester), $namaFile);
+    }
+
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file_import' => 'required|mimes:xlsx,xls,csv',
+            'id_guru' => 'required' 
+        ]);
+
+        if (!class_exists('\Maatwebsite\Excel\Facades\Excel')) {
+            return back()->with('error', 'Package Maatwebsite/Laravel-Excel belum terinstal di sistem.');
+        }
+
+        try {
+            Excel::import(new PklNilaiImport, $request->file('file_import'));
+            
+            return redirect()->route('pkl.nilai.input', [
+                'id_guru' => $request->id_guru,
+                'tahun_ajaran' => $request->tahun_ajaran,
+                'semester' => $request->semester
+            ])->with('success', 'Berhasil! Nilai dan Deskripsi PKL seluruh siswa telah diimpor dan digenerate otomatis.');
+
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+             return back()->with('error', 'Gagal import! Pastikan Anda tidak merubah format kolom (khususnya ID_SISTEM).');
+        } catch (\Exception $e) {
+             return back()->with('error', 'Terjadi kesalahan saat memproses Excel: ' . $e->getMessage());
+        }
+    }
+
+    // ==============================================================
+    // FUNGSI BARU: EXPORT DATA LAPORAN (SESUAI FILTER INDEX)
+    // ==============================================================
+    public function exportRekapExcel(Request $request)
+    {
+        
+        // 1. Tangkap semua filter yang sedang aktif di URL
+        $filters = [
+            'tahun_ajaran' => $request->tahun_ajaran,
+            'semester' => $request->semester,
+            'id_kelas' => $request->id_kelas,
+            'id_guru' => $request->id_guru,
+            'id_tempat' => $request->id_tempat,
+            'status_penilaian' => $request->status_penilaian,
+        ];
+
+        // 2. Proteksi Isolasi Data: Jika user bukan Admin, kunci ke dirinya sendiri
+        $user = Auth::user();
+        if (!$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor'])) {
+            $filters['id_guru'] = $user->id_guru;
+        }
+
+        $namaFile = 'Export_Data_Nilai_PKL_' . time() . '.xlsx';
+
+        return Excel::download(new \App\Exports\PklNilaiRekapExport($filters), $namaFile);
     }
 }
