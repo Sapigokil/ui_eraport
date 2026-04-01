@@ -12,8 +12,19 @@
     .split-left, .split-right { max-height: 70vh; overflow-y: auto; }
     .split-left::-webkit-scrollbar, .split-right::-webkit-scrollbar { width: 4px; }
     .split-left::-webkit-scrollbar-thumb, .split-right::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    input[type=number] { -moz-appearance: textfield; text-align: center; font-weight: bold; font-size: 1rem;}
+    
+    /* REVISI CSS: HILANGKAN TANDA PANAH (SPIN BUTTON) PADA INPUT NUMBER */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+    }
+    input[type=number] { 
+        -moz-appearance: textfield; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 1rem;
+    }
 </style>
 
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
@@ -281,6 +292,11 @@
 
         $(document).ready(function() {
             
+            // REVISI JS: MATIKAN FUNGSI SCROLL (WHEEL) PADA INPUT NUMBER
+            $(document).on('wheel', 'input[type=number]', function (e) {
+                $(this).blur();
+            });
+
             $('.student-list-item').click(function() {
                 $('.student-list-item').removeClass('active');
                 $(this).addClass('active');
@@ -387,7 +403,6 @@
                     gabungan = "Ananda " + dMax + ".";
                 }
             } else {
-                // Perubahan: Menggunakan pemisah titik koma secara langsung
                 gabungan = "Ananda " + dMax + "; " + dMin + ".";
             }
 
@@ -402,11 +417,10 @@
             $('#checkFinal').prop('checked', false);
 
             $.ajax({
-                url: "{{ url('pkl/nilai/get-siswa') }}/" + idPenempatan,
+                url: "{{ url('pkl/nilai/get-siswa-data') }}/" + idPenempatan,
                 type: "GET",
                 success: function(res) {
                     if(res.status === 'success') {
-                        // Isi Catatan & Field Baru
                         if(res.catatan) {
                             $('#inputProgramKeahlian').val(res.catatan.program_keahlian);
                             $('#inputKonsentrasiKeahlian').val(res.catatan.konsentrasi_keahlian);
@@ -421,7 +435,6 @@
                             if(res.catatan.status_penilaian == 1) $('#checkFinal').prop('checked', true);
                         }
                         
-                        // Isi Nilai
                         if(res.nilai) {
                             for (const [id_tp, dataNilai] of Object.entries(res.nilai)) {
                                 let indikators = dataNilai.data_indikator;

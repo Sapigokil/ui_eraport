@@ -4,12 +4,12 @@
 <head>
     <title>Laporan Hasil Belajar PKL</title>
     <style>
-        /* 1. MARGIN KERTAS DIPERKECIL AGAR MUAT 1 HALAMAN */
+        /* 1. MARGIN KERTAS */
         @page {
             margin: 30px 50px 40px 50px; 
         }      
         
-        /* 2. FONT BODY DISERAGAMKAN & SPASI DIRAPATKAN */
+        /* 2. FONT BODY */
         body { 
             font-family: 'Arial', sans-serif; 
             font-size: 10pt; 
@@ -17,11 +17,10 @@
             color: #000;
         }
 
-        /* Header Judul (Tetap Lebih Besar) */
         .kop-sekolah {
             text-align: center;
             font-weight: bold;
-            font-size: 16pt; 
+            font-size: 14pt; 
             margin-bottom: 2px;
         }
         .tahun-ajaran {
@@ -31,7 +30,7 @@
             margin-bottom: 10px; 
         }
 
-        /* 3. Tabel Info Siswa (Lebih Rapat) */
+        /* 3. Tabel Info Siswa */
         .info-table {
             width: 95%; 
             border-collapse: collapse;
@@ -56,7 +55,7 @@
         }
         .main-table th, .main-table td { 
             border: 1px solid black; 
-            padding: 3px 4px; /* Padding dikecilkan */
+            padding: 4px 6px; 
             text-align: left; 
             vertical-align: top;
         }
@@ -66,7 +65,7 @@
             font-weight: bold;
         }
         .text-center { text-align: center !important; }
-        .text-justify { text-align: justify; text-justify: inter-word; }
+        .text-justify { text-align: justify !important; text-justify: inter-word; }
 
         /* 5. Tabel Catatan & Kehadiran */
         .bottom-section {
@@ -77,7 +76,7 @@
         }
         .catatan-box {
             border: 1px solid black;
-            padding: 4px 6px; 
+            padding: 6px; 
             min-height: 30px; 
             margin-bottom: 10px;
             text-align: justify;
@@ -96,20 +95,21 @@
             text-align: left;
         }
 
-        /* 6. AREA TANDA TANGAN (Dipadatkan) */
+        /* 6. AREA TANDA TANGAN SMART (REVISI PIXEL) */
         .keep-together {
             page-break-inside: avoid;
             break-inside: avoid;
         }
-        /* CLASS BARU UNTUK GARIS STATIS TTD */
-        .nama-ttd {
-            display: block;
-            width: 165px; /* Panjang garis statis (Bisa Anda perbesar/perkecil) */
-            margin: 0 auto; /* Menjaga teks dan garis tetap di tengah */
-            border-bottom: 1px solid #000; /* Membuat garis bawah */
+        
+        .ttd-wrapper {
+            display: inline-block;
+            border-bottom: 1px solid #000; 
             font-weight: bold;
-            padding-bottom: 2px; /* Jarak antara teks dan garis */
+            padding-bottom: 2px;
+            text-align: center;
+            white-space: nowrap;
         }
+
         .ttd-table {
             width: 100%;
             margin-top: 15px; 
@@ -123,14 +123,9 @@
             width: 50%;
         }
         .ttd-space {
-            height: 65px; /* Ruang TTD basah diperkecil sedikit */
-        }
-        .garis-bawah {
-            text-decoration: underline;
-            font-weight: bold;
+            height: 65px; 
         }
 
-        /* TTD Kepala Sekolah (Tengah Bawah) */
         .ttd-kepsek {
             width: 100%;
             margin-top: 15px; 
@@ -141,16 +136,7 @@
             margin: 0;
             padding: 0;
         }
-        .ttd-kepsek .nama-kepsek {
-            display: block;
-            width: 165px; /* Samakan dengan .nama-ttd agar seragam */
-            margin: 65px auto 0 auto; /* Ruang stempel & TTD Kepsek */
-            border-bottom: 1px solid #000;
-            font-weight: bold;
-            padding-bottom: 2px;
-        }
 
-        /* Footer Garis Bawah */
         .footer-fixed {
             position: fixed;
             bottom: -30px; 
@@ -163,11 +149,28 @@
 </head>
 <body>
 
-    {{-- HEADER --}}
-    <div class="kop-sekolah">{{ strtoupper($infoSekolah->nama_sekolah ?? 'SMKN 1 SALATIGA') }}</div>
+    @php
+        // LOGIKA SMART LINE WIDTH DENGAN PIXEL
+        $namaGuru = $raporSiswa->nama_guru_snapshot ?? 'Nama Pembimbing';
+        $namaInstruktur = $raporSiswa->nama_instruktur_snapshot ?? 'Nama Instruktur';
+        $namaKepsek = $infoSekolah->nama_kepsek ?? 'Nama Kepala Sekolah';
+
+        // Estimasikan lebar 1 karakter Arial 10pt adalah ~7.5px
+        $charWidth = 7.5;
+
+        // 1. Baris Pertama (Guru & Instruktur)
+        $lenGuru = strlen($namaGuru);
+        $lenInst = strlen($namaInstruktur);
+        $maxCharsBaris1 = ($lenGuru > $lenInst ? $lenGuru : $lenInst) + 6;
+        $widthBaris1 = $maxCharsBaris1 * $charWidth;
+
+        // 2. Baris Kedua (Kepsek)
+        $widthKepsek = (strlen($namaKepsek) + 6) * $charWidth;
+    @endphp
+
+    <div class="kop-sekolah">RAPOR PKL SMK NEGERI 1 SALATIGA</div>
     <div class="tahun-ajaran">Tahun Ajaran {{ $raporSiswa->tahun_ajaran }}</div>
 
-    {{-- INFO SISWA & PKL --}}
     <br>
     <table class="info-table">
         <tr>
@@ -204,7 +207,6 @@
             <td class="info-label">Tanggal PKL</td>
             <td class="info-titik">:</td>
             <td class="info-value">
-                {{-- PERBAIKAN TANGGAL INDONESIA --}}
                 Mulai: {{ $raporSiswa->tanggal_mulai_snapshot ? \Carbon\Carbon::parse($raporSiswa->tanggal_mulai_snapshot)->locale('id')->translatedFormat('d F Y') : '-' }} &nbsp;&nbsp;&nbsp; 
                 Selesai: {{ $raporSiswa->tanggal_selesai_snapshot ? \Carbon\Carbon::parse($raporSiswa->tanggal_selesai_snapshot)->locale('id')->translatedFormat('d F Y') : '-' }}
             </td>
@@ -212,17 +214,16 @@
         <tr>
             <td class="info-label">Nama Instruktur</td>
             <td class="info-titik">:</td>
-            <td class="info-value">{{ $raporSiswa->nama_instruktur_snapshot ?? '-' }}</td>
+            <td class="info-value">{{ $namaInstruktur }}</td>
         </tr>
         <tr>
             <td class="info-label">Nama Pembimbing</td>
             <td class="info-titik">:</td>
-            <td class="info-value">{{ $raporSiswa->nama_guru_snapshot ?? '-' }}</td>
+            <td class="info-value">{{ $namaGuru }}</td>
         </tr>
     </table>
     <br>
 
-    {{-- TABEL NILAI PKL --}}
     <table class="main-table">
         <thead>
             <tr>
@@ -237,85 +238,58 @@
             <tr>
                 <td class="text-center">{{ $index + 1 }}.</td>
                 <td>{{ $nilai->nama_tp_snapshot }}</td>
-                <td class="text-center">
-                    {{ number_format((float)$nilai->nilai_rata_rata, 0, '', '') }}
-                </td>
+                <td class="text-center">{{ number_format((float)$nilai->nilai_rata_rata, 0, '', '') }}</td>
                 <td class="text-justify">{{ $nilai->deskripsi_gabungan }}</td>
             </tr>
             @empty
-            <tr>
-                <td colspan="4" class="text-center">Belum ada data nilai.</td>
-            </tr>
+            <tr><td colspan="4" class="text-center">Belum ada data nilai.</td></tr>
             @endforelse
         </tbody>
     </table>
 
     <div class="bottom-section">
-        {{-- CATATAN PEMBIMBING --}}
         <div><strong>Catatan:</strong></div>
-        <div class="catatan-box">
-            {{ $raporSiswa->catatan_pembimbing ?? '-' }}
-        </div>
+        <div class="catatan-box">{{ $raporSiswa->catatan_pembimbing ?? '-' }}</div>
 
-        {{-- TABEL KEHADIRAN --}}
         <table class="kehadiran-table">
-            <thead>
-                <tr>
-                    <th colspan="2">Kehadiran</th>
-                </tr>
-            </thead>
+            <thead><tr><th colspan="2">Kehadiran</th></tr></thead>
             <tbody>
-                <tr>
-                    <td style="width: 50%;">Sakit</td>
-                    <td style="width: 50%;">:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ $raporSiswa->sakit ?? 0 }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Hari</td>
-                </tr>
-                <tr>
-                    <td>Ijin</td>
-                    <td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ $raporSiswa->izin ?? 0 }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Hari</td>
-                </tr>
-                <tr>
-                    <td>Tanpa Keterangan</td>
-                    <td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ $raporSiswa->alpa ?? 0 }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Hari</td>
-                </tr>
+                <tr><td>Sakit</td><td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ $raporSiswa->sakit ?? 0 }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Hari</td></tr>
+                <tr><td>Ijin</td><td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ $raporSiswa->izin ?? 0 }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Hari</td></tr>
+                <tr><td>Tanpa Keterangan</td><td>:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ $raporSiswa->alpa ?? 0 }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Hari</td></tr>
             </tbody>
         </table>
     </div>
     <br>
 
-    {{-- BUNGKUS SELURUH TANDA TANGAN AGAR TIDAK TERPISAH HALAMAN --}}
     <div class="keep-together">
         <table class="ttd-table">
             <tr>
                 <td>
-                    <br>
-                    Guru Pembimbing<br>
+                    <br>Guru Pembimbing<br>
                     <div class="ttd-space"></div>
-                    {{-- Menggunakan div class nama-ttd --}}
-                    <div class="nama-ttd">{{ $raporSiswa->nama_guru_snapshot ?? 'Nama Pembimbing' }}</div>
+                    <div class="ttd-wrapper" style="width: {{ $widthBaris1 }}px;">{{ $namaGuru }}</div>
                 </td>
                 <td>
-                    {{-- PERBAIKAN TANGGAL INDONESIA --}}
-                    {{ $infoSekolah->kota_kab ?? 'Salatiga' }}, {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('d F Y') }}<br>
+                    {{ ucwords(strtolower($infoSekolah->kota_kab ?? 'Salatiga')) }}, {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('d F Y') }}<br>
                     Pembimbing Dunia Kerja<br>
                     <div class="ttd-space"></div>
-                    {{-- Menggunakan div class nama-ttd --}}
-                    <div class="nama-ttd">{{ $raporSiswa->nama_instruktur_snapshot ?? 'Nama Instruktur' }}</div>
+                    <div class="ttd-wrapper" style="width: {{ $widthBaris1 }}px;">{{ $namaInstruktur }}</div>
                 </td>
             </tr>
         </table>
         <br>
 
-        {{-- TTD Kepala Sekolah (Tengah) --}}
         <div class="ttd-kepsek">
             <p>Mengetahui,</p>
             <p>Kepala Sekolah</p>
-            {{-- Class nama-kepsek sudah kita atur width-nya di CSS --}}
-            <div class="nama-kepsek">{{ $infoSekolah->nama_kepsek ?? 'Nama Kepala Sekolah' }}</div>
+            <div class="ttd-space" style="height: 65px;"></div>
+            <div class="ttd-wrapper" style="width: {{ $widthKepsek }}px;">{{ $namaKepsek }}</div>
+            <br>
             <span>NIP. {{ $infoSekolah->nip_kepsek ?? '-' }}</span>
         </div>
     </div>
 
-    {{-- SCRIPT PENOMORAN HALAMAN DI BAWAH --}}
     <div class="footer-fixed"></div>
     <script type="text/php">
         if (isset($pdf)) {
@@ -325,10 +299,8 @@
             $width = $pdf->get_width();
             $height = $pdf->get_height();
             $marginSide = 50; 
-            
             $y = $height - 33; 
 
-            // Teks Kiri: Nama / NISN
             $leftText = html_entity_decode(
                 "{{ strtoupper($raporSiswa->nama_siswa_snapshot) }} / {{ $raporSiswa->nisn_snapshot }}",
                 ENT_QUOTES,
@@ -336,7 +308,6 @@
             );
             $pdf->page_text($marginSide, $y, $leftText, $font, $size, $color);
 
-            // Teks Kanan: Hal
             $rightText = "Halaman {PAGE_NUM} dari {PAGE_COUNT}";
             $x = $width - $marginSide - 115; 
             $pdf->page_text($x, $y, $rightText, $font, $size, $color);

@@ -11,11 +11,20 @@ return [
     |
     */
 
-    'current_version' => '1.0.16',
+    'current_version' => '1.0.17',
     
-    'last_updated' => '2026-03-31',
+    'last_updated' => '2026-04-01',
 
     'changelog' => [
+        [
+            'version' => '1.0.17',
+            'date'    => '2026-04-01',
+            'notes'   => [
+                'Perbaikan Halaman Input Nilai PKL',
+                'Perbaikan Halaman Cetak Rapor PKL',
+                'Perbaikan Template PDF Rapor PKL',
+            ],
+        ],
         [
             'version' => '1.0.16',
             'date'    => '2026-03-31',
