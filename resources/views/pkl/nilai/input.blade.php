@@ -410,17 +410,19 @@
             previewBox.removeClass('text-secondary bg-light').addClass('text-dark fw-bold bg-white');
         }
 
-        // FUNGSI AJAX: AMBIL DATA
+        // REVISI FUNGSI AJAX: AMBIL DATA
         function loadSiswaData(idPenempatan) {
             $('#formPenilaian')[0].reset();
             $('.form-deskripsi-output').val('').removeClass('text-dark fw-bold').addClass('text-secondary');
+            $('[id^="preview_gabungan_"]').val('').removeClass('text-dark fw-bold bg-white').addClass('text-secondary bg-light');
             $('#checkFinal').prop('checked', false);
 
             $.ajax({
-                url: "{{ url('pkl/nilai/get-siswa-data') }}/" + idPenempatan,
+                url: "{{ url('pkl/nilai/get-siswa') }}/" + idPenempatan,
                 type: "GET",
                 success: function(res) {
                     if(res.status === 'success') {
+                        // 1. Isi Catatan
                         if(res.catatan) {
                             $('#inputProgramKeahlian').val(res.catatan.program_keahlian);
                             $('#inputKonsentrasiKeahlian').val(res.catatan.konsentrasi_keahlian);
@@ -435,17 +437,36 @@
                             if(res.catatan.status_penilaian == 1) $('#checkFinal').prop('checked', true);
                         }
                         
+                        // 2. Isi Nilai Menggunakan Perulangan jQuery (Sangat Kuat)
                         if(res.nilai) {
-                            for (const [id_tp, dataNilai] of Object.entries(res.nilai)) {
+                            $.each(res.nilai, function(key_tp, dataNilai) {
                                 let indikators = dataNilai.data_indikator;
-                                if(indikators) {
-                                    for (const [id_ind, objData] of Object.entries(indikators)) {
-                                        $('#input_nilai_' + id_ind).val(objData.nilai).trigger('change');
+                                
+                                // Jika server mengirimkan bentuk String JSON, kita paksa ekstrak menjadi Object
+                                let parseLimit = 0;
+                                while (typeof indikators === 'string' && parseLimit < 2) {
+                                    try {
+                                        indikators = JSON.parse(indikators);
+                                    } catch(e) {
+                                        break;
                                     }
+                                    parseLimit++;
                                 }
-                            }
+
+                                // Ekstrak indikator dan tempelkan ke dalam kotak input berdasarkan ID
+                                if(indikators && typeof indikators === 'object') {
+                                    $.each(indikators, function(id_ind, objData) {
+                                        if (objData && objData.nilai !== undefined) {
+                                            $('#input_nilai_' + id_ind).val(objData.nilai).trigger('change');
+                                        }
+                                    });
+                                }
+                            });
                         }
                     }
+                },
+                error: function(xhr) {
+                    console.error("Gagal menarik data dari server", xhr.responseText);
                 }
             });
         }

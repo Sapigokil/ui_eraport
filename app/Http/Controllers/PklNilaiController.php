@@ -17,12 +17,10 @@ use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\PklNilaiExport;
 use App\Imports\PklNilaiImport;
+use App\Exports\PklNilaiRekapExport;
 
 class PklNilaiController extends Controller
 {
-    // ==============================================================
-    // HALAMAN 1: INDEX (DASBOR MONITORING & FILTER)
-    // ==============================================================
     public function index(Request $request)
     {
         $season = PklSeason::currentOpen();
@@ -44,9 +42,6 @@ class PklNilaiController extends Controller
         $id_tempat = $request->id_tempat;
         $status_penilaian = $request->status_penilaian; 
 
-        // ==========================================
-        // LOGIKA FILTER ROLE (DATA ISOLATION)
-        // ==========================================
         $user = Auth::user();
         if ($user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor'])) {
             $id_guru = $request->id_guru;
@@ -73,7 +68,6 @@ class PklNilaiController extends Controller
             ->leftJoin('pkl_tempat', 'pkl_penempatan.id_pkltempat', '=', 'pkl_tempat.id')
             ->leftJoin('pkl_catatansiswa', 'pkl_penempatan.id', '=', 'pkl_catatansiswa.id_penempatan');
 
-        // EKSEKUSI FILTER
         if ($id_kelas) $query->where('pkl_gurusiswa.id_kelas', $id_kelas);
         
         if ($user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor'])) {
@@ -84,7 +78,6 @@ class PklNilaiController extends Controller
 
         if ($id_tempat) $query->where('pkl_penempatan.id_pkltempat', $id_tempat);
 
-        // FILTER STATUS PENILAIAN
         if ($status_penilaian !== null && $status_penilaian !== '') {
             if ($status_penilaian === 'belum') {
                 $query->whereNull('pkl_catatansiswa.status_penilaian');
@@ -122,9 +115,6 @@ class PklNilaiController extends Controller
         ));
     }
 
-    // ==============================================================
-    // HALAMAN 2: FORM INPUT (SPLIT SCREEN)
-    // ==============================================================
     public function input(Request $request)
     {
         $user = Auth::user();
@@ -197,52 +187,56 @@ class PklNilaiController extends Controller
         ));
     }
 
-    // ==============================================================
-    // AJAX GET SISWA DATA
-    // ==============================================================
+    /**
+     * FUNGSI PENGAMBILAN DATA SISWA (DIKLIK DI HALAMAN INPUT)
+     */
     public function getSiswaData($id_penempatan)
     {
         $catatan = PklCatatanSiswa::where('id_penempatan', $id_penempatan)->first();
         $nilai = PklNilaiSiswa::where('id_penempatan', $id_penempatan)->get()->keyBy('id_pkl_tp');
 
+        // FIX/PENGAMAN: Menerjemahkan String JSON menjadi Array Murni
+        // Jika data_indikator dari database terbaca sebagai string, kita ubah jadi array
+        // agar Javascript di layar tidak bingung saat membacanya.
+        foreach ($nilai as $n) {
+            if (is_string($n->data_indikator)) {
+                $n->data_indikator = json_decode($n->data_indikator, true);
+            }
+        }
+
         return response()->json(['status' => 'success', 'catatan' => $catatan, 'nilai' => $nilai]);
     }
 
-    // ==============================================================
-    // PROSES SIMPAN NILAI 
-    // ==============================================================
     public function store(Request $request)
     {
         $request->validate([
             'id_penempatan' => 'required',
             'status_penilaian' => 'required|in:0,1',
-            'nilai' => 'array',
+            'nilai' => 'array', 
         ]);
 
         DB::beginTransaction();
         try {
             $id_penempatan = $request->id_penempatan;
 
-            // 1. Simpan Catatan, Data Sertifikat, & Absensi
             PklCatatanSiswa::updateOrCreate(
                 ['id_penempatan' => $id_penempatan],
                 [
-                    'id_guru' => $request->id_guru,
-                    'program_keahlian' => $request->program_keahlian,
+                    'id_guru'              => $request->id_guru,
+                    'program_keahlian'     => $request->program_keahlian,
                     'konsentrasi_keahlian' => $request->konsentrasi_keahlian,
-                    'tanggal_mulai' => $request->tanggal_mulai,
-                    'tanggal_selesai' => $request->tanggal_selesai,
-                    'nama_instruktur' => $request->nama_instruktur,
-                    'sakit' => $request->sakit ?? 0,
-                    'izin' => $request->izin ?? 0,
-                    'alpa' => $request->alpa ?? 0,
-                    'catatan_pembimbing' => $request->catatan_pembimbing,
-                    'status_penilaian' => $request->status_penilaian,
-                    'created_by' => auth()->user()->id ?? null
+                    'tanggal_mulai'        => $request->tanggal_mulai,
+                    'tanggal_selesai'      => $request->tanggal_selesai,
+                    'nama_instruktur'      => $request->nama_instruktur,
+                    'sakit'                => $request->sakit ?? 0,
+                    'izin'                 => $request->izin ?? 0,
+                    'alpa'                 => $request->alpa ?? 0,
+                    'catatan_pembimbing'   => $request->catatan_pembimbing,
+                    'status_penilaian'     => $request->status_penilaian,
+                    'created_by'           => auth()->user()->id ?? null
                 ]
             );
 
-            // 2. Simpan Nilai per TP
             if ($request->has('nilai')) {
                 $semuaRubrik = PklTpRubrik::all()->groupBy('id_pkl_tp_indikator');
 
@@ -308,7 +302,6 @@ class PklNilaiController extends Controller
                             $gabungan = "Ananda $d1.";
                         }
                     } else {
-                        // Perubahan menggunakan pemisah titik koma
                         $gabungan = "Ananda $dMax; $dMin.";
                     }
 
@@ -329,13 +322,9 @@ class PklNilaiController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            return response()->json(['status' => 'error', 'message' => 'Gagal menyimpan: ' . $e->getMessage()], 500);
         }
     }
-
-    // ==============================================================
-    // FUNGSI EXPORT & IMPORT EXCEL (NILAI PKL)
-    // ==============================================================
 
     public function downloadTemplateExcel(Request $request)
     {
@@ -367,7 +356,7 @@ class PklNilaiController extends Controller
         try {
             Excel::import(new PklNilaiImport, $request->file('file_import'));
             
-            return redirect()->route('pkl.nilai.input', [
+            return redirect()->route('pkl.nilai.index', [
                 'id_guru' => $request->id_guru,
                 'tahun_ajaran' => $request->tahun_ajaran,
                 'semester' => $request->semester
@@ -380,13 +369,8 @@ class PklNilaiController extends Controller
         }
     }
 
-    // ==============================================================
-    // FUNGSI BARU: EXPORT DATA LAPORAN (SESUAI FILTER INDEX)
-    // ==============================================================
     public function exportRekapExcel(Request $request)
     {
-        
-        // 1. Tangkap semua filter yang sedang aktif di URL
         $filters = [
             'tahun_ajaran' => $request->tahun_ajaran,
             'semester' => $request->semester,
@@ -396,7 +380,6 @@ class PklNilaiController extends Controller
             'status_penilaian' => $request->status_penilaian,
         ];
 
-        // 2. Proteksi Isolasi Data: Jika user bukan Admin, kunci ke dirinya sendiri
         $user = Auth::user();
         if (!$user->hasAnyRole(['developer', 'admin_erapor', 'guru_erapor'])) {
             $filters['id_guru'] = $user->id_guru;
@@ -404,6 +387,6 @@ class PklNilaiController extends Controller
 
         $namaFile = 'Export_Data_Nilai_PKL_' . time() . '.xlsx';
 
-        return Excel::download(new \App\Exports\PklNilaiRekapExport($filters), $namaFile);
+        return Excel::download(new PklNilaiRekapExport($filters), $namaFile);
     }
 }
