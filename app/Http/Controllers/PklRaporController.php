@@ -130,7 +130,7 @@ class PklRaporController extends Controller
     }
 
     /**
-     * AKSI 1: GENERATE / PERBARUI DATA (Tarik dari master ke snapshot)
+     * AKSI 1: GENERATE / PERBARUI DATA
      */
     public function generate(Request $request)
     {
@@ -164,7 +164,7 @@ class PklRaporController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Siswa belum memiliki data penempatan/nilai dari Guru Pembimbing.'], 400);
             }
             if ($sumberData->status_penilaian !== 1 && $sumberData->status_penilaian !== 3) {
-                return response()->json(['status' => 'error', 'message' => 'Gagal! Data nilai siswa ini belum di-Finalisasi oleh Guru Pembimbing (Masih Draft).'], 400);
+                return response()->json(['status' => 'error', 'message' => 'Gagal! Data nilai siswa ini belum di-Finalisasi oleh Guru Pembimbing.'], 400);
             }
 
             $raporSiswa = PklRaporSiswa::updateOrCreate(
@@ -197,7 +197,6 @@ class PklRaporController extends Controller
 
             PklRaporNilai::where('id_pkl_raporsiswa', $raporSiswa->id)->delete();
 
-            // REVISI: Mengambil pkl_tp.label_tp (bukan hanya nama_tp)
             $sumberNilai = DB::table('pkl_nilaisiswa')
                 ->join('pkl_tp', 'pkl_nilaisiswa.id_pkl_tp', '=', 'pkl_tp.id')
                 ->where('pkl_nilaisiswa.id_penempatan', $sumberData->id_penempatan)
@@ -208,7 +207,7 @@ class PklRaporController extends Controller
                 PklRaporNilai::create([
                     'id_pkl_raporsiswa' => $raporSiswa->id,
                     'id_pkl_tp' => $n->id_pkl_tp,
-                    'nama_tp_snapshot' => $n->label_tp, // REVISI: Menyimpan label_tp ke dalam snapshot
+                    'nama_tp_snapshot' => $n->label_tp,
                     'nilai_rata_rata' => $n->nilai_rata_rata,
                     'deskripsi_gabungan' => $n->deskripsi_gabungan
                 ]);
@@ -302,13 +301,11 @@ class PklRaporController extends Controller
         }
     }
 
-
     /**
-     * ==========================================================
-     * PDF LOGIC: HELPER PERSIAPAN DATA (SNAPSHOT)
-     * ==========================================================
+     * PDF LOGIC: HELPER PERSIAPAN DATA (DENGAN TGL CETAK)
+     * PERBAIKAN: Parameter $tgl_cetak ditambahkan di definisi fungsi
      */
-    private function persiapkanDataRaporPkl($id_siswa, $semester, $tahun_ajaran)
+    private function persiapkanDataRaporPkl($id_siswa, $semester, $tahun_ajaran, $tgl_cetak = null)
     {
         $raporSiswa = PklRaporSiswa::where('id_siswa', $id_siswa)
             ->where('tahun_ajaran', $tahun_ajaran)
@@ -328,7 +325,10 @@ class PklRaporController extends Controller
             $infoSekolah->kota_kab = 'Salatiga';
         }
 
-        return compact('infoSekolah', 'raporSiswa', 'raporNilai');
+        // Gunakan tgl_cetak jika dikirim, jika tidak gunakan hari ini
+        $tanggalCetakRapor = $tgl_cetak ? \Carbon\Carbon::parse($tgl_cetak) : \Carbon\Carbon::now();
+
+        return compact('infoSekolah', 'raporSiswa', 'raporNilai', 'tanggalCetakRapor');
     }
 
     /**
@@ -338,8 +338,9 @@ class PklRaporController extends Controller
     {
         $semester = $request->semester;
         $tahun_ajaran = $request->tahun_ajaran;
+        $tgl_cetak = $request->tgl_cetak; 
         
-        $data = $this->persiapkanDataRaporPkl($id_siswa, $semester, $tahun_ajaran);
+        $data = $this->persiapkanDataRaporPkl($id_siswa, $semester, $tahun_ajaran, $tgl_cetak);
 
         if (!$data) {
             return "<script>alert('Data Rapor belum dikunci/final. Silakan Finalisasi terlebih dahulu.');window.close();</script>";
@@ -355,7 +356,7 @@ class PklRaporController extends Controller
     }
 
     /**
-     * CETAK MASSAL (PDF MERGER)
+     * CETAK MASSAL
      */
     public function download_massal_merge(Request $request)
     {
@@ -365,6 +366,7 @@ class PklRaporController extends Controller
         $id_kelas = $request->id_kelas;
         $tahun_ajaran = $request->tahun_ajaran;
         $semester = $request->semester;
+        $tgl_cetak = $request->tgl_cetak;
 
         $siswaList = Siswa::where('id_kelas', $id_kelas)->orderBy('nama_siswa', 'asc')->get();
 
@@ -382,7 +384,7 @@ class PklRaporController extends Controller
         $siswaBerhasil = 0;
 
         foreach ($siswaList as $siswa) {
-            $data = $this->persiapkanDataRaporPkl($siswa->id_siswa, $semester, $tahun_ajaran);
+            $data = $this->persiapkanDataRaporPkl($siswa->id_siswa, $semester, $tahun_ajaran, $tgl_cetak);
             if (!$data) continue; 
 
             PklRaporSiswa::where('id', $data['raporSiswa']->id)->update(['status_data' => 'cetak']);

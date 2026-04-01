@@ -70,7 +70,6 @@
                             <div class="col-md-7">
                                 <h3 class="text-white font-weight-bold mb-1">{{ $kelasAktif->nama_kelas }}</h3>
                                 <p class="text-white opacity-8 mb-2"><i class="fas fa-user-tie me-2"></i> Wali Kelas: {{ $kelasAktif->wali_kelas }}</p>
-                                
                                 <span class="badge border border-white text-white fw-bold bg-transparent">
                                     Semester {{ $semesterRaw == 1 ? 'Ganjil' : 'Genap' }} - {{ $tahun_ajaran }}
                                 </span>
@@ -99,6 +98,28 @@
             </div>
         </div>
 
+        {{-- REVISI: PANEL SET INPUT TANGGAL CETAK --}}
+        <div class="row mb-4">
+            <div class="col-md-5">
+                <div class="card shadow-xs border border-warning">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="icon icon-shape bg-light shadow-none text-center border-radius-md me-3">
+                                <i class="fas fa-calendar-alt text-warning opacity-10"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <label class="form-label mb-0 text-xs font-weight-bold text-uppercase">Set Tanggal Cetak Rapor</label>
+                                <input type="date" id="tgl_cetak_global" class="form-control form-control-sm border-warning" value="{{ date('Y-m-d') }}">
+                            </div>
+                        </div>
+                        <p class="text-xxs text-secondary mt-2 mb-0 italic">
+                            <i class="fas fa-info-circle me-1"></i> Tanggal ini akan muncul sebagai titimangsa (tanda tangan) di PDF.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- KONTEN TABEL SISWA --}}
         <div class="row">
             <div class="col-12">
@@ -108,16 +129,14 @@
                             <h6 class="mb-0 text-dark font-weight-bold"><i class="fas fa-list-ul me-2"></i> Daftar Rapor PKL Siswa</h6>
                             
                             <div class="d-flex gap-2">
-                                {{-- FITUR BARU: TOMBOL TEMBUS KE MONITORING DENGAN BAWAAN URL id_kelas --}}
                                 <a href="{{ route('pkl.rapor.monitoring.index', ['buka_kelas' => $id_kelas]) }}" target="_blank" class="btn btn-sm btn-outline-info mb-0">
                                     <i class="fas fa-search-location me-2"></i> Cek Monitoring Penilaian
                                 </a>
 
                                 @if($finalCount > 0)
-                                <a href="{{ route('pkl.rapor.download_massal_merge') }}?id_kelas={{ $id_kelas }}&semester={{ $semesterRaw }}&tahun_ajaran={{ $tahun_ajaran }}" 
-                                    class="btn btn-sm btn-outline-primary mb-0" target="_blank">
+                                <button onclick="cetakMassal()" class="btn btn-sm btn-outline-primary mb-0">
                                     <i class="fas fa-file-pdf me-2"></i> Download & Merge PDF
-                                </a>
+                                </button>
                                 @endif
                             </div>
                         </div>
@@ -152,7 +171,6 @@
                                             </div>
                                         </td>
                                         
-                                        {{-- FITUR BARU: STATUS KESIAPAN GURU --}}
                                         <td class="text-center align-middle">
                                             @if($s->status_rapor == 'belum_generate')
                                                 @if($s->status_guru == 'siap')
@@ -197,16 +215,13 @@
                                         <td class="text-center align-middle">
                                             <div class="d-flex justify-content-center gap-2">
                                                 @if($s->is_ready_print)
-                                                    {{-- JIKA FINAL / CETAK --}}
-                                                    <a href="{{ route('pkl.rapor.cetak_proses', $s->id_siswa) }}?semester={{ $semesterRaw }}&tahun_ajaran={{ $tahun_ajaran }}" 
-                                                        target="_blank" class="btn btn-xs bg-gradient-primary mb-0 px-3" data-bs-toggle="tooltip" title="Cetak PDF">
+                                                    <button onclick="cetakSatuan('{{ $s->id_siswa }}')" class="btn btn-xs bg-gradient-primary mb-0 px-3" data-bs-toggle="tooltip" title="Cetak PDF">
                                                         <i class="fas fa-print me-1"></i> Cetak
-                                                    </a>
+                                                    </button>
                                                     <button onclick="unlockRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs btn-outline-danger mb-0 px-3" data-bs-toggle="tooltip" title="Buka Kunci untuk Edit/Update">
                                                         <i class="fas fa-lock"></i> Buka Kunci
                                                     </button>
                                                 @elseif($s->status_rapor == 'draft')
-                                                    {{-- JIKA DRAFT --}}
                                                     <button onclick="regenerateRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs bg-gradient-warning mb-0 px-3" data-bs-toggle="tooltip" title="Tarik data nilai terbaru dari Guru">
                                                         <i class="fas fa-sync-alt me-1"></i> Perbarui Data
                                                     </button>
@@ -214,8 +229,6 @@
                                                         <i class="fas fa-check-circle me-1"></i> Finalisasi
                                                     </button>
                                                 @else
-                                                    {{-- JIKA BELUM ADA --}}
-                                                    {{-- Kita matikan tombol generate jika data guru belum siap --}}
                                                     @if($s->status_guru == 'siap')
                                                         <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs bg-gradient-secondary mb-0 px-3">
                                                             <i class="fas fa-cog me-1"></i> Generate
@@ -263,6 +276,37 @@
 <script>
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) { return new bootstrap.Tooltip(tooltipTriggerEl) })
+
+    // REVISI: FUNGSI CEK TANGGAL DAN REDIRECT CETAK
+    function getTglCetak() {
+        const tgl = $('#tgl_cetak_global').val();
+        if(!tgl) {
+            Swal.fire('Perhatian!', 'Silakan pilih Tanggal Cetak Rapor terlebih dahulu pada kotak kuning.', 'warning');
+            return null;
+        }
+        return tgl;
+    }
+
+    function cetakSatuan(idSiswa) {
+        const tgl = getTglCetak();
+        if(!tgl) return;
+
+        const url = "{{ route('pkl.rapor.cetak_proses', ':id') }}"
+            .replace(':id', idSiswa) + 
+            `?semester={{ $semesterRaw }}&tahun_ajaran={{ $tahun_ajaran }}&tgl_cetak=${tgl}`;
+        
+        window.open(url, '_blank');
+    }
+
+    function cetakMassal() {
+        const tgl = getTglCetak();
+        if(!tgl) return;
+
+        const url = "{{ route('pkl.rapor.download_massal_merge') }}?" + 
+            `id_kelas={{ $id_kelas }}&semester={{ $semesterRaw }}&tahun_ajaran={{ $tahun_ajaran }}&tgl_cetak=${tgl}`;
+        
+        window.open(url, '_blank');
+    }
 
     // AJAX ACTION HELPER
     function actionAjax(url, idSiswa) {

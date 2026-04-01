@@ -271,7 +271,7 @@
                     <div class="ttd-wrapper" style="width: {{ $widthBaris1 }}px;">{{ $namaGuru }}</div>
                 </td>
                 <td>
-                    {{ ucwords(strtolower($infoSekolah->kota_kab ?? 'Salatiga')) }}, {{ \Carbon\Carbon::now()->locale('id')->translatedFormat('d F Y') }}<br>
+                    {{ ucwords(strtolower($infoSekolah->kota_kab ?? 'Salatiga')) }}, {{ $tanggalCetakRapor->locale('id')->translatedFormat('d F Y') }}<br>
                     Pembimbing Dunia Kerja<br>
                     <div class="ttd-space"></div>
                     <div class="ttd-wrapper" style="width: {{ $widthBaris1 }}px;">{{ $namaInstruktur }}</div>
