@@ -195,13 +195,46 @@ class PklNilaiController extends Controller
         $catatan = PklCatatanSiswa::where('id_penempatan', $id_penempatan)->first();
         $nilai = PklNilaiSiswa::where('id_penempatan', $id_penempatan)->get()->keyBy('id_pkl_tp');
 
-        // FIX/PENGAMAN: Menerjemahkan String JSON menjadi Array Murni
-        // Jika data_indikator dari database terbaca sebagai string, kita ubah jadi array
-        // agar Javascript di layar tidak bingung saat membacanya.
+        // Menerjemahkan String JSON menjadi Array Murni
         foreach ($nilai as $n) {
             if (is_string($n->data_indikator)) {
                 $n->data_indikator = json_decode($n->data_indikator, true);
             }
+        }
+
+        // ==============================================================
+        // LOGIKA BARU: AMBIL DEFAULT PROGRAM & KONSENTRASI DARI KELAS
+        // ==============================================================
+        $dataKelasSiswa = DB::table('pkl_penempatan')
+            ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
+            ->join('kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
+            ->where('pkl_penempatan.id', $id_penempatan)
+            ->select('kelas.prog_keahlian', 'kelas.kons_keahlian')
+            ->first();
+
+        $defaultProg = $dataKelasSiswa ? $dataKelasSiswa->prog_keahlian : '';
+        $defaultKons = $dataKelasSiswa ? $dataKelasSiswa->kons_keahlian : '';
+
+        if ($catatan) {
+            // Jika siswa sudah pernah dinilai (ada riwayat catatan), cek datanya. 
+            // Jika kebetulan kosong, maka pakai default dari kelas.
+            $catatan->program_keahlian = $catatan->program_keahlian ?: $defaultProg;
+            $catatan->konsentrasi_keahlian = $catatan->konsentrasi_keahlian ?: $defaultKons;
+        } else {
+            // Jika sama sekali belum pernah dinilai, kita buatkan objek kosong (dummy) 
+            // agar Javascript di layar otomatis mengisikan form berdasarkan default kelas.
+            $catatan = (object) [
+                'program_keahlian'     => $defaultProg,
+                'konsentrasi_keahlian' => $defaultKons,
+                'tanggal_mulai'        => '',
+                'tanggal_selesai'      => '',
+                'nama_instruktur'      => '',
+                'sakit'                => 0,
+                'izin'                 => 0,
+                'alpa'                 => 0,
+                'catatan_pembimbing'   => '',
+                'status_penilaian'     => null
+            ];
         }
 
         return response()->json(['status' => 'success', 'catatan' => $catatan, 'nilai' => $nilai]);
@@ -237,7 +270,7 @@ class PklNilaiController extends Controller
                 ]
             );
 
-            if ($request->has('nilai')) {
+            if ($request->has('nilai') && is_array($request->nilai)) {
                 $semuaRubrik = PklTpRubrik::all()->groupBy('id_pkl_tp_indikator');
 
                 foreach ($request->nilai as $id_tp => $dataIndikatorInput) {
