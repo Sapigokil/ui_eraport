@@ -41,9 +41,7 @@ class KelasController extends Controller
     public function show($id_kelas)
     {
         $kelas = Kelas::with('guru')->withCount('siswas')->findOrFail($id_kelas);
-        // Menggunakan relationship siswas jika sudah didefinisikan di model Kelas
-        // $anggota = $kelas->siswas; 
-        // Atau cara manual seperti kodemu:
+        
         $anggota = Siswa::select('siswa.*')
             ->join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
             ->where('detail_siswa.id_kelas', $id_kelas)
@@ -69,24 +67,25 @@ class KelasController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_kelas' => 'required|string|max:100',
-            'tingkat'    => 'required|integer',
-            'jurusan'    => 'required|string',
-            // 'wali_kelas' string tidak wajib jika sudah pakai id_guru (tergantung struktur DB)
-            // Pastikan input di form name="id_guru"
-            'id_guru'    => 'required|exists:guru,id_guru', 
+            'nama_kelas'    => 'required|string|max:100',
+            'tingkat'       => 'required|integer',
+            'jurusan'       => 'required|string',
+            'prog_keahlian' => 'nullable|string', // ✅ PERBAIKAN: Validasi input baru
+            'kons_keahlian' => 'nullable|string', // ✅ PERBAIKAN: Validasi input baru
+            'id_guru'       => 'required|exists:guru,id_guru', 
         ]);
 
-        // Opsional: Ambil nama guru berdasarkan ID untuk mengisi kolom wali_kelas (jika kolom itu string manual)
         $guru = Guru::find($request->id_guru);
         $namaWaliKelas = $guru ? $guru->nama_guru : '-';
 
         Kelas::create([
-            'nama_kelas' => $request->nama_kelas,
-            'tingkat'    => $request->tingkat,
-            'jurusan'    => $request->jurusan,
-            'id_guru'    => $request->id_guru, // ✅ PERBAIKAN: Simpan ID Guru
-            'wali_kelas' => $namaWaliKelas,    // Isi otomatis nama berdasarkan ID (opsional)
+            'nama_kelas'    => $request->nama_kelas,
+            'tingkat'       => $request->tingkat,
+            'jurusan'       => $request->jurusan,
+            'prog_keahlian' => $request->prog_keahlian, // ✅ PERBAIKAN: Simpan ke DB
+            'kons_keahlian' => $request->kons_keahlian, // ✅ PERBAIKAN: Simpan ke DB
+            'id_guru'       => $request->id_guru, 
+            'wali_kelas'    => $namaWaliKelas,    
         ]);
 
         return redirect()->route('master.kelas.index')->with('success', 'Kelas berhasil ditambahkan!');
@@ -98,14 +97,14 @@ class KelasController extends Controller
         $kelas = Kelas::findOrFail($id_kelas);
         
         $validated = $request->validate([
-            'nama_kelas' => 'required|string|max:100',
-            'tingkat'    => 'required|string', // Pastikan tipe data sesuai (string/integer)
-            'jurusan'    => 'required|string',
-            'id_guru'    => 'required|exists:guru,id_guru', // ✅ PERBAIKAN: Validasi ID Guru
-            // 'jumlah_siswa' => 'nullable|integer|min:0', // Biasanya jumlah siswa otomatis, tidak diinput manual
+            'nama_kelas'    => 'required|string|max:100',
+            'tingkat'       => 'required|string', 
+            'jurusan'       => 'required|string',
+            'prog_keahlian' => 'nullable|string', // ✅ PERBAIKAN: Validasi update baru
+            'kons_keahlian' => 'nullable|string', // ✅ PERBAIKAN: Validasi update baru
+            'id_guru'       => 'required|exists:guru,id_guru', 
         ]);
 
-        // Opsional: Update nama wali kelas string jika ID berubah
         $guru = Guru::find($request->id_guru);
         $validated['wali_kelas'] = $guru ? $guru->nama_guru : $kelas->wali_kelas;
 
@@ -127,7 +126,6 @@ class KelasController extends Controller
     {
         $kelas = Kelas::findOrFail($id_kelas);
 
-        // Perbaikan Query Anggota (Join yang benar)
         $anggota = Siswa::select(
                 'siswa.nama_siswa',
                 'siswa.nisn',
@@ -143,19 +141,15 @@ class KelasController extends Controller
     // Tambah anggota ke kelas
     public function tambahAnggota(Request $request, $id_kelas)
     {
-        // Validasi ID Siswa (bukan nama/nisn manual, biasanya pilih dari dropdown siswa yg belum punya kelas)
         $request->validate([
             'id_siswa' => 'required|exists:siswa,id_siswa'
         ]);
 
-        // Update detail siswa
         DetailSiswa::updateOrCreate(
             ['id_siswa' => $request->id_siswa],
             ['id_kelas' => $id_kelas]
         );
 
-        // Update jumlah siswa di tabel kelas (jika kolom ini ada dan manual)
-        // Sebaiknya gunakan withCount di query daripada simpan statis
         $jumlah = DetailSiswa::where('id_kelas', $id_kelas)->count();
         Kelas::where('id_kelas', $id_kelas)->update(['jumlah_siswa' => $jumlah]);
 
@@ -172,7 +166,6 @@ class KelasController extends Controller
             
             $detail->update(['id_kelas' => null]);
 
-            // Update counter kelas lama
             if($id_kelas_lama) {
                 $jumlah = DetailSiswa::where('id_kelas', $id_kelas_lama)->count();
                 Kelas::where('id_kelas', $id_kelas_lama)->update(['jumlah_siswa' => $jumlah]);
@@ -212,10 +205,9 @@ class KelasController extends Controller
         $handle = fopen($filename, 'w+');
 
         // Header
-        fputcsv($handle, ['No', 'Nama Kelas', 'Tingkat', 'Jurusan', 'Wali Kelas', 'Jumlah Siswa']);
+        fputcsv($handle, ['No', 'Nama Kelas', 'Tingkat', 'Jurusan', 'Program Keahlian', 'Konsentrasi Keahlian', 'Wali Kelas', 'Jumlah Siswa']);
 
         foreach ($kelas as $i => $k) {
-            // Ambil nama wali kelas dari relasi atau kolom string
             $wali = $k->guru ? $k->guru->nama_guru : $k->wali_kelas;
             
             fputcsv($handle, [
@@ -223,8 +215,10 @@ class KelasController extends Controller
                 $k->nama_kelas,
                 $k->tingkat,
                 $k->jurusan,
+                $k->prog_keahlian, // ✅ Ditambahkan ke CSV
+                $k->kons_keahlian, // ✅ Ditambahkan ke CSV
                 $wali,
-                $k->jumlah_siswa // Atau $k->siswas_count jika pakai withCount
+                $k->jumlah_siswa 
             ]);
         }
 

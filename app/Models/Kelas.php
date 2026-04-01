@@ -21,6 +21,8 @@ class Kelas extends Model
         'nama_kelas',
         'tingkat',
         'jurusan',
+        'prog_keahlian', // Kolom baru ditambahkan
+        'kons_keahlian', // Kolom baru ditambahkan
         'wali_kelas',   // Legacy (String Nama) - TETAP ADA
         'id_guru',      // Baru (Relasi ID) - TETAP ADA
         'jumlah_siswa',

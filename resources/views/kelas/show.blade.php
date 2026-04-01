@@ -47,6 +47,13 @@
                                         
                                         <dt class="col-sm-4 text-secondary">Jurusan:</dt>
                                         <dd class="col-sm-8 font-weight-bold">{{ $kelas->jurusan ?? '-' }}</dd>
+
+                                        {{-- 🛑 PENAMBAHAN: Program Keahlian & Konsentrasi Keahlian --}}
+                                        <dt class="col-sm-4 text-secondary">Program Keahlian:</dt>
+                                        <dd class="col-sm-8 font-weight-bold">{{ $kelas->prog_keahlian ?? '-' }}</dd>
+
+                                        <dt class="col-sm-4 text-secondary">Konsentrasi Keahlian:</dt>
+                                        <dd class="col-sm-8 font-weight-bold">{{ $kelas->kons_keahlian ?? '-' }}</dd>
                                     </dl>
                                 </div>
                                 <div class="col-md-6">
@@ -73,7 +80,6 @@
                             <hr class="my-4">
 
                             {{-- ================================================= --}}
-                            {{-- 🛑 BAGIAN BARU: II. Daftar Mata Pelajaran --}}
                             <h6 class="text-sm font-weight-bolder mb-3 text-info"><i class="fas fa-book me-1"></i> II. Daftar Mata Pelajaran</h6>
                             <hr>
                             <div class="p-3 border rounded text-dark mb-4">
@@ -83,7 +89,6 @@
                             </div>
                             
                             {{-- ================================================= --}}
-                            {{-- 🛑 BAGIAN BARU: III. Daftar Anggota Kelas --}}
                             <h6 class="text-sm font-weight-bolder mb-3 text-info"><i class="fas fa-users me-1"></i> III. Daftar Anggota Kelas ({{ $anggota->count() }} Siswa)</h6>
                             <hr>
                             
@@ -110,7 +115,6 @@
                                                 <p class="text-xs font-weight-bold mb-0">{{ $s->nisn }}</p>
                                             </td>
                                             <td class="align-middle">
-                                                {{-- Aksi: Hapus Anggota --}}
                                                 <form action="{{ route('master.kelas.anggota.delete', $s->id_siswa) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin mengeluarkan {{ $s->nama_siswa }} dari kelas ini?')">
                                                     @csrf
                                                     @method('DELETE')
@@ -119,7 +123,6 @@
                                                     </button>
                                                 </form>
                                                 
-                                                {{-- Link ke Detail Siswa --}}
                                                 <a href="{{ route('master.siswa.show', $s->id_siswa) }}" class="text-info font-weight-bold text-xs ms-3" 
                                                    data-bs-toggle="tooltip" title="Lihat Detail Siswa" target="_blank"> 
                                                     <i class="fas fa-eye me-1"></i> Detail Siswa

@@ -23,6 +23,8 @@ return [
                 'Perbaikan Halaman Input Nilai PKL',
                 'Perbaikan Halaman Cetak Rapor PKL',
                 'Perbaikan Template PDF Rapor PKL',
+                'Penambahan Kolom Program Keahlian dan Konsentrasi Keahlian pada Data Kelas',
+                'Menautkan Data PKL dengan Data Kelas untuk digunakan dalam Rapor PKL',
             ],
         ],
         [

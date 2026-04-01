@@ -166,7 +166,7 @@
             @php 
                 $masterRoutes = [
                     'master.sekolah.*', 'master.guru.*', 'master.siswa.*', 'master.kelas.*', 
-                    'master.mapel.*', 'master.pembelajaran.*', 'master.ekskul.*'
+                    'master.mapel.*', 'master.pembelajaran.*'
                 ];
                 $isMasterActive = request()->routeIs($masterRoutes); 
             @endphp
@@ -187,6 +187,26 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.kelas.*') ? 'active' : '' }}" href="{{ route('master.kelas.index') }}"><span class="sidenav-normal"> Data Kelas </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.mapel.*') ? 'active' : '' }}" href="{{ route('master.mapel.index') }}"><span class="sidenav-normal"> Mata Pelajaran </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.pembelajaran.*') ? 'active' : '' }}" href="{{ route('master.pembelajaran.index') }}"><span class="sidenav-normal"> Pembelajaran </span></a></li>
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+            {{-- DATA EKSKUL --}}
+            @can('master.menu')
+            @php
+                $dataEkskulRoutes = ['master.ekskul.*'];
+                $isDataEkskulActive = request()->routeIs($dataEkskulRoutes);
+            @endphp
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#dataEkskulMenu" class="nav-link {{ $isDataEkskulActive ? 'active' : '' }}" aria-controls="dataEkskulMenu" role="button" aria-expanded="{{ $isDataEkskulActive ? 'true' : 'false' }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-futbol text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Data Ekskul</span>
+                </a>
+                <div class="collapse {{ $isDataEkskulActive ? 'show' : '' }}" id="dataEkskulMenu">
+                    <ul class="nav">
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.ekskul.list.*') ? 'active' : '' }}" href="{{ route('master.ekskul.list.index') }}"><span class="sidenav-normal"> List Ekskul </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.ekskul.siswa.*') ? 'active' : '' }}" href="{{ route('master.ekskul.siswa.index') }}"><span class="sidenav-normal"> Peserta Ekskul </span></a></li>
                     </ul>

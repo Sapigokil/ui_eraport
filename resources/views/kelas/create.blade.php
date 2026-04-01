@@ -65,25 +65,34 @@
                                     <div class="col-md-6 mb-3">
                                         <label for="id_guru" class="form-label">Wali Kelas <span class="text-danger">*</span></label>
                                         
-                                        {{-- PERBAIKAN: Tambahkan name="id_guru" dan value gunakan ID --}}
                                         <select class="form-select" name="id_guru" id="id_guru" required>
                                             <option value="">-- Pilih Wali Kelas --</option>
                                             @foreach ($guru as $g)
                                                 <option value="{{ $g->id_guru }}" 
-                                                    {{-- Logic untuk Edit (jika ada data kelas) atau Old Input (jika validasi gagal) --}}
                                                     {{ (old('id_guru') == $g->id_guru) || (isset($kelas) && $kelas->id_guru == $g->id_guru) ? 'selected' : '' }}>
                                                     {{ $g->nama_guru }}
                                                 </option>
                                             @endforeach
                                         </select>
-
-                                        {{-- Input hidden 'wali_kelas' DIHAPUS saja, karena Controller sudah otomatis mengisi nama --}}
                                     </div>
+
+                                    {{-- 🛑 PENAMBAHAN: Program Keahlian --}}
+                                    <div class="col-md-6 mb-3">
+                                        <label for="prog_keahlian" class="form-label">Program Keahlian</label>
+                                        <input type="text" class="form-control" id="prog_keahlian" name="prog_keahlian" value="{{ old('prog_keahlian') }}" placeholder="Contoh: Teknik Komputer dan Informatika">
+                                    </div>
+
+                                    {{-- 🛑 PENAMBAHAN: Konsentrasi Keahlian --}}
+                                    <div class="col-md-6 mb-3">
+                                        <label for="kons_keahlian" class="form-label">Konsentrasi Keahlian</label>
+                                        <input type="text" class="form-control" id="kons_keahlian" name="kons_keahlian" value="{{ old('kons_keahlian') }}" placeholder="Contoh: Rekayasa Perangkat Lunak">
+                                    </div>
+
                                 </div>
                                 
                                 <hr class="my-4">
 
-                                {{-- II. Informasi Status Siswa (Revisi Style: Teks Netral) --}}
+                                {{-- II. Informasi Status Siswa --}}
                                 <h6 class="text-sm font-weight-bolder mb-3 text-info"><i class="fas fa-users-cog me-1"></i> Status Anggota Kelas</h6>
                                 
                                 <div class="p-3 border rounded text-dark"> 
@@ -118,16 +127,15 @@
             const idGuruSelect = document.getElementById('id_guru_select');
             const waliKelasInput = document.getElementById('wali_kelas_text');
 
-            function updateWaliKelas() {
-                const selectedOption = idGuruSelect.options[idGuruSelect.selectedIndex];
-                // Mengambil nilai dari option (yang kini berisi nama guru)
-                waliKelasInput.value = selectedOption.value.startsWith('--') ? '' : selectedOption.value.trim(); 
+            if(idGuruSelect && waliKelasInput) {
+                function updateWaliKelas() {
+                    const selectedOption = idGuruSelect.options[idGuruSelect.selectedIndex];
+                    waliKelasInput.value = selectedOption.value.startsWith('--') ? '' : selectedOption.value.trim(); 
+                }
+
+                idGuruSelect.addEventListener('change', updateWaliKelas);
+                updateWaliKelas();
             }
-
-            idGuruSelect.addEventListener('change', updateWaliKelas);
-
-            // Jalankan saat load jika ada data old()
-            updateWaliKelas();
         });
     </script>
 @endsection

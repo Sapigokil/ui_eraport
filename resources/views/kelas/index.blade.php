@@ -52,11 +52,11 @@
                                         <tr>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">No</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Nama Kelas</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Tingkat</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Jurusan</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Program Keahlian</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Konsentrasi Keahlian</th>
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Wali Kelas</th>
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Jumlah Siswa</th>
-                                            <th class="text-secondary opacity-7">Aksi</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Jumlah Siswa</th>
+                                            <th class="text-secondary opacity-7 text-center">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -69,19 +69,18 @@
                                                 <p class="text-xs font-weight-bold mb-0">{{ $k->nama_kelas }}</p>
                                             </td>
                                             <td class="align-middle">
-                                                <p class="text-xs font-weight-bold mb-0">{{ $k->tingkat }}</p>
+                                                <p class="text-xs font-weight-bold mb-0">{{ $k->prog_keahlian ?? '-' }}</p>
                                             </td>
                                             <td class="align-middle">
-                                                <p class="text-xs font-weight-bold mb-0">{{ $k->jurusan }}</p>
+                                                <p class="text-xs font-weight-bold mb-0">{{ $k->kons_keahlian ?? '-' }}</p>
                                             </td>
                                             <td class="align-middle">
                                                 <p class="text-xs font-weight-bold mb-0">{{ $k->wali_kelas ?? '-' }}</p>
                                             </td>
                                             <td class="align-middle text-center">
-                                                {{-- 🛑 REVISI: Mengganti badge menjadi teks normal --}}
                                                 <p class="text-xs font-weight-bold mb-0">{{ $k->siswas_count ?? 0 }} Siswa</p>
                                             </td>
-                                            <td class="align-middle">
+                                            <td class="align-middle text-center">
                                                 {{-- Aksi: SHOW (Lihat Detail) --}}
                                                 <a href="{{ route('master.kelas.show', $k->id_kelas) }}" class="text-info font-weight-bold text-xs me-2" data-bs-toggle="tooltip" title="Lihat Detail">
                                                     <i class="fas fa-eye me-1"></i> Lihat
