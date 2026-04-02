@@ -6,7 +6,7 @@
     <style>
         /* 1. MARGIN KERTAS */
         @page {
-            margin: 30px 50px 40px 50px; 
+            margin: 30px 50px 30px 50px; 
         }      
         
         /* 2. FONT BODY */
@@ -142,7 +142,7 @@
             bottom: -30px; 
             left: 0;
             right: 0;
-            height: 40px;
+            height: 30px;
             border-top: 1px solid #000;
         }
     </style>
@@ -161,7 +161,7 @@
         // 1. Baris Pertama (Guru & Instruktur)
         $lenGuru = strlen($namaGuru);
         $lenInst = strlen($namaInstruktur);
-        $maxCharsBaris1 = ($lenGuru > $lenInst ? $lenGuru : $lenInst) + 6;
+        $maxCharsBaris1 = ($lenGuru > $lenInst ? $lenGuru : $lenInst) + 0;
         $widthBaris1 = $maxCharsBaris1 * $charWidth;
 
         // 2. Baris Kedua (Kepsek)
@@ -260,7 +260,6 @@
             </tbody>
         </table>
     </div>
-    <br>
 
     <div class="keep-together">
         <table class="ttd-table">
@@ -299,7 +298,9 @@
             $width = $pdf->get_width();
             $height = $pdf->get_height();
             $marginSide = 50; 
-            $y = $height - 33; 
+
+            // Footer text position (30px from bottom)
+            $y = $height - 20; 
 
             $leftText = html_entity_decode(
                 "{{ strtoupper($raporSiswa->nama_siswa_snapshot) }} / {{ $raporSiswa->nisn_snapshot }}",
