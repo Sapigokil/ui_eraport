@@ -22,6 +22,7 @@ return [
             'notes'   => [
                 'Penambahan Tombol Massal pada halaman cetak Rapor PKL',
                 'Perbaikan Halaman Input Nilai PKL',
+                'Optimasi Proses Generate Rapor PKL untuk meningkatkan kecepatan dan mengurangi beban server',
             ],
         ],
         [

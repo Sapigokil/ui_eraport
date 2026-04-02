@@ -148,18 +148,9 @@
                                     <i class="fas fa-search-location me-2"></i> Cek Monitoring
                                 </a>
 
-                                @if($countBelumGenerate > 0)
-                                    <button onclick="bulkAction('generate_awal', 'Generate Awal Rapor PKL')" class="btn btn-sm bg-gradient-secondary mb-0">
-                                        <i class="fas fa-cog me-1"></i> Generate Awal
-                                    </button>
-                                @endif
-
-                                @if($countDraft > 0)
-                                    <button onclick="bulkAction('regenerate', 'Perbarui Data (Tarik Ulang)')" class="btn btn-sm bg-gradient-warning mb-0">
-                                        <i class="fas fa-sync-alt me-1"></i> Perbarui Data
-                                    </button>
-                                    <button onclick="bulkAction('finalisasi', 'Finalisasi Rapor (Siap Cetak)')" class="btn btn-sm bg-gradient-info mb-0">
-                                        <i class="fas fa-check-circle me-1"></i> Finalisasi
+                                @if($countBelumGenerate > 0 || $countDraft > 0)
+                                    <button onclick="bulkAction('generate', 'Generate / Perbarui Data')" class="btn btn-sm bg-gradient-secondary mb-0">
+                                        <i class="fas fa-sync-alt me-1"></i> Generate / Perbarui
                                     </button>
                                 @endif
 
@@ -190,10 +181,7 @@
                                         </th>
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 5%">No</th>
                                         <th class="ps-3 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 25%">Nama Siswa</th>
-                                        
-                                        {{-- REVISI: Tambahan Kolom Guru Pembimbing --}}
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Guru Pembimbing</th>
-                                        
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Kesiapan Guru</th>
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status Rapor</th>
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Terakhir Update</th>
@@ -232,7 +220,7 @@
 
                                         {{-- KESIAPAN GURU --}}
                                         <td class="text-center align-middle">
-                                            @if($s->status_rapor == 'belum_generate')
+                                            @if($s->status_rapor == 'belum_generate' || $s->status_rapor == 'draft')
                                                 @if($s->status_guru == 'siap')
                                                     <span class="text-xs font-weight-bold text-success">
                                                         <i class="fas fa-check-circle me-1"></i> Data Siap
@@ -288,19 +276,17 @@
                                                         <i class="fas fa-lock"></i> Buka Kunci
                                                     </button>
 
-                                                @elseif($s->status_rapor == 'draft')
-                                                    <button onclick="regenerateRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs bg-gradient-warning mb-0 px-3" data-bs-toggle="tooltip" title="Tarik data nilai terbaru dari Guru">
-                                                        <i class="fas fa-sync-alt me-1"></i> Perbarui
-                                                    </button>
-                                                    <button onclick="finalisasiRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs bg-gradient-info mb-0 px-3">
-                                                        <i class="fas fa-check-circle me-1"></i> Finalisasi
-                                                    </button>
-
                                                 @else
                                                     @if($s->status_guru == 'siap')
-                                                        <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs bg-gradient-secondary mb-0 px-3">
-                                                            <i class="fas fa-cog me-1"></i> Generate
-                                                        </button>
+                                                        @if($s->status_rapor == 'draft')
+                                                            <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs bg-gradient-warning mb-0 px-3" data-bs-toggle="tooltip" title="Tarik data nilai terbaru dari Guru">
+                                                                <i class="fas fa-sync-alt me-1"></i> Perbarui Data
+                                                            </button>
+                                                        @else
+                                                            <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs bg-gradient-secondary mb-0 px-3">
+                                                                <i class="fas fa-cog me-1"></i> Generate
+                                                            </button>
+                                                        @endif
                                                     @else
                                                         <button disabled class="btn btn-xs bg-light text-secondary border mb-0 px-3" data-bs-toggle="tooltip" title="Guru belum memfinalisasi nilai anak ini.">
                                                             <i class="fas fa-lock me-1"></i> Menunggu Guru
@@ -408,12 +394,8 @@
         var targetUrl = "";
         var iconColor = "#344767";
 
-        // URL MENGARAH KE ROUTE PKL BARU
-        if (actionType === 'generate_awal' || actionType === 'regenerate') {
+        if (actionType === 'generate') {
             targetUrl = "{{ route('pkl.rapor.generate_massal') }}";
-        } else if (actionType === 'finalisasi') {
-            targetUrl = "{{ route('pkl.rapor.finalisasi_massal') }}";
-            iconColor = "#17ad37";
         } else if (actionType === 'unlock') {
             targetUrl = "{{ route('pkl.rapor.unlock_massal') }}";
             iconColor = "#ea0606";
@@ -421,7 +403,7 @@
 
         Swal.fire({
             title: actionName + ' Massal',
-            text: `Anda yakin akan mengeksekusi aksi ini untuk ${selectedIds.length} siswa terpilih? Sistem hanya akan memproses siswa yang statusnya sesuai.`,
+            text: `Sistem akan memproses ${selectedIds.length} siswa yang Anda centang. Lanjutkan?`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Ya, Lanjutkan!',
@@ -447,7 +429,7 @@
                 .then(response => response.json().then(data => ({ status: response.status, body: data })))
                 .then(res => {
                     if (res.status >= 200 && res.status < 300) {
-                        Swal.fire('Berhasil!', res.body.message, 'success').then(() => { location.reload(); });
+                        Swal.fire('Selesai!', res.body.message, res.body.status === 'success' ? 'success' : 'warning').then(() => { location.reload(); });
                     } else {
                         throw new Error(res.body.message || 'Terjadi kesalahan sistem internal.');
                     }
@@ -508,7 +490,7 @@
         .then(response => response.json().then(data => ({ status: response.status, body: data })))
         .then(res => {
             if (res.status >= 200 && res.status < 300) {
-                Swal.fire('Berhasil!', res.body.message || 'Sukses.', 'success').then(() => { location.reload(); });
+                Swal.fire('Selesai!', res.body.message || 'Sukses.', res.body.status === 'success' ? 'success' : 'warning').then(() => { location.reload(); });
             } else {
                 throw new Error(res.body.message || 'Terjadi kesalahan sistem internal.');
             }
@@ -530,40 +512,22 @@
         window.open(url, '_blank');
     }
 
-    // 1. GENERATE ADMIN (SATUAN)
+    // 1. GENERATE ADMIN (SATUAN) / PERBARUI DATA
     function generateRaporAdmin(idSiswa, namaSiswa) {
         Swal.fire({
-            title: 'Generate Rapor PKL?',
-            text: `Sistem akan menarik data nilai dari guru pembimbing untuk ${namaSiswa}.`,
-            icon: 'info', showCancelButton: true, confirmButtonText: 'Ya, Generate!', confirmButtonColor: '#344767'
+            title: 'Tarik & Finalisasi Rapor?',
+            text: `Sistem akan menarik data nilai terbaru dari Guru Pembimbing untuk ${namaSiswa}, memvalidasi kelengkapannya, dan langsung menguncinya. Lanjutkan?`,
+            icon: 'info', showCancelButton: true, confirmButtonText: 'Ya, Lanjutkan!', confirmButtonColor: '#344767'
         }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('pkl.rapor.generate') }}", idSiswa); });
     }
 
-    // 2. RE-GENERATE (SATUAN)
-    function regenerateRapor(idSiswa, namaSiswa) {
-        Swal.fire({
-            title: 'Perbarui Nilai?',
-            text: `Tarik ulang nilai untuk ${namaSiswa}? Data rapor draft saat ini akan ditimpa.`,
-            icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Update!', confirmButtonColor: '#fb8c00'
-        }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('pkl.rapor.generate') }}", idSiswa); });
-    }
-
-    // 3. UNLOCK RAPOR (SATUAN)
+    // 2. UNLOCK RAPOR (SATUAN)
     function unlockRapor(idSiswa, namaSiswa) {
         Swal.fire({
             title: 'Buka Kunci?',
-            text: `Status rapor ${namaSiswa} akan dikembalikan ke DRAFT agar datanya bisa ditarik ulang.`,
-            icon: 'question', showCancelButton: true, confirmButtonText: 'Ya, Buka Kunci!', confirmButtonColor: '#ea0606'
+            text: `Rapor ${namaSiswa} akan dihanguskan dan statusnya dikembalikan ke DRAFT agar Guru Pembimbing bisa merevisi datanya.`,
+            icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Buka Kunci!', confirmButtonColor: '#ea0606'
         }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('pkl.rapor.unlock') }}", idSiswa); });
-    }
-
-    // 4. FINALISASI RAPOR (SATUAN)
-    function finalisasiRapor(idSiswa, namaSiswa) {
-        Swal.fire({
-            title: 'Finalisasi Rapor?',
-            text: `Pastikan nilai sudah benar. Status rapor ${namaSiswa} akan diubah menjadi SIAP CETAK.`,
-            icon: 'success', showCancelButton: true, confirmButtonText: 'Ya, Finalisasi!', confirmButtonColor: '#17ad37'
-        }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('pkl.rapor.finalisasi') }}", idSiswa); });
     }
 </script>
 @endsection
