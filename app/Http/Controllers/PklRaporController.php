@@ -45,7 +45,6 @@ class PklRaporController extends Controller
         if ($id_kelas) {
             $kelasAktif = Kelas::find($id_kelas);
 
-            // REVISI: Join ke pkl_gurusiswa untuk mengambil nama_guru
             $masterSiswa = DB::table('siswa')
                 ->where('siswa.id_kelas', $id_kelas)
                 ->where('siswa.status', 'aktif')
@@ -68,7 +67,6 @@ class PklRaporController extends Controller
                 ->get()
                 ->keyBy('id_siswa');
 
-            // REVISI: Ambil nama_guru_snapshot dari rapor
             $snapshotRapor = DB::table('pkl_raporsiswa')
                 ->where('id_kelas', $id_kelas)
                 ->where('tahun_ajaran', $tahun_ajaran)
@@ -113,7 +111,7 @@ class PklRaporController extends Controller
                     'id_siswa'       => $id,
                     'nama_siswa'     => $nama,
                     'nisn'           => $nisn,
-                    'nama_guru'      => $namaGuru, // Dikirim ke view
+                    'nama_guru'      => $namaGuru,
                     'status_rapor'   => $statusRapor,
                     'status_siswa'   => $statusSiswa,
                     'status_guru'    => $statusGuruPenilaian, 
@@ -140,9 +138,7 @@ class PklRaporController extends Controller
     }
 
     /**
-     * ==============================================================
-     * LOGIKA INTI GENERATE RAPOR PKL (Digunakan oleh Satuan & Massal)
-     * ==============================================================
+     * PRIVATE HELPER: GENERATE SINGLE
      */
     private function prosesGenerateSinglePkl($id_siswa, $id_kelas, $semester, $tahun_ajaran)
     {
@@ -220,7 +216,7 @@ class PklRaporController extends Controller
     }
 
     /**
-     * EKSEKUSI SATUAN
+     * AKSI 1: GENERATE SATUAN
      */
     public function generate(Request $request)
     {
@@ -235,6 +231,9 @@ class PklRaporController extends Controller
         }
     }
 
+    /**
+     * AKSI 2: FINALISASI SATUAN
+     */
     public function finalisasi(Request $request)
     {
         DB::beginTransaction();
@@ -265,6 +264,9 @@ class PklRaporController extends Controller
         }
     }
 
+    /**
+     * AKSI 3: UNLOCK SATUAN (REVISI: KEMBALI KE 0)
+     */
     public function unlock(Request $request)
     {
         DB::beginTransaction();
@@ -284,7 +286,8 @@ class PklRaporController extends Controller
                 ->select('pkl_penempatan.id as id_penempatan')->first();
 
             if ($penempatan) {
-                DB::table('pkl_catatansiswa')->where('id_penempatan', $penempatan->id_penempatan)->update(['status_penilaian' => 1]);
+                // ✅ REVISI: Status Penilaian kembali ke 0 (Draft) agar Guru bisa edit lagi
+                DB::table('pkl_catatansiswa')->where('id_penempatan', $penempatan->id_penempatan)->update(['status_penilaian' => 0]);
             }
 
             DB::commit();
@@ -296,9 +299,7 @@ class PklRaporController extends Controller
     }
 
     /**
-     * ==============================================================
-     * EKSEKUSI MASSAL (Smart Bulk Action - DARI SUMATIF)
-     * ==============================================================
+     * MASSAL 1: GENERATE
      */
     public function generateMassal(Request $request)
     {
@@ -308,7 +309,6 @@ class PklRaporController extends Controller
         $berhasil = 0; $dilewati = 0; $gagal = 0;
 
         foreach ($id_siswa_array as $id_siswa) {
-            // FILTER: Lewati jika data sudah final/cetak
             $cekStatus = PklRaporSiswa::where(['id_siswa' => $id_siswa, 'semester' => $request->semester, 'tahun_ajaran' => $request->tahun_ajaran])->first();
             if ($cekStatus && in_array($cekStatus->status_data, ['final', 'cetak'])) {
                 $dilewati++;
@@ -325,9 +325,12 @@ class PklRaporController extends Controller
                 $gagal++;
             }
         }
-        return response()->json(['status' => 'success', 'message' => "Proses Selesai! Berhasil: $berhasil siswa. Dilewati: $dilewati siswa. Gagal: $gagal siswa."]);
+        return response()->json(['status' => 'success', 'message' => "Proses Selesai! Berhasil: $berhasil. Dilewati: $dilewati. Gagal: $gagal."]);
     }
 
+    /**
+     * MASSAL 2: FINALISASI
+     */
     public function finalisasiMassal(Request $request)
     {
         $id_siswa_array = $request->id_siswa_array ?? [];
@@ -338,7 +341,6 @@ class PklRaporController extends Controller
         DB::beginTransaction();
         try {
             foreach ($id_siswa_array as $id_siswa) {
-                // FILTER: Hanya memfinalisasi yang berstatus DRAFT
                 $cek = PklRaporSiswa::where(['id_siswa' => $id_siswa, 'semester' => $request->semester, 'tahun_ajaran' => $request->tahun_ajaran])->first();
                 if (!$cek || $cek->status_data !== 'draft') {
                     $dilewati++;
@@ -362,13 +364,16 @@ class PklRaporController extends Controller
                 $berhasil++;
             }
             DB::commit();
-            return response()->json(['status' => 'success', 'message' => "Finalisasi Selesai! $berhasil siswa berhasil dikunci. $dilewati siswa dilewati."]);
+            return response()->json(['status' => 'success', 'message' => "Finalisasi Selesai! $berhasil siswa dikunci. $dilewati siswa dilewati."]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['status' => 'error', 'message' => 'Gagal memproses finalisasi massal: ' . $e->getMessage()], 500);
+            return response()->json(['status' => 'error', 'message' => 'Gagal memproses: ' . $e->getMessage()], 500);
         }
     }
 
+    /**
+     * MASSAL 3: UNLOCK (REVISI: KEMBALI KE 0)
+     */
     public function unlockMassal(Request $request)
     {
         $id_siswa_array = $request->id_siswa_array ?? [];
@@ -379,7 +384,6 @@ class PklRaporController extends Controller
         DB::beginTransaction();
         try {
             foreach ($id_siswa_array as $id_siswa) {
-                // FILTER: Hanya me-unlock yang sudah final atau cetak
                 $cek = PklRaporSiswa::where(['id_siswa' => $id_siswa, 'semester' => $request->semester, 'tahun_ajaran' => $request->tahun_ajaran])->first();
                 if (!$cek || !in_array($cek->status_data, ['final', 'cetak'])) {
                     $dilewati++;
@@ -398,20 +402,21 @@ class PklRaporController extends Controller
                     ->select('pkl_penempatan.id as id_penempatan')->first();
 
                 if ($penempatan) {
-                    DB::table('pkl_catatansiswa')->where('id_penempatan', $penempatan->id_penempatan)->update(['status_penilaian' => 1]);
+                    // ✅ REVISI MASSAL: Status Penilaian kembali ke 0 (Draft)
+                    DB::table('pkl_catatansiswa')->where('id_penempatan', $penempatan->id_penempatan)->update(['status_penilaian' => 0]);
                 }
                 $berhasil++;
             }
             DB::commit();
-            return response()->json(['status' => 'success', 'message' => "Unlock Selesai! Kunci $berhasil siswa telah dibuka. $dilewati siswa dilewati."]);
+            return response()->json(['status' => 'success', 'message' => "Unlock Selesai! Kunci $berhasil siswa dibuka. $dilewati siswa dilewati."]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['status' => 'error', 'message' => 'Gagal memproses unlock massal: ' . $e->getMessage()], 500);
+            return response()->json(['status' => 'error', 'message' => 'Gagal memproses unlock: ' . $e->getMessage()], 500);
         }
     }
 
     /**
-     * PDF LOGIC: HELPER PERSIAPAN DATA (DENGAN TGL CETAK)
+     * PDF HELPER
      */
     private function persiapkanDataRaporPkl($id_siswa, $semester, $tahun_ajaran, $tgl_cetak = null)
     {
@@ -439,7 +444,7 @@ class PklRaporController extends Controller
     }
 
     /**
-     * CETAK SATUAN
+     * CETAK PROSES
      */
     public function cetak_proses($id_siswa, Request $request)
     {
@@ -450,7 +455,7 @@ class PklRaporController extends Controller
         $data = $this->persiapkanDataRaporPkl($id_siswa, $semester, $tahun_ajaran, $tgl_cetak);
 
         if (!$data) {
-            return "<script>alert('Data Rapor belum dikunci/final. Silakan Finalisasi terlebih dahulu.');window.close();</script>";
+            return "<script>alert('Data Rapor belum dikunci/final.');window.close();</script>";
         }
 
         PklRaporSiswa::where('id', $data['raporSiswa']->id)->update(['status_data' => 'cetak']);
@@ -463,7 +468,7 @@ class PklRaporController extends Controller
     }
 
     /**
-     * CETAK MASSAL MERGE PDF
+     * DOWNLOAD MASSAL MERGE
      */
     public function download_massal_merge(Request $request)
     {
@@ -475,7 +480,6 @@ class PklRaporController extends Controller
         $semester = $request->semester;
         $tgl_cetak = $request->tgl_cetak;
 
-        // Filter Smart Massal berdasarkan Checkbox
         $querySiswa = Siswa::where('id_kelas', $id_kelas);
         if ($request->has('ids') && !empty($request->ids)) {
             $idArray = explode(',', $request->ids);
@@ -484,7 +488,7 @@ class PklRaporController extends Controller
         $siswaList = $querySiswa->orderBy('nama_siswa', 'asc')->get();
 
         if ($siswaList->isEmpty()) {
-            return back()->with('error', 'Tidak ada siswa yang terpilih atau ditemukan di kelas ini.');
+            return back()->with('error', 'Tidak ada siswa terpilih.');
         }
 
         $path = storage_path('app/public/temp_rapor_pkl');
@@ -529,7 +533,7 @@ class PklRaporController extends Controller
 
             return response()->download($finalPath)->deleteFileAfterSend(true);
         } else {
-            return back()->with('error', 'Gagal memproses data. Pastikan status rapor siswa yang dicentang sudah FINAL.');
+            return back()->with('error', 'Pastikan status sudah FINAL.');
         }
     }
 }
