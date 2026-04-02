@@ -17,6 +17,14 @@ return [
 
     'changelog' => [
         [
+            'version' => '1.0.18',
+            'date'    => '2026-04-02',
+            'notes'   => [
+                'Penambahan Tombol Massal pada halaman cetak Rapor PKL',
+                'Perbaikan Halaman Input Nilai PKL',
+            ],
+        ],
+        [
             'version' => '1.0.17',
             'date'    => '2026-04-01',
             'notes'   => [

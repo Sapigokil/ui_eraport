@@ -45,6 +45,7 @@ class PklRaporController extends Controller
         if ($id_kelas) {
             $kelasAktif = Kelas::find($id_kelas);
 
+            // REVISI: Join ke pkl_gurusiswa untuk mengambil nama_guru
             $masterSiswa = DB::table('siswa')
                 ->where('siswa.id_kelas', $id_kelas)
                 ->where('siswa.status', 'aktif')
@@ -53,19 +54,26 @@ class PklRaporController extends Controller
                          ->where('pkl_penempatan.tahun_ajaran', '=', $tahun_ajaran)
                          ->where('pkl_penempatan.semester', '=', $semesterRaw);
                 })
+                ->leftJoin('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semesterRaw) {
+                    $join->on('siswa.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
+                         ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
+                         ->where('pkl_gurusiswa.semester', '=', $semesterRaw);
+                })
                 ->leftJoin('pkl_catatansiswa', 'pkl_penempatan.id', '=', 'pkl_catatansiswa.id_penempatan')
                 ->select(
                     'siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nisn',
-                    'pkl_catatansiswa.status_penilaian' 
+                    'pkl_catatansiswa.status_penilaian',
+                    'pkl_gurusiswa.nama_guru' 
                 )
                 ->get()
                 ->keyBy('id_siswa');
 
+            // REVISI: Ambil nama_guru_snapshot dari rapor
             $snapshotRapor = DB::table('pkl_raporsiswa')
                 ->where('id_kelas', $id_kelas)
                 ->where('tahun_ajaran', $tahun_ajaran)
                 ->where('semester', $semesterRaw)
-                ->select('id_siswa', 'status_data', 'last_update', 'nama_siswa_snapshot', 'nisn_snapshot')
+                ->select('id_siswa', 'status_data', 'last_update', 'nama_siswa_snapshot', 'nisn_snapshot', 'nama_guru_snapshot')
                 ->get()
                 ->keyBy('id_siswa');
 
@@ -77,6 +85,7 @@ class PklRaporController extends Controller
 
                 $nama = $snap->nama_siswa_snapshot ?? $master->nama_siswa ?? 'Data Siswa Terhapus';
                 $nisn = $snap->nisn_snapshot ?? $master->nisn ?? '-';
+                $namaGuru = $snap->nama_guru_snapshot ?? $master->nama_guru ?? 'Belum Ditentukan';
                 
                 $statusRapor = 'belum_generate';
                 $tanggalGenerate = null;
@@ -91,12 +100,12 @@ class PklRaporController extends Controller
                     $statusSiswa = 'history_moved';
                 }
 
-                $statusGuru = null;
+                $statusGuruPenilaian = null;
                 if ($statusRapor == 'belum_generate' && $master) {
                     if ($master->status_penilaian === 1 || $master->status_penilaian === 3) {
-                        $statusGuru = 'siap'; 
+                        $statusGuruPenilaian = 'siap'; 
                     } elseif ($master->status_penilaian === 0) {
-                        $statusGuru = 'belum_siap'; 
+                        $statusGuruPenilaian = 'belum_siap'; 
                     }
                 }
 
@@ -104,9 +113,10 @@ class PklRaporController extends Controller
                     'id_siswa'       => $id,
                     'nama_siswa'     => $nama,
                     'nisn'           => $nisn,
+                    'nama_guru'      => $namaGuru, // Dikirim ke view
                     'status_rapor'   => $statusRapor,
                     'status_siswa'   => $statusSiswa,
-                    'status_guru'    => $statusGuru, 
+                    'status_guru'    => $statusGuruPenilaian, 
                     'last_update'    => $tanggalGenerate,
                     'is_ready_print' => in_array($statusRapor, ['final', 'cetak'])
                 ];
@@ -130,89 +140,93 @@ class PklRaporController extends Controller
     }
 
     /**
-     * AKSI 1: GENERATE / PERBARUI DATA
+     * ==============================================================
+     * LOGIKA INTI GENERATE RAPOR PKL (Digunakan oleh Satuan & Massal)
+     * ==============================================================
+     */
+    private function prosesGenerateSinglePkl($id_siswa, $id_kelas, $semester, $tahun_ajaran)
+    {
+        $sumberData = DB::table('pkl_penempatan')
+            ->join('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
+                $join->on('pkl_penempatan.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
+                     ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
+                     ->where('pkl_gurusiswa.semester', '=', $semester);
+            })
+            ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
+            ->join('kelas', 'pkl_gurusiswa.id_kelas', '=', 'kelas.id_kelas')
+            ->leftJoin('pkl_tempat', 'pkl_penempatan.id_pkltempat', '=', 'pkl_tempat.id')
+            ->join('pkl_catatansiswa', 'pkl_penempatan.id', '=', 'pkl_catatansiswa.id_penempatan')
+            ->where('pkl_penempatan.id_siswa', $id_siswa)
+            ->select(
+                'pkl_penempatan.id as id_penempatan', 'siswa.nama_siswa', 'siswa.nisn',
+                'kelas.nama_kelas', 'kelas.wali_kelas',
+                'pkl_gurusiswa.nama_guru', 'pkl_tempat.nama_perusahaan',
+                'pkl_catatansiswa.*'
+            )
+            ->first();
+
+        if (!$sumberData) {
+            throw new \Exception("Siswa belum memiliki data penempatan/nilai dari Guru Pembimbing.");
+        }
+        if ($sumberData->status_penilaian !== 1 && $sumberData->status_penilaian !== 3) {
+            throw new \Exception("Data nilai belum di-Finalisasi oleh Guru Pembimbing.");
+        }
+
+        $raporSiswa = PklRaporSiswa::updateOrCreate(
+            [
+                'id_siswa' => $id_siswa,
+                'tahun_ajaran' => $tahun_ajaran,
+                'semester' => $semester
+            ],
+            [
+                'id_kelas' => $id_kelas,
+                'nama_siswa_snapshot' => $sumberData->nama_siswa,
+                'nisn_snapshot' => $sumberData->nisn,
+                'kelas_snapshot' => $sumberData->nama_kelas,
+                'wali_kelas_snapshot' => $sumberData->wali_kelas,
+                'nama_guru_snapshot' => $sumberData->nama_guru,
+                'nama_instruktur_snapshot' => $sumberData->nama_instruktur,
+                'tempat_pkl_snapshot' => $sumberData->nama_perusahaan,
+                'tanggal_mulai_snapshot' => $sumberData->tanggal_mulai,
+                'tanggal_selesai_snapshot' => $sumberData->tanggal_selesai,
+                'program_keahlian_snapshot' => $sumberData->program_keahlian,
+                'konsentrasi_keahlian_snapshot' => $sumberData->konsentrasi_keahlian,
+                'sakit' => $sumberData->sakit,
+                'izin' => $sumberData->izin,
+                'alpa' => $sumberData->alpa,
+                'catatan_pembimbing' => $sumberData->catatan_pembimbing,
+                'status_data' => 'draft', 
+                'last_update' => now()
+            ]
+        );
+
+        PklRaporNilai::where('id_pkl_raporsiswa', $raporSiswa->id)->delete();
+
+        $sumberNilai = DB::table('pkl_nilaisiswa')
+            ->join('pkl_tp', 'pkl_nilaisiswa.id_pkl_tp', '=', 'pkl_tp.id')
+            ->where('pkl_nilaisiswa.id_penempatan', $sumberData->id_penempatan)
+            ->select('pkl_nilaisiswa.*', 'pkl_tp.label_tp') 
+            ->get();
+
+        foreach ($sumberNilai as $n) {
+            PklRaporNilai::create([
+                'id_pkl_raporsiswa' => $raporSiswa->id,
+                'id_pkl_tp' => $n->id_pkl_tp,
+                'nama_tp_snapshot' => $n->label_tp,
+                'nilai_rata_rata' => $n->nilai_rata_rata,
+                'deskripsi_gabungan' => $n->deskripsi_gabungan
+            ]);
+        }
+    }
+
+    /**
+     * EKSEKUSI SATUAN
      */
     public function generate(Request $request)
     {
-        $id_siswa = $request->id_siswa;
-        $tahun_ajaran = $request->tahun_ajaran;
-        $semester = $request->semester;
-        $id_kelas = $request->id_kelas;
-
         DB::beginTransaction();
         try {
-            $sumberData = DB::table('pkl_penempatan')
-                ->join('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
-                    $join->on('pkl_penempatan.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
-                         ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
-                         ->where('pkl_gurusiswa.semester', '=', $semester);
-                })
-                ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
-                ->join('kelas', 'pkl_gurusiswa.id_kelas', '=', 'kelas.id_kelas')
-                ->leftJoin('pkl_tempat', 'pkl_penempatan.id_pkltempat', '=', 'pkl_tempat.id')
-                ->join('pkl_catatansiswa', 'pkl_penempatan.id', '=', 'pkl_catatansiswa.id_penempatan')
-                ->where('pkl_penempatan.id_siswa', $id_siswa)
-                ->select(
-                    'pkl_penempatan.id as id_penempatan', 'siswa.nama_siswa', 'siswa.nisn',
-                    'kelas.nama_kelas', 'kelas.wali_kelas',
-                    'pkl_gurusiswa.nama_guru', 'pkl_tempat.nama_perusahaan',
-                    'pkl_catatansiswa.*'
-                )
-                ->first();
-
-            if (!$sumberData) {
-                return response()->json(['status' => 'error', 'message' => 'Siswa belum memiliki data penempatan/nilai dari Guru Pembimbing.'], 400);
-            }
-            if ($sumberData->status_penilaian !== 1 && $sumberData->status_penilaian !== 3) {
-                return response()->json(['status' => 'error', 'message' => 'Gagal! Data nilai siswa ini belum di-Finalisasi oleh Guru Pembimbing.'], 400);
-            }
-
-            $raporSiswa = PklRaporSiswa::updateOrCreate(
-                [
-                    'id_siswa' => $id_siswa,
-                    'tahun_ajaran' => $tahun_ajaran,
-                    'semester' => $semester
-                ],
-                [
-                    'id_kelas' => $id_kelas,
-                    'nama_siswa_snapshot' => $sumberData->nama_siswa,
-                    'nisn_snapshot' => $sumberData->nisn,
-                    'kelas_snapshot' => $sumberData->nama_kelas,
-                    'wali_kelas_snapshot' => $sumberData->wali_kelas,
-                    'nama_guru_snapshot' => $sumberData->nama_guru,
-                    'nama_instruktur_snapshot' => $sumberData->nama_instruktur,
-                    'tempat_pkl_snapshot' => $sumberData->nama_perusahaan,
-                    'tanggal_mulai_snapshot' => $sumberData->tanggal_mulai,
-                    'tanggal_selesai_snapshot' => $sumberData->tanggal_selesai,
-                    'program_keahlian_snapshot' => $sumberData->program_keahlian,
-                    'konsentrasi_keahlian_snapshot' => $sumberData->konsentrasi_keahlian,
-                    'sakit' => $sumberData->sakit,
-                    'izin' => $sumberData->izin,
-                    'alpa' => $sumberData->alpa,
-                    'catatan_pembimbing' => $sumberData->catatan_pembimbing,
-                    'status_data' => 'draft', 
-                    'last_update' => now()
-                ]
-            );
-
-            PklRaporNilai::where('id_pkl_raporsiswa', $raporSiswa->id)->delete();
-
-            $sumberNilai = DB::table('pkl_nilaisiswa')
-                ->join('pkl_tp', 'pkl_nilaisiswa.id_pkl_tp', '=', 'pkl_tp.id')
-                ->where('pkl_nilaisiswa.id_penempatan', $sumberData->id_penempatan)
-                ->select('pkl_nilaisiswa.*', 'pkl_tp.label_tp') 
-                ->get();
-
-            foreach ($sumberNilai as $n) {
-                PklRaporNilai::create([
-                    'id_pkl_raporsiswa' => $raporSiswa->id,
-                    'id_pkl_tp' => $n->id_pkl_tp,
-                    'nama_tp_snapshot' => $n->label_tp,
-                    'nilai_rata_rata' => $n->nilai_rata_rata,
-                    'deskripsi_gabungan' => $n->deskripsi_gabungan
-                ]);
-            }
-
+            $this->prosesGenerateSinglePkl($request->id_siswa, $request->id_kelas, $request->semester, $request->tahun_ajaran);
             DB::commit();
             return response()->json(['status' => 'success', 'message' => 'Data rapor berhasil ditarik dari Guru Pembimbing!']);
         } catch (\Exception $e) {
@@ -221,36 +235,26 @@ class PklRaporController extends Controller
         }
     }
 
-    /**
-     * AKSI 2: FINALISASI
-     */
     public function finalisasi(Request $request)
     {
-        $id_siswa = $request->id_siswa;
-        $tahun_ajaran = $request->tahun_ajaran;
-        $semester = $request->semester;
-
         DB::beginTransaction();
         try {
-            PklRaporSiswa::where('id_siswa', $id_siswa)
-                ->where('tahun_ajaran', $tahun_ajaran)
-                ->where('semester', $semester)
+            PklRaporSiswa::where('id_siswa', $request->id_siswa)
+                ->where('tahun_ajaran', $request->tahun_ajaran)
+                ->where('semester', $request->semester)
                 ->update(['status_data' => 'final', 'last_update' => now()]);
 
             $penempatan = DB::table('pkl_penempatan')
-                ->join('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
+                ->join('pkl_gurusiswa', function($join) use ($request) {
                     $join->on('pkl_penempatan.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
-                         ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
-                         ->where('pkl_gurusiswa.semester', '=', $semester);
+                         ->where('pkl_gurusiswa.tahun_ajaran', '=', $request->tahun_ajaran)
+                         ->where('pkl_gurusiswa.semester', '=', $request->semester);
                 })
-                ->where('pkl_penempatan.id_siswa', $id_siswa)
-                ->select('pkl_penempatan.id as id_penempatan')
-                ->first();
+                ->where('pkl_penempatan.id_siswa', $request->id_siswa)
+                ->select('pkl_penempatan.id as id_penempatan')->first();
 
             if ($penempatan) {
-                DB::table('pkl_catatansiswa')
-                    ->where('id_penempatan', $penempatan->id_penempatan)
-                    ->update(['status_penilaian' => 3]);
+                DB::table('pkl_catatansiswa')->where('id_penempatan', $penempatan->id_penempatan)->update(['status_penilaian' => 3]);
             }
 
             DB::commit();
@@ -261,36 +265,26 @@ class PklRaporController extends Controller
         }
     }
 
-    /**
-     * AKSI 3: UNLOCK
-     */
     public function unlock(Request $request)
     {
-        $id_siswa = $request->id_siswa;
-        $tahun_ajaran = $request->tahun_ajaran;
-        $semester = $request->semester;
-
         DB::beginTransaction();
         try {
-            PklRaporSiswa::where('id_siswa', $id_siswa)
-                ->where('tahun_ajaran', $tahun_ajaran)
-                ->where('semester', $semester)
+            PklRaporSiswa::where('id_siswa', $request->id_siswa)
+                ->where('tahun_ajaran', $request->tahun_ajaran)
+                ->where('semester', $request->semester)
                 ->update(['status_data' => 'draft', 'last_update' => now()]);
 
             $penempatan = DB::table('pkl_penempatan')
-                ->join('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
+                ->join('pkl_gurusiswa', function($join) use ($request) {
                     $join->on('pkl_penempatan.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
-                         ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
-                         ->where('pkl_gurusiswa.semester', '=', $semester);
+                         ->where('pkl_gurusiswa.tahun_ajaran', '=', $request->tahun_ajaran)
+                         ->where('pkl_gurusiswa.semester', '=', $request->semester);
                 })
-                ->where('pkl_penempatan.id_siswa', $id_siswa)
-                ->select('pkl_penempatan.id as id_penempatan')
-                ->first();
+                ->where('pkl_penempatan.id_siswa', $request->id_siswa)
+                ->select('pkl_penempatan.id as id_penempatan')->first();
 
             if ($penempatan) {
-                DB::table('pkl_catatansiswa')
-                    ->where('id_penempatan', $penempatan->id_penempatan)
-                    ->update(['status_penilaian' => 1]);
+                DB::table('pkl_catatansiswa')->where('id_penempatan', $penempatan->id_penempatan)->update(['status_penilaian' => 1]);
             }
 
             DB::commit();
@@ -302,8 +296,122 @@ class PklRaporController extends Controller
     }
 
     /**
+     * ==============================================================
+     * EKSEKUSI MASSAL (Smart Bulk Action - DARI SUMATIF)
+     * ==============================================================
+     */
+    public function generateMassal(Request $request)
+    {
+        $id_siswa_array = $request->id_siswa_array ?? [];
+        if (empty($id_siswa_array)) return response()->json(['message' => 'Tidak ada siswa yang dipilih.'], 400);
+
+        $berhasil = 0; $dilewati = 0; $gagal = 0;
+
+        foreach ($id_siswa_array as $id_siswa) {
+            // FILTER: Lewati jika data sudah final/cetak
+            $cekStatus = PklRaporSiswa::where(['id_siswa' => $id_siswa, 'semester' => $request->semester, 'tahun_ajaran' => $request->tahun_ajaran])->first();
+            if ($cekStatus && in_array($cekStatus->status_data, ['final', 'cetak'])) {
+                $dilewati++;
+                continue;
+            }
+
+            DB::beginTransaction();
+            try {
+                $this->prosesGenerateSinglePkl($id_siswa, $request->id_kelas, $request->semester, $request->tahun_ajaran);
+                DB::commit();
+                $berhasil++;
+            } catch (\Exception $e) {
+                DB::rollBack();
+                $gagal++;
+            }
+        }
+        return response()->json(['status' => 'success', 'message' => "Proses Selesai! Berhasil: $berhasil siswa. Dilewati: $dilewati siswa. Gagal: $gagal siswa."]);
+    }
+
+    public function finalisasiMassal(Request $request)
+    {
+        $id_siswa_array = $request->id_siswa_array ?? [];
+        if (empty($id_siswa_array)) return response()->json(['message' => 'Tidak ada siswa yang dipilih.'], 400);
+
+        $berhasil = 0; $dilewati = 0;
+
+        DB::beginTransaction();
+        try {
+            foreach ($id_siswa_array as $id_siswa) {
+                // FILTER: Hanya memfinalisasi yang berstatus DRAFT
+                $cek = PklRaporSiswa::where(['id_siswa' => $id_siswa, 'semester' => $request->semester, 'tahun_ajaran' => $request->tahun_ajaran])->first();
+                if (!$cek || $cek->status_data !== 'draft') {
+                    $dilewati++;
+                    continue;
+                }
+                
+                $cek->update(['status_data' => 'final', 'last_update' => now()]);
+                
+                $penempatan = DB::table('pkl_penempatan')
+                    ->join('pkl_gurusiswa', function($join) use ($request) {
+                        $join->on('pkl_penempatan.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
+                             ->where('pkl_gurusiswa.tahun_ajaran', '=', $request->tahun_ajaran)
+                             ->where('pkl_gurusiswa.semester', '=', $request->semester);
+                    })
+                    ->where('pkl_penempatan.id_siswa', $id_siswa)
+                    ->select('pkl_penempatan.id as id_penempatan')->first();
+
+                if ($penempatan) {
+                    DB::table('pkl_catatansiswa')->where('id_penempatan', $penempatan->id_penempatan)->update(['status_penilaian' => 3]);
+                }
+                $berhasil++;
+            }
+            DB::commit();
+            return response()->json(['status' => 'success', 'message' => "Finalisasi Selesai! $berhasil siswa berhasil dikunci. $dilewati siswa dilewati."]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => 'Gagal memproses finalisasi massal: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function unlockMassal(Request $request)
+    {
+        $id_siswa_array = $request->id_siswa_array ?? [];
+        if (empty($id_siswa_array)) return response()->json(['message' => 'Tidak ada siswa yang dipilih.'], 400);
+
+        $berhasil = 0; $dilewati = 0;
+
+        DB::beginTransaction();
+        try {
+            foreach ($id_siswa_array as $id_siswa) {
+                // FILTER: Hanya me-unlock yang sudah final atau cetak
+                $cek = PklRaporSiswa::where(['id_siswa' => $id_siswa, 'semester' => $request->semester, 'tahun_ajaran' => $request->tahun_ajaran])->first();
+                if (!$cek || !in_array($cek->status_data, ['final', 'cetak'])) {
+                    $dilewati++;
+                    continue;
+                }
+                
+                $cek->update(['status_data' => 'draft', 'last_update' => now()]);
+                
+                $penempatan = DB::table('pkl_penempatan')
+                    ->join('pkl_gurusiswa', function($join) use ($request) {
+                        $join->on('pkl_penempatan.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
+                             ->where('pkl_gurusiswa.tahun_ajaran', '=', $request->tahun_ajaran)
+                             ->where('pkl_gurusiswa.semester', '=', $request->semester);
+                    })
+                    ->where('pkl_penempatan.id_siswa', $id_siswa)
+                    ->select('pkl_penempatan.id as id_penempatan')->first();
+
+                if ($penempatan) {
+                    DB::table('pkl_catatansiswa')->where('id_penempatan', $penempatan->id_penempatan)->update(['status_penilaian' => 1]);
+                }
+                $berhasil++;
+            }
+            DB::commit();
+            return response()->json(['status' => 'success', 'message' => "Unlock Selesai! Kunci $berhasil siswa telah dibuka. $dilewati siswa dilewati."]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => 'error', 'message' => 'Gagal memproses unlock massal: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * PDF LOGIC: HELPER PERSIAPAN DATA (DENGAN TGL CETAK)
-     * PERBAIKAN: Parameter $tgl_cetak ditambahkan di definisi fungsi
      */
     private function persiapkanDataRaporPkl($id_siswa, $semester, $tahun_ajaran, $tgl_cetak = null)
     {
@@ -325,7 +433,6 @@ class PklRaporController extends Controller
             $infoSekolah->kota_kab = 'Salatiga';
         }
 
-        // Gunakan tgl_cetak jika dikirim, jika tidak gunakan hari ini
         $tanggalCetakRapor = $tgl_cetak ? \Carbon\Carbon::parse($tgl_cetak) : \Carbon\Carbon::now();
 
         return compact('infoSekolah', 'raporSiswa', 'raporNilai', 'tanggalCetakRapor');
@@ -356,7 +463,7 @@ class PklRaporController extends Controller
     }
 
     /**
-     * CETAK MASSAL
+     * CETAK MASSAL MERGE PDF
      */
     public function download_massal_merge(Request $request)
     {
@@ -368,10 +475,16 @@ class PklRaporController extends Controller
         $semester = $request->semester;
         $tgl_cetak = $request->tgl_cetak;
 
-        $siswaList = Siswa::where('id_kelas', $id_kelas)->orderBy('nama_siswa', 'asc')->get();
+        // Filter Smart Massal berdasarkan Checkbox
+        $querySiswa = Siswa::where('id_kelas', $id_kelas);
+        if ($request->has('ids') && !empty($request->ids)) {
+            $idArray = explode(',', $request->ids);
+            $querySiswa->whereIn('id_siswa', $idArray);
+        }
+        $siswaList = $querySiswa->orderBy('nama_siswa', 'asc')->get();
 
         if ($siswaList->isEmpty()) {
-            return back()->with('error', 'Tidak ada siswa di kelas ini.');
+            return back()->with('error', 'Tidak ada siswa yang terpilih atau ditemukan di kelas ini.');
         }
 
         $path = storage_path('app/public/temp_rapor_pkl');
@@ -416,7 +529,7 @@ class PklRaporController extends Controller
 
             return response()->download($finalPath)->deleteFileAfterSend(true);
         } else {
-            return back()->with('error', 'Gagal memproses data. Pastikan status rapor siswa sudah FINAL.');
+            return back()->with('error', 'Gagal memproses data. Pastikan status rapor siswa yang dicentang sudah FINAL.');
         }
     }
 }

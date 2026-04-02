@@ -133,25 +133,12 @@
                                 <h5 class="mb-0 text-primary" id="headerNamaSiswa">Nama Siswa</h5>
                             </div>
                         </div>
-
-                        {{-- ALERT PENGAMAN (Muncul saat status Final) --}}
-                        <div id="lockedWarning" class="d-none mx-4 mt-4 mb-0 p-3 shadow-sm border-radius-md" style="background-color: #fce4e4; border-left: 4px solid #f5365c;">
-                            <div class="d-flex align-items-center">
-                                <div class="icon icon-shape shadow-sm border-radius-sm bg-white text-center me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                                    <i class="fas fa-lock" style="color: #f5365c;"></i>
-                                </div>
-                                <span class="text-sm font-weight-bold" style="color: #32325d;">
-                                    <span style="color: #f5365c;">Terkunci!</span> Data penilaian ini telah difinalisasi. Hubungi Admin jika Anda perlu merubah nilai.
-                                </span>
-                            </div>
-                        </div>
                         
                         <div class="card-body p-4 bg-gray-100 split-right flex-grow-1" id="formScrollArea">
-                            <form id="formPenilaian" onsubmit="event.preventDefault();">
+                            <form id="formPenilaian" onsubmit="return submitPenilaian(event)">
                                 @csrf
                                 <input type="hidden" name="id_penempatan" id="inputIdPenempatan">
                                 <input type="hidden" name="id_guru" value="{{ $id_guru }}">
-                                <input type="hidden" name="status_penilaian" id="inputStatusPenilaian" value="0">
 
                                 {{-- LOOPING BLOK TP & INDIKATOR --}}
                                 @foreach($tpData as $tp)
@@ -272,13 +259,15 @@
                                 </div>
 
                                 {{-- ACTION BUTTONS --}}
-                                <div id="actionButtonsArea" class="d-flex justify-content-end align-items-center mt-3 pt-3 border-top">
-                                    <button type="button" class="btn btn-secondary mb-0 me-2" id="btnSimpanDraft" onclick="prosesSimpan(0)">
-                                        <i class="fas fa-save me-1"></i> Simpan Draft
-                                    </button>
-                                    <button type="button" class="btn bg-gradient-success mb-0" id="btnFinalisasi" onclick="prosesSimpan(1)">
-                                        <i class="fas fa-check-circle me-1"></i> Finalisasi
-                                    </button>
+                                <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                                    <div class="form-check form-switch ps-0">
+                                        <input class="form-check-input ms-0 me-2 cursor-pointer" type="checkbox" id="checkFinal" name="status_penilaian" value="1" style="height:25px; width:50px;">
+                                        <label class="form-check-label font-weight-bold text-dark cursor-pointer mt-1" for="checkFinal">Tandai Final (Siap Cetak Rapor)</label>
+                                    </div>
+                                    <div>
+                                        <button type="button" class="btn btn-secondary mb-0 me-2" onclick="saveAsDraft()"><i class="fas fa-save me-1"></i> Simpan Draft</button>
+                                        <button type="submit" class="btn bg-gradient-success mb-0" id="btnSimpanLanjut">Simpan & Lanjut <i class="fas fa-arrow-right ms-1"></i></button>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -303,7 +292,7 @@
 
         $(document).ready(function() {
             
-            // MATIKAN FUNGSI SCROLL (WHEEL) PADA INPUT NUMBER
+            // REVISI JS: MATIKAN FUNGSI SCROLL (WHEEL) PADA INPUT NUMBER
             $(document).on('wheel', 'input[type=number]', function (e) {
                 $(this).blur();
             });
@@ -421,17 +410,12 @@
             previewBox.removeClass('text-secondary bg-light').addClass('text-dark fw-bold bg-white');
         }
 
-        // FUNGSI AJAX: AMBIL DATA
+        // REVISI FUNGSI AJAX: AMBIL DATA
         function loadSiswaData(idPenempatan) {
             $('#formPenilaian')[0].reset();
             $('.form-deskripsi-output').val('').removeClass('text-dark fw-bold').addClass('text-secondary');
             $('[id^="preview_gabungan_"]').val('').removeClass('text-dark fw-bold bg-white').addClass('text-secondary bg-light');
-            $('#inputStatusPenilaian').val(0);
-            
-            $('#actionButtonsArea').removeClass('d-none');
-            $('#lockedWarning').addClass('d-none');
-            $('#btnSimpanDraft').prop('disabled', false);
-            $('#btnFinalisasi').prop('disabled', false);
+            $('#checkFinal').prop('checked', false);
 
             $.ajax({
                 url: "{{ url('pkl/nilai/get-siswa') }}/" + idPenempatan,
@@ -450,13 +434,15 @@
                             $('#inputIzin').val(res.catatan.izin);
                             $('#inputAlpa').val(res.catatan.alpa);
                             $('#inputCatatan').val(res.catatan.catatan_pembimbing);
+                            if(res.catatan.status_penilaian == 1) $('#checkFinal').prop('checked', true);
                         }
                         
-                        // 2. Isi Nilai
+                        // 2. Isi Nilai Menggunakan Perulangan jQuery (Sangat Kuat)
                         if(res.nilai) {
                             $.each(res.nilai, function(key_tp, dataNilai) {
                                 let indikators = dataNilai.data_indikator;
                                 
+                                // Jika server mengirimkan bentuk String JSON, kita paksa ekstrak menjadi Object
                                 let parseLimit = 0;
                                 while (typeof indikators === 'string' && parseLimit < 2) {
                                     try {
@@ -467,22 +453,15 @@
                                     parseLimit++;
                                 }
 
+                                // Ekstrak indikator dan tempelkan ke dalam kotak input berdasarkan ID
                                 if(indikators && typeof indikators === 'object') {
                                     $.each(indikators, function(id_ind, objData) {
-                                        if (objData && objData.nilai !== undefined && objData.nilai !== null) {
+                                        if (objData && objData.nilai !== undefined) {
                                             $('#input_nilai_' + id_ind).val(objData.nilai).trigger('change');
                                         }
                                     });
                                 }
                             });
-                        }
-
-                        // 3. PENGAMAN HANYA PADA TOMBOL
-                        if(res.catatan && (res.catatan.status_penilaian == 1 || res.catatan.status_penilaian == 3)) {
-                            $('#btnSimpanDraft').prop('disabled', true);
-                            $('#btnFinalisasi').prop('disabled', true);
-                            $('#actionButtonsArea').addClass('d-none');
-                            $('#lockedWarning').removeClass('d-none');
                         }
                     }
                 },
@@ -492,81 +471,20 @@
             });
         }
 
-        function prosesSimpan(statusTarget) {
-            $('#inputStatusPenilaian').val(statusTarget);
-            
-            // Validasi khusus Finalisasi (Status = 1)
-            if(statusTarget === 1) {
-                let adaKosong = false;
-                
-                // 1. Cek seluruh kotak input nilai
-                $('.form-nilai-input').each(function() {
-                    if($(this).val() === "") {
-                        adaKosong = true;
-                        return false; 
-                    }
-                });
-
-                // 2. Cek kolom non-nilai (Pelaksanaan & Kehadiran)
-                let requiredFields = [
-                    '#inputProgramKeahlian', '#inputKonsentrasiKeahlian',
-                    '#inputTglMulai', '#inputTglSelesai', '#inputInstruktur',
-                    '#inputSakit', '#inputIzin', '#inputAlpa', '#inputCatatan'
-                ];
-
-                for (let i = 0; i < requiredFields.length; i++) {
-                    if ($(requiredFields[i]).val() === "" || $(requiredFields[i]).val() === null) {
-                        adaKosong = true;
-                        break;
-                    }
-                }
-
-                if(adaKosong) {
-                    Swal.fire({
-                        title: 'Data Belum Lengkap!',
-                        text: 'Semua kolom indikator nilai, data pelaksanaan (tanggal/instruktur), kehadiran, dan catatan pembimbing harus diisi sebelum melakukan Finalisasi. Anda masih bisa menyimpan sebagian data ini menggunakan tombol Simpan Draft.',
-                        icon: 'warning',
-                        confirmButtonColor: '#344767'
-                    });
-                    return; 
-                }
-
-                Swal.fire({
-                    title: 'Yakin Finalisasi?',
-                    text: 'Setelah difinalisasi, nilai ini akan langsung disetor ke sistem Admin. Lanjutkan?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#17ad37',
-                    cancelButtonColor: '#d33',
-                    confirmButtonText: 'Ya, Finalisasi!',
-                    cancelButtonText: 'Batal'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        eksekusiAjax();
-                    }
-                });
-            } else {
-                eksekusiAjax();
-            }
+        function saveAsDraft() {
+            $('#checkFinal').prop('checked', false);
+            $('#formPenilaian').submit();
         }
 
-        function eksekusiAjax() {
+        function submitPenilaian(e) {
+            e.preventDefault();
+            
             let formData = $('#formPenilaian').serialize();
-            let isFinal = $('#inputStatusPenilaian').val() == 1;
+            if(!$('#checkFinal').is(':checked')) formData += '&status_penilaian=0';
 
-            let btnDraft = $('#btnSimpanDraft');
-            let btnFinal = $('#btnFinalisasi');
-            let oldDraftHtml = btnDraft.html();
-            let oldFinalHtml = btnFinal.html();
-
-            // Set Loading UI
-            btnDraft.prop('disabled', true);
-            btnFinal.prop('disabled', true);
-            if (isFinal) {
-                btnFinal.html('<i class="fas fa-spinner fa-spin"></i> Memproses...');
-            } else {
-                btnDraft.html('<i class="fas fa-spinner fa-spin"></i> Menyimpan...');
-            }
+            let btn = $('#btnSimpanLanjut');
+            let oldHtml = btn.html();
+            btn.html('<i class="fas fa-spinner fa-spin"></i> Menyimpan...').prop('disabled', true);
 
             $.ajax({
                 url: "{{ route('pkl.nilai.store') }}",
@@ -582,20 +500,14 @@
                         });
 
                         let activeLi = $('.student-list-item.active');
+                        let isFinal = $('#checkFinal').is(':checked');
                         let badgeHtml = isFinal ? '<span class="badge bg-success text-xxs px-2 py-1"><i class="fas fa-check me-1"></i>Selesai</span>' : '<span class="badge bg-warning text-xxs px-2 py-1"><i class="fas fa-edit me-1"></i>Draft</span>';
                         activeLi.find('.status-badge-container').html(badgeHtml);
 
-                        if(isFinal) {
-                            $('#lockedWarning').removeClass('d-none');
-                            btnFinal.html(oldFinalHtml);
-                            btnDraft.html(oldDraftHtml);
-                            $('#actionButtonsArea').addClass('d-none');
-                        } else {
-                            let nextLi = activeLi.next('.student-list-item');
-                            if(nextLi.length > 0) {
-                                nextLi.click();
-                                nextLi[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
+                        let nextLi = activeLi.next('.student-list-item');
+                        if(nextLi.length > 0) {
+                            nextLi.click();
+                            nextLi[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
                     }
                 },
@@ -603,10 +515,7 @@
                     Swal.fire('Error', 'Gagal menyimpan data.', 'error');
                 },
                 complete: function() {
-                    if(!isFinal) {
-                        btnDraft.prop('disabled', false).html(oldDraftHtml);
-                        btnFinal.prop('disabled', false).html(oldFinalHtml);
-                    }
+                    btn.html(oldHtml).prop('disabled', false);
                 }
             });
         }

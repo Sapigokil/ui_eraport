@@ -44,6 +44,13 @@ use App\Http\Controllers\CatatanKokurikulerController;
 use App\Http\Controllers\RaporController;
 use App\Http\Controllers\LedgerController;
 
+// PKL
+use App\Http\Controllers\PklTempatController;
+use App\Http\Controllers\PklGuruSiswaController;
+use App\Http\Controllers\PklPenempatanController;
+use App\Http\Controllers\PklNilaiController;
+use App\Http\Controllers\PklRaporController;
+
 // Settings
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
@@ -487,6 +494,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/finalisasi', [\App\Http\Controllers\PklRaporController::class, 'finalisasi'])->name('finalisasi');
         Route::post('/unlock', [\App\Http\Controllers\PklRaporController::class, 'unlock'])->name('unlock');
         
+        Route::post('/pkl/rapor/generate-massal', [PklRaporController::class, 'generateMassal'])->name('generate_massal');
+        Route::post('/pkl/rapor/finalisasi-massal', [PklRaporController::class, 'finalisasiMassal'])->name('finalisasi_massal');
+        Route::post('/pkl/rapor/unlock-massal', [PklRaporController::class, 'unlockMassal'])->name('unlock_massal');
+
         // AKSI CETAK PDF
         Route::middleware('can:rapor.cetak')->group(function() {
             Route::get('/print/{id_siswa}', [\App\Http\Controllers\PklRaporController::class, 'cetak_proses'])->name('cetak_proses');
