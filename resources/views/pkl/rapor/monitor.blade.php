@@ -110,21 +110,32 @@
                                                     </div>
                                                 </div>
 
-                                                {{-- PROGRESS BAR GLOBAL KELAS --}}
+                                                {{-- PROGRESS BAR STACKED MULTICOLOR --}}
                                                 <div class="flex-grow-1 mx-4 d-none d-lg-block">
                                                     <div class="d-flex justify-content-between mb-1">
                                                         <span class="text-xxs font-weight-bold text-uppercase text-secondary">Progress Penilaian</span>
-                                                        <span class="text-xxs font-weight-bold text-dark">{{ $data->siswa_selesai }} / {{ $data->jml_siswa }} Siswa Selesai</span>
+                                                        <span class="text-xxs font-weight-bold text-dark">
+                                                            <span class="text-success">{{ $data->siswa_selesai }} Final</span> | 
+                                                            <span class="text-warning">{{ $data->siswa_proses }} Draft</span> | 
+                                                            <span class="text-secondary">{{ $data->siswa_kosong }} Kosong</span>
+                                                        </span>
                                                     </div>
-                                                    <div class="progress w-100" style="height: 6px; background-color: #e9ecef;">
-                                                        <div class="progress-bar bg-gradient-{{ $data->persen == 100 ? 'success' : 'info' }}" 
-                                                             role="progressbar" style="width: {{ $data->persen }}%"></div>
+                                                    <div class="progress w-100" style="height: 8px; background-color: #e9ecef; overflow: hidden;">
+                                                        @if($data->persen_selesai > 0)
+                                                            <div class="progress-bar bg-gradient-success" role="progressbar" style="width: {{ $data->persen_selesai }}%" data-bs-toggle="tooltip" title="{{ $data->siswa_selesai }} Siswa Selesai ({{ $data->persen_selesai }}%)"></div>
+                                                        @endif
+                                                        @if($data->persen_proses > 0)
+                                                            <div class="progress-bar bg-gradient-warning" role="progressbar" style="width: {{ $data->persen_proses }}%" data-bs-toggle="tooltip" title="{{ $data->siswa_proses }} Siswa Proses Draft ({{ $data->persen_proses }}%)"></div>
+                                                        @endif
+                                                        @if($data->persen_kosong > 0)
+                                                            <div class="progress-bar bg-secondary opacity-4" role="progressbar" style="width: {{ $data->persen_kosong }}%" data-bs-toggle="tooltip" title="{{ $data->siswa_kosong }} Siswa Belum Dinilai ({{ $data->persen_kosong }}%)"></div>
+                                                        @endif
                                                     </div>
                                                 </div>
 
-                                                {{-- BADGE STATUS --}}
+                                                {{-- BADGE STATUS GLOBAL KELAS --}}
                                                 <div style="min-width: 100px; text-align: right;">
-                                                    @if($data->persen == 100)
+                                                    @if($data->persen_selesai == 100)
                                                         <span class="badge bg-gradient-success">SIAP CETAK</span>
                                                     @else
                                                         <span class="badge bg-gradient-secondary">BELUM LENGKAP</span>

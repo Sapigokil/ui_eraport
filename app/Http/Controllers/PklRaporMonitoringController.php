@@ -67,21 +67,37 @@ class PklRaporMonitoringController extends Controller
         foreach ($groupedByKelas as $id_kelas => $students) {
             $jml_siswa = $students->count();
             
-            // ✅ PERBAIKAN PROGRESS BAR: Hitung siswa yang sudah Final Guru (1) atau Final Admin (3)
-            $siswa_selesai = $students->filter(function($s) {
-                if (is_null($s->status_penilaian)) return false;
-                $val = (int) $s->status_penilaian;
-                return $val === 1 || $val === 3;
-            })->count();
+            // ✅ LOGIKA BARU: Hitung berdasarkan 3 Kategori
+            $siswa_selesai = 0;
+            $siswa_proses = 0;
+            $siswa_kosong = 0;
+
+            foreach ($students as $s) {
+                if (is_null($s->status_penilaian)) {
+                    $siswa_kosong++;
+                } else {
+                    $val = (int) $s->status_penilaian;
+                    if ($val === 1 || $val === 3) {
+                        $siswa_selesai++;
+                    } elseif ($val === 0) {
+                        $siswa_proses++;
+                    } else {
+                        $siswa_kosong++; // Fallback
+                    }
+                }
+            }
 
             $global_siswa_final += $siswa_selesai;
 
-            $persen = $jml_siswa > 0 ? round(($siswa_selesai / $jml_siswa) * 100) : 0;
+            // Hitung Persentase masing-masing
+            $persen_selesai = $jml_siswa > 0 ? round(($siswa_selesai / $jml_siswa) * 100) : 0;
+            $persen_proses  = $jml_siswa > 0 ? round(($siswa_proses / $jml_siswa) * 100) : 0;
+            $persen_kosong  = $jml_siswa > 0 ? (100 - ($persen_selesai + $persen_proses)) : 0; // Sisa persentase agar pas 100%
+
             $kelasInfo = $students->first();
 
-            // ✅ PERBAIKAN MAPPING DATA (Mengatasi String vs Integer)
+            // Mapping data untuk kebutuhan View (Tabs)
             $detail_siswa = $students->map(function($s) {
-                
                 $statusData = 'kosong';
                 if (!is_null($s->status_penilaian)) {
                     $val = (int) $s->status_penilaian;
@@ -113,8 +129,16 @@ class PklRaporMonitoringController extends Controller
                 'kelas' => (object)['id_kelas' => $id_kelas, 'nama_kelas' => $kelasInfo->nama_kelas],
                 'wali_kelas' => $kelasInfo->wali_kelas ?? 'Belum diset',
                 'jml_siswa' => $jml_siswa,
+                
+                // Tambahan data statistik
                 'siswa_selesai' => $siswa_selesai,
-                'persen' => $persen,
+                'siswa_proses' => $siswa_proses,
+                'siswa_kosong' => $siswa_kosong,
+                
+                'persen_selesai' => $persen_selesai,
+                'persen_proses' => $persen_proses,
+                'persen_kosong' => $persen_kosong,
+                
                 'detail_siswa' => $detail_siswa
             ];
         }
