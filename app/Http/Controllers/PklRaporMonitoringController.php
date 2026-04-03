@@ -41,7 +41,6 @@ class PklRaporMonitoringController extends Controller
                      ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
                      ->where('pkl_gurusiswa.semester', '=', $semester);
             })
-            // PERBAIKAN: Join ke tabel master siswa untuk mengambil NISN
             ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
             ->leftJoin('pkl_tempat', 'pkl_penempatan.id_pkltempat', '=', 'pkl_tempat.id')
             ->leftJoin('pkl_catatansiswa', 'pkl_penempatan.id', '=', 'pkl_catatansiswa.id_penempatan')
@@ -50,7 +49,7 @@ class PklRaporMonitoringController extends Controller
                 'kelas.id_kelas', 'kelas.nama_kelas', 'kelas.wali_kelas',
                 'pkl_penempatan.id as id_penempatan',
                 'pkl_gurusiswa.id_siswa', 'pkl_gurusiswa.nama_siswa', 
-                'siswa.nisn', // PERBAIKAN: Diambil dari tabel siswa
+                'siswa.nisn', 
                 'pkl_gurusiswa.id_guru', 'pkl_gurusiswa.nama_guru',
                 'pkl_tempat.nama_perusahaan as tempat_pkl',
                 'pkl_catatansiswa.status_penilaian',
@@ -68,17 +67,21 @@ class PklRaporMonitoringController extends Controller
         foreach ($groupedByKelas as $id_kelas => $students) {
             $jml_siswa = $students->count();
             
-            // Hitung siswa yang sudah Final (status = 1)
-            $siswa_selesai = $students->where('status_penilaian', 1)->count();
+            // ✅ PERBAIKAN PROGRESS BAR: Hitung siswa yang sudah Final Guru (1) atau Final Admin (3)
+            $siswa_selesai = $students->filter(function($s) {
+                if (is_null($s->status_penilaian)) return false;
+                $val = (int) $s->status_penilaian;
+                return $val === 1 || $val === 3;
+            })->count();
+
             $global_siswa_final += $siswa_selesai;
 
             $persen = $jml_siswa > 0 ? round(($siswa_selesai / $jml_siswa) * 100) : 0;
             $kelasInfo = $students->first();
 
-            // Mapping data untuk kebutuhan View (Tabs)
+            // ✅ PERBAIKAN MAPPING DATA (Mengatasi String vs Integer)
             $detail_siswa = $students->map(function($s) {
                 
-                // PERBAIKAN: Tangkap nilai dan pastikan menjadi angka (integer)
                 $statusData = 'kosong';
                 if (!is_null($s->status_penilaian)) {
                     $val = (int) $s->status_penilaian;
@@ -94,7 +97,7 @@ class PklRaporMonitoringController extends Controller
                     'nisn' => $s->nisn,
                     'guru' => $s->nama_guru,
                     'tempat' => $s->tempat_pkl ?? 'Belum Diatur',
-                    'status' => $statusData, // Gunakan variabel yang sudah divalidasi
+                    'status' => $statusData,
                     'id_guru' => $s->id_guru,
                     'id_penempatan' => $s->id_penempatan,
                     'sakit' => $s->sakit ?? 0,
