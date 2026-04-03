@@ -138,7 +138,7 @@
                                                 {{-- BADGE STATUS GLOBAL KELAS (Porsi 2/12) --}}
                                                 <div class="col-12 col-lg-2 text-end px-0 mt-2 mt-lg-0">
                                                     @if($data->persen_selesai == 100)
-                                                        <span class="badge bg-gradient-success w-100 w-lg-auto">SIAP CETAK</span>
+                                                        <span class="badge bg-gradient-success w-100 w-lg-auto">LENGKAP</span>
                                                     @else
                                                         <span class="badge bg-gradient-secondary w-100 w-lg-auto">BELUM LENGKAP</span>
                                                     @endif
