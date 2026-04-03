@@ -77,12 +77,24 @@ class PklRaporMonitoringController extends Controller
 
             // Mapping data untuk kebutuhan View (Tabs)
             $detail_siswa = $students->map(function($s) {
+                
+                // PERBAIKAN: Tangkap nilai dan pastikan menjadi angka (integer)
+                $statusData = 'kosong';
+                if (!is_null($s->status_penilaian)) {
+                    $val = (int) $s->status_penilaian;
+                    if ($val === 1 || $val === 3) {
+                        $statusData = 'lengkap';
+                    } elseif ($val === 0) {
+                        $statusData = 'proses';
+                    }
+                }
+
                 return [
                     'nama_siswa' => $s->nama_siswa,
                     'nisn' => $s->nisn,
                     'guru' => $s->nama_guru,
                     'tempat' => $s->tempat_pkl ?? 'Belum Diatur',
-                    'status' => $s->status_penilaian === 1 ? 'lengkap' : ($s->status_penilaian === 0 ? 'proses' : 'kosong'),
+                    'status' => $statusData, // Gunakan variabel yang sudah divalidasi
                     'id_guru' => $s->id_guru,
                     'id_penempatan' => $s->id_penempatan,
                     'sakit' => $s->sakit ?? 0,
