@@ -175,10 +175,19 @@
                                             <form role="form" method="POST" action="{{ route('sign-up.check') }}">
                                                 @csrf
                                                 <div class="mb-3">
-                                                    <label class="form-label">Tipe Akun</label>
-                                                    <select name="tipe_akun" class="form-control form-select" required>
-                                                        <option value="guru" {{ old('tipe_akun') == 'guru' ? 'selected' : '' }}>Guru</option>
-                                                        <option value="siswa" {{ old('tipe_akun') == 'siswa' ? 'selected' : '' }}>Siswa</option>
+                                                    <label class="form-label">Tipe Akun <span class="badge bg-gradient-secondary text-xxs ms-2">Terbatas</span></label>
+                                                    
+                                                    {{-- ======================================================= --}}
+                                                    {{-- [TEMPORARY LOCK] --}}
+                                                    {{-- Opsi dropdown dikunci ke Guru dengan pointer-events: none --}}
+                                                    {{-- Hapus style tersebut & hapus komentar Blade di opsi siswa --}}
+                                                    {{-- untuk mengembalikan ke fungsi aslinya. --}}
+                                                    {{-- ======================================================= --}}
+                                                    <select name="tipe_akun" class="form-control form-select" required style="pointer-events: none; background-color: #e9ecef; color: #6c757d;">
+                                                        <option value="guru" selected>Guru</option>
+                                                        
+                                                        {{-- KODE ASLI YANG DISEMBUNYIKAN: --}}
+                                                        {{-- <option value="siswa" {{ old('tipe_akun') == 'siswa' ? 'selected' : '' }}>Siswa</option> --}}
                                                     </select>
                                                 </div>
                                                 <div class="mb-3">

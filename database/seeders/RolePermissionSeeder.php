@@ -6,8 +6,6 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Hash;
 
 class RolePermissionSeeder extends Seeder
@@ -17,15 +15,7 @@ class RolePermissionSeeder extends Seeder
         // 1. Reset Cache Permission (WAJIB)
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 2. BERSIHKAN DATA LAMA (TRUNCATE)
-        Schema::disableForeignKeyConstraints();
-        DB::table('role_has_permissions')->truncate();
-        DB::table('model_has_roles')->truncate();
-        DB::table('model_has_permissions')->truncate();
-        DB::table('roles')->truncate();
-        DB::table('permissions')->truncate();
-        DB::table('users')->truncate();
-        Schema::enableForeignKeyConstraints();
+        // JANGAN ADA TRUNCATE DI SINI AGAR DATA USER AMAN
 
         // ====================================================
         // 3. DEFINISI PERMISSION (HCMS STYLE - MODULAR)
@@ -69,16 +59,17 @@ class RolePermissionSeeder extends Seeder
 
             // G. SYSTEM SETTINGS (Admin Only)
             '07. Pengaturan Sistem' => [
-                // Menggunakan 1 Pintu sesuai permintaan
                 'setting.menu' => 'Akses Penuh Seluruh Menu Pengaturan (Erapor, PKL, User, Role)', 
             ],
 
             // H. SYSTEM SETTINGS (Siswa Only)
             '08. Menu Siswa' => [
-                // Menggunakan 1 Pintu sesuai permintaan
                 'siswa.menu' => 'Akses bagi siswa untuk melihat data diri, nilai, rapor, dll di portal siswa', 
             ],
         ];
+
+        // Kumpulkan nama permission untuk verifikasi (Opsional: menghapus permission lama)
+        $allPermissionNames = [];
 
         foreach ($permissions as $group => $perms) {
             foreach ($perms as $permName => $permLabel) {
@@ -89,40 +80,43 @@ class RolePermissionSeeder extends Seeder
                         'label'      => $permLabel // Simpan Label
                     ]
                 );
+                $allPermissionNames[] = $permName;
             }
         }
 
+        // CLEANUP: Hapus permission di database yang sudah Anda hapus dari list array di atas
+        Permission::whereNotIn('name', $allPermissionNames)->delete();
+
         // ====================================================
-        // 4. BUAT ROLE SPESIAL
+        // 4. BUAT / UPDATE ROLE SPESIAL (Gunakan firstOrCreate)
         // ====================================================
         
-        $roleDev = Role::create(['name' => 'developer']);
-        $roleDev->givePermissionTo(Permission::all());
+        $roleDev = Role::firstOrCreate(['name' => 'developer']);
+        $roleDev->syncPermissions(Permission::all());
         
         // --- ROLE 1: ADMIN ERAPOR (FULL AKSES) ---
-        $roleAdmin = Role::create(['name' => 'admin_erapor']);
-        $roleAdmin->givePermissionTo(Permission::all()); // Sakti mandraguna
+        $roleAdmin = Role::firstOrCreate(['name' => 'admin_erapor']);
+        $roleAdmin->syncPermissions(Permission::all()); 
 
         // --- ROLE 2: GURU ERAPOR (BACKUP / SUPER GURU) ---
-        $roleGuruErapor = Role::create(['name' => 'guru_erapor']);
-        $roleGuruErapor->givePermissionTo([
+        $roleGuruErapor = Role::firstOrCreate(['name' => 'guru_erapor']);
+        $roleGuruErapor->syncPermissions([
             'dashboard.view',
-            // Data Akademik
             'nilai.menu', 'nilai.input',
             'ekskul.menu', 
             'pkl.nilai.menu',
         ]);
 
         // --- Role 2a: GURU EKSTRAKURIKULER (Opsional) ---
-        $roleGuruEkskul = Role::create(['name' => 'guru_ekskul']);
-        $roleGuruEkskul->givePermissionTo([
+        $roleGuruEkskul = Role::firstOrCreate(['name' => 'guru_ekskul']);
+        $roleGuruEkskul->syncPermissions([
             'dashboard.view',
             'ekskul.menu',
         ]);
 
         // --- ROLE 3: GURU REGULER (Standar) ---
-        $roleGuru = Role::create(['name' => 'guru']);
-        $roleGuru->givePermissionTo([
+        $roleGuru = Role::firstOrCreate(['name' => 'guru']);
+        $roleGuru->syncPermissions([
             'dashboard.view',
             'nilai.menu', 'nilai.input',
             'ekskul.menu', 
@@ -130,94 +124,86 @@ class RolePermissionSeeder extends Seeder
         ]);
 
         // --- ROLE 4: SISWA (BACKUP / SUPER SISWA) ---
-        $roleSiswa = Role::create(['name' => 'siswa_erapor']);
-        $roleSiswa->givePermissionTo([
+        $roleSiswaErapor = Role::firstOrCreate(['name' => 'siswa_erapor']);
+        $roleSiswaErapor->syncPermissions([
             'dashboard.view',
-            'siswa.menu', // Nanti untuk akses portal siswa (profil, nilai, rapor, dll)
+            'siswa.menu', 
         ]);
         
         // --- ROLE 4b: SISWA ---
-        $roleSiswa = Role::create(['name' => 'siswa']);
-        $roleSiswa->givePermissionTo([
+        $roleSiswa = Role::firstOrCreate(['name' => 'siswa']);
+        $roleSiswa->syncPermissions([
             'dashboard.view',
-            'siswa.menu', // Nanti untuk akses portal siswa (profil, nilai, rapor, dll)
+            'siswa.menu', 
         ]);
 
 
         // ====================================================
-        // 5. BUAT USER SPESIAL OTOMATIS
+        // 5. BUAT USER SPESIAL OTOMATIS (firstOrCreate)
         // ====================================================
         
         // USER 0: DEVELOPER (AKUN DARURAT)
         $dev = User::firstOrCreate(
-            ['username' => 'dev.campus'], // Username rahasia
+            ['username' => 'dev.campus'], 
             [
-                'name'      => 'System Core', // Nama samaran agar terlihat teknis
+                'name'      => 'System Core', 
                 'email'     => 'campus@dev.id',
-                'password'  => Hash::make('campussolusi26#'), // Password Kuat
+                'password'  => Hash::make('campussolusi26#'), 
                 'role'      => 'developer',
             ]
         );
-        $dev->assignRole($roleDev);
+        $dev->syncRoles([$roleDev]);
         
-        $this->command->info('Akun Developer Hidden berhasil dibuat!');
+        $this->command->info('Akun Developer Hidden berhasil diupdate!');
         
         // USER 1: ADMIN ERAPOR
         $adminUser = User::firstOrCreate(
-            ['username' => 'admin.erapor'], // Cek berdasarkan username
+            ['username' => 'admin.erapor'], 
             [
                 'name'      => 'Administrator E-Rapor',
-                'username'  => 'admin.erapor',
                 'email'     => 'admin@smkn1salatiga.sch.id',
-                'password'  => Hash::make('adminerapor#'), // Password Default
-                'role'      => 'admin_erapor', // Kolom manual (backup)
+                'password'  => Hash::make('adminerapor#'), 
+                'role'      => 'admin_erapor', 
             ]
         );
-        $adminUser->assignRole($roleAdmin);
+        $adminUser->syncRoles([$roleAdmin]);
 
         // USER 2: GURU ERAPOR (BACKUP)
         $guruUser = User::firstOrCreate(
             ['username' => 'guru.erapor'], 
             [
                 'name'      => 'Guru E-Rapor (Backup)',
-                'username'  => 'guru.erapor',
                 'email'     => 'guru@smkn1salatiga.sch.id',
                 'password'  => Hash::make('gurusmkn1'),
                 'role'      => 'guru_erapor',
             ]
         );
-        $guruUser->assignRole($roleGuruErapor);
+        $guruUser->syncRoles([$roleGuruErapor]);
 
          // USER 2b: GURU EKSKUL (BACKUP)
         $guruEkskulUser = User::firstOrCreate(
             ['username' => 'guru.ekskul'], 
             [
                 'name'      => 'Guru Ekskul E-Rapor (Backup)',
-                'username'  => 'guru.ekskul',
                 'email'     => 'ekskul@smkn1salatiga.sch.id',
                 'password'  => Hash::make('ekskulsmkn1'),
                 'role'      => 'guru_ekskul',
             ]
         );
-        $guruEkskulUser->assignRole($roleGuruEkskul);
+        $guruEkskulUser->syncRoles([$roleGuruEkskul]);
 
         // USER 3: SISWA (BACKUP / SUPER SISWA)
         $siswaUser = User::firstOrCreate(
             ['username' => 'siswa.erapor'], 
             [
                 'name'      => 'Siswa E-Rapor (Backup)',
-                'username'  => 'siswa.erapor',
                 'email'     => 'siswa@smkn1salatiga.sch.id',
                 'password'  => Hash::make('siswasmkn1'),
                 'role'      => 'siswa_erapor',
             ]
         );
-        $siswaUser->assignRole($roleSiswa);
+        $siswaUser->syncRoles([$roleSiswaErapor]);
 
-        $this->command->info('SUKSES! User Spesial telah dibuat:');
-        $this->command->info('1. Admin: admin.erapor / adminerapor#');
-        $this->command->info('2. Guru: guru.erapor / gurusmkn1');
-        $this->command->info('3. Guru Ekskul: guru.ekskul / ekskulsmkn1');
-        $this->command->info('4. Siswa: siswa.erapor / siswasmkn1');
+        $this->command->info('SUKSES! Permission dan Role telah di-sync tanpa menghapus data user.');
     }
 }

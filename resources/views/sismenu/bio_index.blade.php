@@ -9,7 +9,7 @@
     <div class="container-fluid py-4 px-5">
 
         {{-- ALERT INFORMASI READ-ONLY --}}
-        <div class="alert alert-info d-flex align-items-center text-white mb-4" role="alert">
+        <div class="alert alert-info d-flex align-items-center text-dark mb-4" role="alert">
             <i class="fas fa-info-circle fa-2x me-3"></i>
             <div>
                 <strong>Informasi Penting!</strong><br>

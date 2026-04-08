@@ -122,7 +122,7 @@ class RoleController extends Controller
 
         // 2. PROTEKSI SYSTEM ROLES (REVISI: Tambah 'guru' dan 'siswa')
         // Role-role ini haram dihapus karena digunakan oleh sistem core / default register
-        $systemRoles = ['developer', 'admin_erapor', 'guru_erapor', 'guru', 'siswa'];
+        $systemRoles = ['developer', 'admin_erapor', 'guru_erapor', 'guru', 'siswa_erapor'];
 
         if (in_array(strtolower($role->name), $systemRoles)) {
             return redirect()->route('settings.system.roles.index') 

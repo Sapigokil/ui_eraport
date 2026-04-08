@@ -612,51 +612,11 @@
                         <div class="sidenav-category text-uppercase">Hasil Belajar</div>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link {{ request()->routeIs('sis.psts.*') ? 'active' : '' }}" href="{{ route('sis.psts.index') }}">
                             <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-marker text-sm"></i>
+                                <i class="fas fa-file-invoice text-sm {{ request()->routeIs('sis.psts.*') ? 'text-white' : '' }}"></i>
                             </div>
-                            <span class="nav-link-text">Capaian Nilai</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-clipboard-list text-sm"></i>
-                            </div>
-                            <span class="nav-link-text">Absensi & Ekskul</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item mt-3">
-                        <div class="sidenav-category text-uppercase">Prakerin (PKL)</div>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-building text-sm"></i>
-                            </div>
-                            <span class="nav-link-text">Penempatan PKL</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-star text-sm"></i>
-                            </div>
-                            <span class="nav-link-text">Nilai PKL</span>
-                        </a>
-                    </li>
-
-                    <li class="nav-item mt-3">
-                        <div class="sidenav-category text-uppercase">Dokumen</div>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">
-                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-file-pdf text-sm text-danger"></i>
-                            </div>
-                            <span class="nav-link-text">Unduh E-Rapor</span>
+                            <span class="nav-link-text">Laporan PSTS</span>
                         </a>
                     </li>
 
@@ -684,11 +644,11 @@
                                         <span class="sidenav-normal"> Biodata Diri </span>
                                     </a>
                                 </li>
-                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Capaian Nilai </span></a></li>
-                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Absensi & Ekskul </span></a></li>
-                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Penempatan PKL </span></a></li>
-                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Nilai PKL </span></a></li>
-                                <li class="nav-item"><a class="nav-link" href="#"><span class="sidenav-normal"> Unduh E-Rapor </span></a></li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('sis.psts.*') ? 'active' : '' }}" href="{{ route('sis.psts.index') }}">
+                                        <span class="sidenav-normal"> Laporan PSTS </span>
+                                    </a>
+                                </li>
                             </ul>
                         </div>
                     </li>

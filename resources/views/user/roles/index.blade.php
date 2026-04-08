@@ -37,7 +37,7 @@
                                         
                                         {{-- REVISI DISINI: Tambahkan 'guru' dan 'siswa' ke dalam array --}}
                                         @php
-                                            $isSystemRole = in_array(strtolower($role->name), ['developer', 'admin_erapor', 'guru_erapor', 'guru_ekskul', 'guru', 'siswa']);
+                                            $isSystemRole = in_array(strtolower($role->name), ['developer', 'admin_erapor', 'guru_erapor', 'guru_ekskul', 'guru', 'siswa_erapor']);
                                         @endphp
 
                                         <tr>

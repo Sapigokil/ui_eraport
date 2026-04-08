@@ -623,7 +623,7 @@ Route::middleware(['auth'])->group(function () {
 
 });
 
-// ==========================================================================
+    // ==========================================================================
     // MODULE: PORTAL SISWA 
     // Prefix: sis
     // Akses: Menggunakan permission 'siswa.menu'
@@ -632,6 +632,10 @@ Route::middleware(['auth'])->group(function () {
         
         // Halaman Biodata Diri
         Route::get('/biodata', [\App\Http\Controllers\SisbioController::class, 'index'])->name('biodata');
+        
+        // Halaman Laporan PSTS
+        Route::get('/psts', [\App\Http\Controllers\SisPstsController::class, 'index'])->name('psts.index');
+        Route::get('/psts/detail/{tahun_ajaran}/{semester}/{id_kelas}', [\App\Http\Controllers\SisPstsController::class, 'detail'])->name('psts.detail');
         
     });
 

@@ -3,23 +3,21 @@
         <section>
             <div class="page-header min-vh-100">
                 
-                {{-- 1. BACKGROUND MODERN (Ringan, Tanpa Gambar Besar) --}}
+                {{-- 1. BACKGROUND MODERN --}}
                 <div class="position-absolute top-0 start-0 w-100 h-100" 
                      style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); z-index: -1;">
-                     {{-- Opsi lain: Background Mesh Gradient (lihat CSS di bawah) --}}
                 </div>
 
                 <div class="container">
                     <div class="row justify-content-center">
                         <div class="col-xl-4 col-lg-5 col-md-7 d-flex flex-column mx-auto">
                             
-                            {{-- 2. CARD LOGIN (Dibuat Pop-up dengan Shadow) --}}
+                            {{-- 2. CARD LOGIN --}}
                             <div class="card shadow-lg mt-5 border-0 rounded-3">
                                 <div class="card-header pb-0 text-center bg-white border-0 pt-4">
                                     {{-- Judul & Versi --}}
                                     <div class="position-relative d-inline-block">
                                         <h4 class="font-weight-bolder text-primary text-gradient mb-1">E-Rapor SMK</h4>
-                                        {{-- Badge Versi diletakkan di pojok atas judul --}}
                                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary text-xxs" 
                                             style="font-size: 0.55rem; padding: 4px 6px; transform: translate(0, -50%) !important;">
                                             v{{ config('app_history.current_version') }}
@@ -46,25 +44,43 @@
                                     <form role="form" method="POST" action="sign-in">
                                         @csrf
                                         
+                                        {{-- ========================================== --}}
+                                        {{-- RADIO BUTTON TIPE LOGIN (BARU)             --}}
+                                        {{-- ========================================== --}}
+                                        <div class="d-flex justify-content-center gap-4 mb-4 mt-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="login_type" id="tipe_guru" value="guru" checked onchange="toggleLoginType()">
+                                                <label class="form-check-label font-weight-bold text-dark text-sm" for="tipe_guru" style="cursor: pointer;">
+                                                    Guru / Admin
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="login_type" id="tipe_siswa" value="siswa" onchange="toggleLoginType()">
+                                                <label class="form-check-label font-weight-bold text-dark text-sm" for="tipe_siswa" style="cursor: pointer;">
+                                                    Siswa
+                                                </label>
+                                            </div>
+                                        </div>
+
                                         <div class="mb-3">
-                                            <label class="form-label text-xs font-weight-bold text-uppercase text-secondary">Email / Username</label>
+                                            <label id="label_username" class="form-label text-xs font-weight-bold text-uppercase text-secondary">Email / Username</label>
                                             <input type="text" 
                                                    id="login" 
                                                    name="login" 
-                                                   class="form-control form-control-lg ps-3"
+                                                   class="form-control form-control-lg ps-3 border"
                                                    placeholder="Ketik username anda"
                                                    value="{{ old('login') }}"
                                                    required autofocus>
                                         </div>
 
-                                        <div class="mb-3">
+                                        <div class="mb-3" id="box_password">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <label class="form-label text-xs font-weight-bold text-uppercase text-secondary">Password</label>
                                             </div>
                                             <input type="password" 
                                                    id="password" 
                                                    name="password"
-                                                   class="form-control form-control-lg ps-3" 
+                                                   class="form-control form-control-lg ps-3 border" 
                                                    placeholder="Ketik password"
                                                    required>
                                         </div>
@@ -99,4 +115,41 @@
             </div>
         </section>
     </main>
+
+    {{-- ========================================== --}}
+    {{-- SCRIPT TOGGLE VIEW PASSWORD (BARU)         --}}
+    {{-- ========================================== --}}
+    <script>
+        function toggleLoginType() {
+            let isSiswa = document.getElementById('tipe_siswa').checked;
+            let boxPassword = document.getElementById('box_password');
+            let inputPassword = document.getElementById('password');
+            let labelUsername = document.getElementById('label_username');
+            let inputUsername = document.getElementById('login');
+
+            if (isSiswa) {
+                // Sembunyikan Box Password & Buat Tidak Wajib
+                boxPassword.style.display = 'none';
+                inputPassword.required = false; 
+                inputPassword.value = ''; 
+                
+                // Ubah Label Input Pertama
+                labelUsername.innerText = 'NIS atau NISN';
+                inputUsername.placeholder = 'Ketik NIS atau NISN Anda';
+            } else {
+                // Tampilkan Kembali Box Password
+                boxPassword.style.display = 'block';
+                inputPassword.required = true;
+                
+                // Kembalikan Label Input Pertama
+                labelUsername.innerText = 'Email / Username';
+                inputUsername.placeholder = 'Ketik username anda';
+            }
+        }
+        
+        // Panggil fungsi saat halaman pertama kali diload (mengantisipasi user menekan tombol 'back' di browser)
+        document.addEventListener("DOMContentLoaded", function() {
+            toggleLoginType();
+        });
+    </script>
 </x-guest-layout>

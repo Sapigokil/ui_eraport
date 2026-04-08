@@ -46,7 +46,8 @@ class UserController extends Controller
         } 
         elseif ($tab == 'siswa') {
             $query->whereHas('roles', function($q) {
-                $q->where('name', 'siswa');
+                // ✅ PERBAIKAN: Gunakan 'like' agar 'siswa' dan 'siswa_erapor' terbaca
+                $q->where('name', 'like', '%siswa%'); 
             });
             
             if ($id_kelas) {
@@ -174,7 +175,6 @@ class UserController extends Controller
         if ($user->id_guru) $jenis_akun = 'guru';
         elseif ($user->id_siswa) $jenis_akun = 'siswa';
 
-        // Tidak perlu lagi mengambil seluruh data $gurus dan $siswas karena form bersifat Read-Only
         return view('user.users.edit', compact('user', 'roles', 'jenis_akun'));
     }
     
@@ -184,7 +184,6 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'Anda tidak memiliki akses untuk mengubah data Developer.');
         }
 
-        // VALIDASI DISESUAIKAN: Hapus validasi penautan karena fitur tersebut kini Read-Only
         $request->validate([
             'name'       => 'required|string|max:255',
             'email'      => 'required|string|email|max:255|unique:users,email,' . $user->id, 
@@ -198,7 +197,7 @@ class UserController extends Controller
         
         DB::beginTransaction();
         try {
-            // 1. UPDATE DETAIL USER (Tanpa menyentuh id_guru / id_siswa)
+            // 1. UPDATE DETAIL USER
             $user->name = $request->name;
             $user->email = $request->email; 
             $user->is_active = $request->has('is_active') ? 1 : 0; 
@@ -233,7 +232,8 @@ class UserController extends Controller
             return back()->with('error', 'Akses ditolak: Anda tidak dapat menghapus akun Developer.');
         }
 
-        if ($user->hasAnyRole(['developer', 'admin', 'guru'])) {
+        // ✅ PERBAIKAN: Tambahkan 'siswa_erapor' ke dalam array proteksi
+        if ($user->hasAnyRole(['developer', 'admin', 'guru', 'siswa_erapor'])) {
              $roleName = $user->roles->first()->name ?? 'Utama'; 
              return back()->with('error', 'Pengguna dengan role sistem (' . Str::title($roleName) . ') dilindungi dan tidak dapat dihapus.');
         }
