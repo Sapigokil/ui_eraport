@@ -41,7 +41,6 @@ class PklRaporMonitoringController extends Controller
                      ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
                      ->where('pkl_gurusiswa.semester', '=', $semester);
             })
-            // PERBAIKAN: Join ke tabel master siswa untuk mengambil NISN
             ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
             ->leftJoin('pkl_tempat', 'pkl_penempatan.id_pkltempat', '=', 'pkl_tempat.id')
             ->leftJoin('pkl_catatansiswa', 'pkl_penempatan.id', '=', 'pkl_catatansiswa.id_penempatan')
@@ -50,7 +49,7 @@ class PklRaporMonitoringController extends Controller
                 'kelas.id_kelas', 'kelas.nama_kelas', 'kelas.wali_kelas',
                 'pkl_penempatan.id as id_penempatan',
                 'pkl_gurusiswa.id_siswa', 'pkl_gurusiswa.nama_siswa', 
-                'siswa.nisn', // PERBAIKAN: Diambil dari tabel siswa
+                'siswa.nisn', 
                 'pkl_gurusiswa.id_guru', 'pkl_gurusiswa.nama_guru',
                 'pkl_tempat.nama_perusahaan as tempat_pkl',
                 'pkl_catatansiswa.status_penilaian',
@@ -68,21 +67,53 @@ class PklRaporMonitoringController extends Controller
         foreach ($groupedByKelas as $id_kelas => $students) {
             $jml_siswa = $students->count();
             
-            // Hitung siswa yang sudah Final (status = 1)
-            $siswa_selesai = $students->where('status_penilaian', 1)->count();
+            // ✅ LOGIKA BARU: Hitung berdasarkan 3 Kategori
+            $siswa_selesai = 0;
+            $siswa_proses = 0;
+            $siswa_kosong = 0;
+
+            foreach ($students as $s) {
+                if (is_null($s->status_penilaian)) {
+                    $siswa_kosong++;
+                } else {
+                    $val = (int) $s->status_penilaian;
+                    if ($val === 1 || $val === 3) {
+                        $siswa_selesai++;
+                    } elseif ($val === 0) {
+                        $siswa_proses++;
+                    } else {
+                        $siswa_kosong++; // Fallback
+                    }
+                }
+            }
+
             $global_siswa_final += $siswa_selesai;
 
-            $persen = $jml_siswa > 0 ? round(($siswa_selesai / $jml_siswa) * 100) : 0;
+            // Hitung Persentase masing-masing
+            $persen_selesai = $jml_siswa > 0 ? round(($siswa_selesai / $jml_siswa) * 100) : 0;
+            $persen_proses  = $jml_siswa > 0 ? round(($siswa_proses / $jml_siswa) * 100) : 0;
+            $persen_kosong  = $jml_siswa > 0 ? (100 - ($persen_selesai + $persen_proses)) : 0; // Sisa persentase agar pas 100%
+
             $kelasInfo = $students->first();
 
             // Mapping data untuk kebutuhan View (Tabs)
             $detail_siswa = $students->map(function($s) {
+                $statusData = 'kosong';
+                if (!is_null($s->status_penilaian)) {
+                    $val = (int) $s->status_penilaian;
+                    if ($val === 1 || $val === 3) {
+                        $statusData = 'lengkap';
+                    } elseif ($val === 0) {
+                        $statusData = 'proses';
+                    }
+                }
+
                 return [
                     'nama_siswa' => $s->nama_siswa,
                     'nisn' => $s->nisn,
                     'guru' => $s->nama_guru,
                     'tempat' => $s->tempat_pkl ?? 'Belum Diatur',
-                    'status' => $s->status_penilaian === 1 ? 'lengkap' : ($s->status_penilaian === 0 ? 'proses' : 'kosong'),
+                    'status' => $statusData,
                     'id_guru' => $s->id_guru,
                     'id_penempatan' => $s->id_penempatan,
                     'sakit' => $s->sakit ?? 0,
@@ -98,8 +129,16 @@ class PklRaporMonitoringController extends Controller
                 'kelas' => (object)['id_kelas' => $id_kelas, 'nama_kelas' => $kelasInfo->nama_kelas],
                 'wali_kelas' => $kelasInfo->wali_kelas ?? 'Belum diset',
                 'jml_siswa' => $jml_siswa,
+                
+                // Tambahan data statistik
                 'siswa_selesai' => $siswa_selesai,
-                'persen' => $persen,
+                'siswa_proses' => $siswa_proses,
+                'siswa_kosong' => $siswa_kosong,
+                
+                'persen_selesai' => $persen_selesai,
+                'persen_proses' => $persen_proses,
+                'persen_kosong' => $persen_kosong,
+                
                 'detail_siswa' => $detail_siswa
             ];
         }

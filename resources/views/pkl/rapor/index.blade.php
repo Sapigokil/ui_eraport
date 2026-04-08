@@ -10,9 +10,16 @@
     $finalCount = isset($finalSiswaList) ? $finalSiswaList->whereIn('status_rapor', ['final', 'cetak'])->count() : 0;
     $rawCount   = isset($finalSiswaList) ? $finalSiswaList->where('status_rapor', '!=', 'belum_generate')->count() : 0;
     
-    // Logika tombol massal (Hidden if 0)
-    $countBelumGenerate = isset($finalSiswaList) ? $finalSiswaList->where('status_rapor', 'belum_generate')->count() : 0;
-    $countDraft         = isset($finalSiswaList) ? $finalSiswaList->where('status_rapor', 'draft')->count() : 0;
+    // LOGIKA BARU UNTUK TOMBOL MASSAL
+    $bisaGenerate = isset($finalSiswaList) ? $finalSiswaList->filter(function($s) {
+        return in_array($s->status_guru, ['siap', 'belum_siap']) && in_array($s->status_rapor, ['belum_generate', 'draft']);
+    })->count() : 0;
+
+    $bisaUnlock = isset($finalSiswaList) ? $finalSiswaList->where('status_guru', 'siap')->count() : 0;
+    
+    $bisaCetak = isset($finalSiswaList) ? $finalSiswaList->filter(function($s) {
+        return $s->status_guru == 'siap' && in_array($s->status_rapor, ['final', 'cetak']);
+    })->count() : 0;
 
     $persenFinal = $totalSiswa > 0 ? round(($finalCount / $totalSiswa) * 100) : 0;
     $persenRaw   = $totalSiswa > 0 ? round(($rawCount / $totalSiswa) * 100) : 0;
@@ -148,17 +155,19 @@
                                     <i class="fas fa-search-location me-2"></i> Cek Monitoring
                                 </a>
 
-                                @if($countBelumGenerate > 0 || $countDraft > 0)
+                                @if($bisaGenerate > 0)
                                     <button onclick="bulkAction('generate', 'Generate / Perbarui Data')" class="btn btn-sm bg-gradient-secondary mb-0">
                                         <i class="fas fa-sync-alt me-1"></i> Generate / Perbarui
                                     </button>
                                 @endif
 
-                                @if($finalCount > 0)
+                                @if($bisaUnlock > 0)
                                     <button onclick="bulkAction('unlock', 'Buka Kunci (Kembali ke Draft)')" class="btn btn-sm btn-outline-danger mb-0">
-                                        <i class="fas fa-lock-open me-1"></i> Unlock
+                                        <i class="fas fa-lock-open me-1"></i> Unlock Massal
                                     </button>
-                                    
+                                @endif
+
+                                @if($bisaCetak > 0)
                                     <button onclick="bulkDownloadMerge()" class="btn btn-sm btn-primary mb-0">
                                         <i class="fas fa-file-pdf me-1"></i> Download Massal
                                     </button>
@@ -218,35 +227,23 @@
                                             </span>
                                         </td>
 
-                                        {{-- KESIAPAN GURU --}}
+                                        {{-- VIEW KESIAPAN GURU --}}
                                         <td class="text-center align-middle">
-                                            @if($s->status_rapor == 'belum_generate' || $s->status_rapor == 'draft')
-                                                @if($s->status_guru == 'siap')
-                                                    <span class="text-xs font-weight-bold text-success">
-                                                        <i class="fas fa-check-circle me-1"></i> Data Siap
-                                                    </span>
-                                                @elseif($s->status_guru == 'belum_siap')
-                                                    <span class="text-xs font-weight-bold text-warning">
-                                                        <i class="fas fa-edit me-1"></i> Draft Guru
-                                                    </span>
-                                                @else
-                                                    <span class="text-xs font-weight-bold text-danger">
-                                                        <i class="fas fa-times-circle me-1"></i> Belum Ada
-                                                    </span>
-                                                @endif
+                                            @if($s->status_guru == 'siap')
+                                                <span class="text-xs font-weight-bold text-success"><i class="fas fa-check-circle me-1"></i> Data Siap</span>
+                                            @elseif($s->status_guru == 'belum_siap')
+                                                <span class="text-xs font-weight-bold text-warning"><i class="fas fa-edit me-1"></i> Draft Guru</span>
                                             @else
-                                                <span class="text-xs font-weight-bold text-secondary">
-                                                    <i class="fas fa-link me-1"></i> Tersinkron
-                                                </span>
+                                                <span class="text-xs font-weight-bold text-danger"><i class="fas fa-times-circle me-1"></i> Belum Ada</span>
                                             @endif
                                         </td>
 
-                                        {{-- STATUS DATA --}}
+                                        {{-- VIEW STATUS RAPOR ADMIN --}}
                                         <td class="text-center align-middle">
                                             @if($s->status_rapor == 'belum_generate')
                                                 <span class="badge badge-sm bg-gradient-light text-secondary border">BELUM ADA</span>
                                             @elseif($s->status_rapor == 'draft')
-                                                <span class="badge badge-sm bg-gradient-info">DRAFT</span>
+                                                <span class="badge badge-sm bg-gradient-info">DRAFT ADMIN</span>
                                             @elseif($s->status_rapor == 'final')
                                                 <span class="badge badge-sm bg-gradient-success">SIAP CETAK</span>
                                             @elseif($s->status_rapor == 'cetak')
@@ -264,34 +261,39 @@
                                             @endif
                                         </td>
 
-                                        {{-- AKSI SATUAN --}}
+                                        {{-- ======================================= --}}
+                                        {{-- AKSI SATUAN BERDIRI SENDIRI             --}}
+                                        {{-- ======================================= --}}
                                         <td class="text-center align-middle">
                                             <div class="d-flex justify-content-center gap-2">
                                                 
-                                                @if($s->is_ready_print)
-                                                    <button onclick="cetakSatuan('{{ $s->id_siswa }}')" class="btn btn-xs bg-gradient-primary mb-0 px-3" data-bs-toggle="tooltip" title="Cetak PDF">
+                                                {{-- 1. TOMBOL GENERATE / PERBARUI (Posisi Kiri) --}}
+                                                @if(in_array($s->status_guru, ['siap', 'belum_siap']) && in_array($s->status_rapor, ['belum_generate', 'draft']))
+                                                    <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs {{ $s->status_rapor == 'draft' ? 'bg-gradient-warning' : 'bg-gradient-secondary' }} mb-0 px-3" data-bs-toggle="tooltip" title="{{ $s->status_rapor == 'draft' ? 'Tarik data terbaru dari Guru' : 'Tarik data ke sistem Rapor' }}">
+                                                        <i class="fas {{ $s->status_rapor == 'draft' ? 'fa-sync-alt' : 'fa-cog' }} me-1"></i> 
+                                                        {{ $s->status_rapor == 'draft' ? 'Perbarui Data' : 'Generate' }}
+                                                    </button>
+                                                @endif
+
+                                                {{-- 2. TOMBOL CETAK (Posisi Kiri) --}}
+                                                @if($s->status_guru == 'siap' && in_array($s->status_rapor, ['final', 'cetak']))
+                                                    <button onclick="cetakSatuan('{{ $s->id_siswa }}')" class="btn btn-xs bg-gradient-primary mb-0 px-3" data-bs-toggle="tooltip" title="Cetak PDF Rapor">
                                                         <i class="fas fa-print me-1"></i> Cetak
                                                     </button>
-                                                    <button onclick="unlockRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs btn-outline-danger mb-0 px-3" data-bs-toggle="tooltip" title="Buka Kunci untuk Edit/Update">
-                                                        <i class="fas fa-lock"></i> Buka Kunci
-                                                    </button>
+                                                @endif
 
-                                                @else
-                                                    @if($s->status_guru == 'siap')
-                                                        @if($s->status_rapor == 'draft')
-                                                            <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs bg-gradient-warning mb-0 px-3" data-bs-toggle="tooltip" title="Tarik data nilai terbaru dari Guru">
-                                                                <i class="fas fa-sync-alt me-1"></i> Perbarui Data
-                                                            </button>
-                                                        @else
-                                                            <button onclick="generateRaporAdmin('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs bg-gradient-secondary mb-0 px-3">
-                                                                <i class="fas fa-cog me-1"></i> Generate
-                                                            </button>
-                                                        @endif
-                                                    @else
-                                                        <button disabled class="btn btn-xs bg-light text-secondary border mb-0 px-3" data-bs-toggle="tooltip" title="Guru belum memfinalisasi nilai anak ini.">
-                                                            <i class="fas fa-lock me-1"></i> Menunggu Guru
-                                                        </button>
-                                                    @endif
+                                                {{-- LABEL MENUNGGU GURU (Posisi Kiri) --}}
+                                                @if($s->status_guru == 'kosong' && $s->status_rapor == 'belum_generate')
+                                                    <span class="text-xs text-secondary italic">
+                                                        <i class="fas fa-hourglass-half me-1"></i> Menunggu Guru
+                                                    </span>
+                                                @endif
+
+                                                {{-- 3. TOMBOL UNLOCK (SELALU DI POSISI KANAN) --}}
+                                                @if($s->status_guru == 'siap')
+                                                    <button onclick="unlockRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" class="btn btn-xs btn-outline-danger mb-0 px-3" data-bs-toggle="tooltip" title="Kembalikan form ke Guru untuk direvisi">
+                                                        <i class="fas fa-unlock me-1"></i> Buka Kunci
+                                                    </button>
                                                 @endif
 
                                             </div>

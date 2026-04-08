@@ -97,39 +97,53 @@
                                 <div class="accordion-item mb-3 border rounded shadow-xs">
                                     <h2 class="accordion-header" id="head{{ $index }}">
                                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#clps{{ $index }}" data-kelas-id="{{ $data->kelas->id_kelas }}">
-                                            <div class="d-flex w-100 align-items-center justify-content-between pe-3">
+                                            
+                                            {{-- ✅ PERBAIKAN: MENGGUNAKAN GRID ROW & COL AGAR STATIS DAN SEJAJAR --}}
+                                            <div class="row w-100 align-items-center m-0 pe-3">
                                                 
-                                                {{-- INFO KELAS --}}
-                                                <div class="d-flex align-items-center" style="min-width: 220px;">
-                                                    <div class="icon icon-sm shadow border-radius-md bg-white text-center me-3 d-flex align-items-center justify-content-center border">
+                                                {{-- INFO KELAS (Porsi 4/12) --}}
+                                                <div class="col-12 col-lg-4 d-flex align-items-center px-0">
+                                                    <div class="icon icon-sm shadow border-radius-md bg-white text-center me-3 d-flex align-items-center justify-content-center border flex-shrink-0">
                                                         <i class="fas fa-chalkboard-teacher text-dark text-xs"></i>
                                                     </div>
-                                                    <div class="d-flex flex-column">
-                                                        <span class="font-weight-bold text-dark">{{ $data->kelas->nama_kelas }}</span>
-                                                        <span class="text-xs text-secondary">Wali: {{ $data->wali_kelas }}</span>
+                                                    <div class="d-flex flex-column text-truncate">
+                                                        <span class="font-weight-bold text-dark text-truncate">{{ $data->kelas->nama_kelas }}</span>
+                                                        <span class="text-xs text-secondary text-truncate">Wali: {{ $data->wali_kelas }}</span>
                                                     </div>
                                                 </div>
 
-                                                {{-- PROGRESS BAR GLOBAL KELAS --}}
-                                                <div class="flex-grow-1 mx-4 d-none d-lg-block">
+                                                {{-- PROGRESS BAR STACKED MULTICOLOR (Porsi 6/12 - Terkunci Lebarnya) --}}
+                                                <div class="col-lg-6 d-none d-lg-block px-3">
                                                     <div class="d-flex justify-content-between mb-1">
                                                         <span class="text-xxs font-weight-bold text-uppercase text-secondary">Progress Penilaian</span>
-                                                        <span class="text-xxs font-weight-bold text-dark">{{ $data->siswa_selesai }} / {{ $data->jml_siswa }} Siswa Selesai</span>
+                                                        <span class="text-xxs font-weight-bold text-dark">
+                                                            <span class="text-success">{{ $data->siswa_selesai }} Final</span> | 
+                                                            <span class="text-warning">{{ $data->siswa_proses }} Draft</span> | 
+                                                            <span class="text-secondary">{{ $data->siswa_kosong }} Kosong</span>
+                                                        </span>
                                                     </div>
-                                                    <div class="progress w-100" style="height: 6px; background-color: #e9ecef;">
-                                                        <div class="progress-bar bg-gradient-{{ $data->persen == 100 ? 'success' : 'info' }}" 
-                                                             role="progressbar" style="width: {{ $data->persen }}%"></div>
+                                                    <div class="progress w-100" style="height: 8px; background-color: #e9ecef; overflow: hidden;">
+                                                        @if($data->persen_selesai > 0)
+                                                            <div class="progress-bar bg-gradient-success" role="progressbar" style="width: {{ $data->persen_selesai }}%" data-bs-toggle="tooltip" title="{{ $data->siswa_selesai }} Siswa Selesai ({{ $data->persen_selesai }}%)"></div>
+                                                        @endif
+                                                        @if($data->persen_proses > 0)
+                                                            <div class="progress-bar bg-gradient-warning" role="progressbar" style="width: {{ $data->persen_proses }}%" data-bs-toggle="tooltip" title="{{ $data->siswa_proses }} Siswa Proses Draft ({{ $data->persen_proses }}%)"></div>
+                                                        @endif
+                                                        @if($data->persen_kosong > 0)
+                                                            <div class="progress-bar bg-secondary opacity-4" role="progressbar" style="width: {{ $data->persen_kosong }}%" data-bs-toggle="tooltip" title="{{ $data->siswa_kosong }} Siswa Belum Dinilai ({{ $data->persen_kosong }}%)"></div>
+                                                        @endif
                                                     </div>
                                                 </div>
 
-                                                {{-- BADGE STATUS --}}
-                                                <div style="min-width: 100px; text-align: right;">
-                                                    @if($data->persen == 100)
-                                                        <span class="badge bg-gradient-success">SIAP CETAK</span>
+                                                {{-- BADGE STATUS GLOBAL KELAS (Porsi 2/12) --}}
+                                                <div class="col-12 col-lg-2 text-end px-0 mt-2 mt-lg-0">
+                                                    @if($data->persen_selesai == 100)
+                                                        <span class="badge bg-gradient-success w-100 w-lg-auto">LENGKAP</span>
                                                     @else
-                                                        <span class="badge bg-gradient-secondary">BELUM LENGKAP</span>
+                                                        <span class="badge bg-gradient-secondary w-100 w-lg-auto">BELUM LENGKAP</span>
                                                     @endif
                                                 </div>
+
                                             </div>
                                         </button>
                                     </h2>
@@ -189,7 +203,6 @@
                                                                         @endif
                                                                     </td>
                                                                     <td class="align-middle text-center py-2">
-                                                                        {{-- TOMBOL CEK: Terhubung langsung ke Form Split Screen Penilaian PKL! --}}
                                                                         <a href="{{ route('pkl.nilai.input', [
                                                                             'tahun_ajaran' => $tahun_ajaran, 
                                                                             'semester' => $semester, 
@@ -288,11 +301,9 @@
         const bukaKelasId = urlParams.get('buka_kelas');
 
         if (bukaKelasId) {
-            // Cari tombol accordion yang memiliki kelas tersebut (Kita harus tambahkan data-kelas-id di tombol accordionnya)
             let targetButton = $('.accordion-button[data-kelas-id="' + bukaKelasId + '"]');
             if (targetButton.length > 0) {
-                targetButton.click(); // Klik untuk membuka
-                // Scroll layar ke elemen tersebut
+                targetButton.click(); 
                 setTimeout(() => {
                     targetButton[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 300);
