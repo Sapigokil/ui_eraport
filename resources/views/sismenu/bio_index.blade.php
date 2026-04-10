@@ -8,13 +8,80 @@
 
     <div class="container-fluid py-4 px-5">
 
-        {{-- ALERT INFORMASI READ-ONLY --}}
-        <div class="alert alert-info d-flex align-items-center text-dark mb-4" role="alert">
-            <i class="fas fa-info-circle fa-2x me-3"></i>
-            <div>
-                <strong>Informasi Penting!</strong><br>
-                <span class="text-sm">Halaman ini bersifat <i>Read-Only</i> (hanya baca). Jika terdapat ketidaksesuaian data, silakan menghubungi Wali Kelas atau Admin Tata Usaha sekolah untuk melakukan pembaruan data.</span>
+        {{-- 1. ALERT PENGAJUAN PENDING --}}
+        @if($pengajuanPending)
+            <div class="alert alert-warning d-flex align-items-center text-dark mb-4 shadow-sm" role="alert">
+                <i class="fas fa-user-clock fa-2x me-3"></i>
+                <div>
+                    <strong>Pengajuan Sedang Diproses!</strong><br>
+                    <span class="text-sm">Perubahan biodata yang Anda ajukan sedang menunggu validasi dari Tata Usaha / Admin. Anda tidak dapat mengajukan perubahan baru hingga pengajuan sebelumnya disetujui atau ditolak.</span>
+                </div>
             </div>
+        @else
+            {{-- 2. ALERT INFORMASI BACA-SAJA --}}
+            <div class="alert alert-info d-flex align-items-center text-dark mb-4 shadow-sm" role="alert">
+                <i class="fas fa-info-circle fa-2x me-3"></i>
+                <div>
+                    <strong>Informasi Penting!</strong><br>
+                    <span class="text-sm">Halaman ini bersifat <i>Read-Only</i>. Jika terdapat ketidaksesuaian data, silakan klik tombol "Ajukan Perubahan Data" di bawah.</span>
+                </div>
+            </div>
+        @endif
+
+        {{-- Ganti bagian Alert Riwayat Terakhir dengan kode ini --}}
+        @if(!$pengajuanPending && isset($riwayatTerakhir) && $riwayatTerakhir->is_read == 0)
+            <div id="alertResponAdmin" class="alert {{ $riwayatTerakhir->status == 'disetujui' ? 'alert-success' : 'alert-danger' }} alert-dismissible fade show d-flex align-items-start text-dark mb-4 shadow-sm" role="alert">
+                <i class="fas {{ $riwayatTerakhir->status == 'disetujui' ? 'fa-check-circle' : 'fa-times-circle' }} fa-2x me-3 mt-1"></i>
+                <div class="w-100">
+                    <strong>Pengajuan Sebelumnya {{ ucfirst($riwayatTerakhir->status) }}</strong>
+                    <br>
+                    <span class="text-sm">Pengajuan perubahan data Anda telah diproses oleh Admin.</span>
+                    
+                    @if(!empty($riwayatTerakhir->keterangan_admin))
+                        <div class="mt-2 p-2 rounded" style="background-color: rgba(255,255,255,0.4); border-left: 3px solid #344767;">
+                            <strong class="text-sm">Catatan Admin:</strong><br>
+                            <span class="text-sm">{{ $riwayatTerakhir->keterangan_admin }}</span>
+                        </div>
+                    @endif
+                </div>
+                {{-- Tombol Close --}}
+                <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert" aria-label="Close" onclick="tandaiSudahDibaca({{ $riwayatTerakhir->id_pengajuan }})">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        @endif
+
+        {{-- Script AJAX di bagian bawah file --}}
+        <script>
+            function tandaiSudahDibaca(id) {
+                fetch("{{ url('/biodata/mark-as-read') }}/" + id, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success) {
+                        console.log("Notifikasi ditandai sudah dibaca");
+                        // Opsional: Hapus badge di sidebar secara manual jika tidak ingin nunggu refresh
+                    }
+                });
+            }
+        </script>
+
+        {{-- BUTTON LINK MENUJU HALAMAN EDIT --}}
+        <div class="d-flex justify-content-end mb-3">
+            @if(!$pengajuanPending)
+                <a href="{{ route('sis.biodata.edit') }}" class="btn bg-gradient-primary shadow-sm">
+                    <i class="fas fa-edit me-2"></i> Lengkapi / Ubah Biodata
+                </a>
+            @else
+                <button type="button" class="btn btn-secondary shadow-sm" disabled>
+                    <i class="fas fa-lock me-2"></i> Menunggu Persetujuan...
+                </button>
+            @endif
         </div>
 
         <div class="row">
@@ -225,8 +292,38 @@
 
             </div>
         </div>
-
     </div>
+    
     <x-app.footer />
+    {{-- Script AJAX Penanda Sudah Dibaca --}}
+    <script>
+        function tandaiSudahDibaca(id) {
+            // Gabungkan URL dasar dengan ID secara langsung
+            const targetUrl = "{{ route('sis.biodata.read', '') }}/" + id;
+
+            console.log("Mencoba mengirim request ke: ", targetUrl);
+
+            fetch(targetUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Tampilkan respon dari server (Sukses atau Error) di Console
+                console.log("Respon dari Server: ", data);
+                
+                if(!data.success) {
+                    alert("Gagal menghilangkan notif: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Terjadi masalah jaringan/koneksi: ", error);
+            });
+        }
+    </script>
 </main>
 @endsection

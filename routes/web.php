@@ -130,6 +130,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('siswa/import/csv', [SiswaController::class, 'importCsv'])->name('siswa.import.csv');
         Route::post('siswa/import/xlsx', [SiswaController::class, 'importXlsx'])->name('siswa.import.xlsx');
 
+        // Rute Validasi Biodata Siswa (Admin)
+        Route::get('/validasi-biodata', [\App\Http\Controllers\AdminValidasiBioController::class, 'index'])->name('validasi_bio.index');
+        Route::get('/validasi-biodata/{id}/review', [\App\Http\Controllers\AdminValidasiBioController::class, 'show'])->name('validasi_bio.show');
+        Route::post('/validasi-biodata/{id}/proses', [\App\Http\Controllers\AdminValidasiBioController::class, 'proses'])->name('validasi_bio.proses');
+        
         // Kelas
         Route::resource('kelas', KelasController::class)->names('kelas')->parameters(['kelas' => 'id_kelas']); 
         Route::get('kelas/export/pdf', [KelasController::class, 'exportPdf'])->name('kelas.export.pdf');
@@ -632,7 +637,10 @@ Route::middleware(['auth'])->group(function () {
         
         // Halaman Biodata Diri
         Route::get('/biodata', [\App\Http\Controllers\SisbioController::class, 'index'])->name('biodata');
-        
+        Route::get('/biodata/edit', [\App\Http\Controllers\SisbioController::class, 'edit'])->name('biodata.edit');
+        Route::post('/biodata/ajukan', [\App\Http\Controllers\SisbioController::class, 'ajukanPerubahan'])->name('biodata.ajukan');
+        Route::post('/biodata/mark-as-read/{id}', [\App\Http\Controllers\SisbioController::class, 'markAsRead'])->name('biodata.read');
+
         // Halaman Laporan PSTS
         Route::get('/psts', [\App\Http\Controllers\SisPstsController::class, 'index'])->name('psts.index');
         Route::get('/psts/detail/{tahun_ajaran}/{semester}/{id_kelas}', [\App\Http\Controllers\SisPstsController::class, 'detail'])->name('psts.detail');

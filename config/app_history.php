@@ -11,11 +11,20 @@ return [
     |
     */
 
-    'current_version' => '1.0.17',
+    'current_version' => '1.0.19',
     
-    'last_updated' => '2026-04-01',
+    'last_updated' => '2026-04-10',
 
     'changelog' => [
+        [
+            'version' => '1.0.19',
+            'date'    => '2026-04-10',
+            'notes'   => [
+                'Perbaikah Halaman Data Siswa, untuk mendukung pengajuan perubahan Data',
+                'Penambahan Menu Validasi Biodata untuk Admin memproses pengajuan perubahan biodata siswa',
+                'Optimasi Proses Pengajuan Perubahan Biodata dengan menggunakan JSON untuk menyimpan data perubahan dan keputusan admin agar lebih fleksibel dan mudah dikembangkan di masa depan',
+            ],
+        ],
         [
             'version' => '1.0.18',
             'date'    => '2026-04-02',

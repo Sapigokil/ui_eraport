@@ -164,26 +164,66 @@
             {{-- MASTER DATA --}}
             @can('master.menu') 
             @php 
+                // ✅ PERBAIKAN: Menambahkan 'validasi_bio.*' ke dalam daftar masterRoutes agar menu tetap terbuka
                 $masterRoutes = [
-                    'master.sekolah.*', 'master.guru.*', 'master.siswa.*', 'master.kelas.*', 
+                    'master.sekolah.*', 'master.guru.*', 'master.siswa.*', 'master.validasi_bio.*', 'master.kelas.*', 
                     'master.mapel.*', 'master.pembelajaran.*'
                 ];
                 $isMasterActive = request()->routeIs($masterRoutes); 
+
+                // ✅ QUERY BADGE NOTIFIKASI: Menghitung jumlah pengajuan yang masih pending
+                $pendingBioCount = \App\Models\PengajuanBiodata::where('status', 'pending')->count();
+            
+                // DEKLARASI VARIABEL BARU
+                $subMenuHadAlert = $pendingBioCount > 0;
+
             @endphp
             
             <li class="nav-item">
-                <a data-bs-toggle="collapse" href="#masterDataMenu" class="nav-link {{ $isMasterActive ? 'active' : '' }}" aria-controls="masterDataMenu" role="button" aria-expanded="{{ $isMasterActive ? 'true' : 'false' }}">
+                {{-- <a data-bs-toggle="collapse" href="#masterDataMenu" class="nav-link {{ $isMasterActive ? 'active' : '' }}" aria-controls="masterDataMenu" role="button" aria-expanded="{{ $isMasterActive ? 'true' : 'false' }}">
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
                         <i class="fas fa-database text-sm"></i>
                     </div>
-                    <span class="nav-link-text">Master Data</span>
+                    <span class="nav-link-text">Master Data
+                        @if($pendingBioCount > 0)
+                            <span class="badge bg-gradient-danger py-1 px-2" style="font-size: 0.55rem;">{{ $pendingBioCount }}</span>
+                        @endif
+                    </span>
+                </a> --}}
+                <a data-bs-toggle="collapse" href="#masterDataMenu" class="nav-link {{ $isMasterActive ? 'active' : '' }} d-flex align-items-center" aria-controls="masterDataMenu" role="button" aria-expanded="{{ $isMasterActive ? 'true' : 'false' }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-database text-sm"></i>
+                    </div>
+                    
+                    {{-- Menerapkan Flexbox pada label teks --}}
+                    <span class="nav-link-text w-100 d-flex justify-content-between align-items-center pe-4">
+                        <span>Master Data</span>
+                        
+                        @if($subMenuHadAlert)
+                            <span class="badge bg-gradient-danger py-1 px-2 shadow-sm" style="font-size: 0.55rem; line-height: 1;">{{ $pendingBioCount }}</span>
+                        @endif
+                    </span>
                 </a>
 
                 <div class="collapse {{ $isMasterActive ? 'show' : '' }}" id="masterDataMenu">
                     <ul class="nav">
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sekolah.*') ? 'active' : '' }}" href="{{ route('master.sekolah.index') }}"><span class="sidenav-normal"> Data Sekolah </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.guru.*') ? 'active' : '' }}" href="{{ route('master.guru.index') }}"><span class="sidenav-normal"> Data Guru </span></a></li>
+                        
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.siswa.*') ? 'active' : '' }}" href="{{ route('master.siswa.index') }}"><span class="sidenav-normal"> Data Siswa </span></a></li>
+                        
+                        {{-- ✅ TAMBAHAN MENU BARU: Validasi Data Siswa dengan Notifikasi Badge --}}
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('master.validasi_bio.*') ? 'active' : '' }}" href="{{ route('master.validasi_bio.index') }}">
+                                <span class="sidenav-normal d-flex align-items-center justify-content-between w-100"> 
+                                    Validasi Data Siswa 
+                                    @if($pendingBioCount > 0)
+                                        <span class="badge bg-gradient-danger py-1 px-2" style="font-size: 0.55rem;">{{ $pendingBioCount }}</span>
+                                    @endif
+                                </span>
+                            </a>
+                        </li>
+
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.kelas.*') ? 'active' : '' }}" href="{{ route('master.kelas.index') }}"><span class="sidenav-normal"> Data Kelas </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.mapel.*') ? 'active' : '' }}" href="{{ route('master.mapel.index') }}"><span class="sidenav-normal"> Mata Pelajaran </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.pembelajaran.*') ? 'active' : '' }}" href="{{ route('master.pembelajaran.index') }}"><span class="sidenav-normal"> Pembelajaran </span></a></li>
@@ -593,18 +633,32 @@
             {{-- MENU KHUSUS SISWA --}}
             {{-- ========================================================= --}}
             @can('siswa.menu')
-                @if(auth()->user()->hasRole('siswa') || auth()->user()->level == 'siswa')
+                @if(auth()->user()->hasRole('siswa_erapor') || auth()->user()->level == 'siswa_erapor')
                     
+                    @php
+                        // Hitung respon admin yang belum dibaca siswa khusus untuk user ini
+                        $id_siswa = auth()->user()->id_siswa;
+                        $notifBalikAdmin = \App\Models\PengajuanBiodata::where('id_siswa', $id_siswa)
+                                            ->whereIn('status', ['disetujui', 'ditolak'])
+                                            ->where('is_read', 0)
+                                            ->count();
+                    @endphp
+
                     {{-- FLAT DESIGN KHUSUS UNTUK ROLE SISWA ASLI --}}
                     <li class="nav-item mt-3">
                         <div class="sidenav-category text-uppercase">Profil Saya</div>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('sis.biodata') ? 'active' : '' }}" href="{{ route('sis.biodata') }}">
+                        <a class="nav-link {{ request()->routeIs('sis.biodata') || request()->routeIs('sis.biodata.*') ? 'active' : '' }}" href="{{ route('sis.biodata') }}">
                             <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-id-card text-sm {{ request()->routeIs('sis.biodata') ? 'text-white' : '' }}"></i>
+                                <i class="fas fa-id-card text-sm"></i>
                             </div>
-                            <span class="nav-link-text">Biodata Diri</span>
+                            <span class="nav-link-text d-flex justify-content-between align-items-center w-100">
+                                Biodata Diri
+                                @if($notifBalikAdmin > 0)
+                                    <span class="badge bg-gradient-danger py-1 px-2 shadow-sm" style="font-size: 0.55rem; line-height: 1;">{{ $notifBalikAdmin }}</span>
+                                @endif
+                            </span>
                         </a>
                     </li>
 
@@ -614,7 +668,7 @@
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('sis.psts.*') ? 'active' : '' }}" href="{{ route('sis.psts.index') }}">
                             <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-file-invoice text-sm {{ request()->routeIs('sis.psts.*') ? 'text-white' : '' }}"></i>
+                                <i class="fas fa-file-invoice text-sm"></i>
                             </div>
                             <span class="nav-link-text">Laporan PSTS</span>
                         </a>
@@ -624,44 +678,12 @@
                         <hr class="horizontal light my-2">
                     </li>
 
-                @else
-
-                    {{-- COLLAPSIBLE DESIGN UNTUK ADMIN (PREVIEW) --}}
-                    <li class="nav-item mt-3">
-                        <div class="sidenav-category text-uppercase">Portal Siswa</div>
-                    </li>
-                    <li class="nav-item">
-                        <a data-bs-toggle="collapse" href="#previewSiswaMenu" class="nav-link {{ request()->routeIs('sis.*') ? 'active' : '' }}" aria-controls="previewSiswaMenu" role="button" aria-expanded="{{ request()->routeIs('sis.*') ? 'true' : 'false' }}">
-                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                                <i class="fas fa-mobile-alt text-sm {{ request()->routeIs('sis.*') ? 'text-white' : '' }}"></i>
-                            </div>
-                            <span class="nav-link-text">Menu Siswa (Preview)</span>
-                        </a>
-                        <div class="collapse {{ request()->routeIs('sis.*') ? 'show' : '' }}" id="previewSiswaMenu">
-                            <ul class="nav">
-                                <li class="nav-item">
-                                    <a class="nav-link {{ request()->routeIs('sis.biodata') ? 'active' : '' }}" href="{{ route('sis.biodata') }}">
-                                        <span class="sidenav-normal"> Biodata Diri </span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link {{ request()->routeIs('sis.psts.*') ? 'active' : '' }}" href="{{ route('sis.psts.index') }}">
-                                        <span class="sidenav-normal"> Laporan PSTS </span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </li>
-                    <li class="nav-item mt-3">
-                        <hr class="horizontal light my-2">
-                    </li>
-
                 @endif
             @endcan
             {{-- ========================================================= --}}
             {{-- END OF MENU SISWA --}}
             {{-- ========================================================= --}}
-
+            
             {{-- ========================================================= --}}
             {{-- 7. PERSONAL --}}
             {{-- ========================================================= --}}
