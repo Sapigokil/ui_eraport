@@ -72,7 +72,7 @@
         </script>
 
         {{-- BUTTON LINK MENUJU HALAMAN EDIT --}}
-        <div class="d-flex justify-content-end mb-3">
+        {{-- <div class="d-flex justify-content-end mb-3">
             @if(!$pengajuanPending)
                 <a href="{{ route('sis.biodata.edit') }}" class="btn bg-gradient-primary shadow-sm">
                     <i class="fas fa-edit me-2"></i> Lengkapi / Ubah Biodata
@@ -82,6 +82,58 @@
                     <i class="fas fa-lock me-2"></i> Menunggu Persetujuan...
                 </button>
             @endif
+        </div> --}}
+
+        {{-- PANEL STATUS PERIODE BIODATA & TOMBOL AKSI --}}
+        <div class="card shadow-sm border-0 mt-4 mb-4">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
+                
+                <div class="d-flex align-items-center mb-3 mb-md-0">
+                    @if($isBiodataOpen)
+                        <div class="icon-shape bg-gradient-success shadow-success text-center rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-door-open text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-dark font-weight-bold">Periode Pembaruan Dibuka</h6>
+                            <p class="text-sm text-secondary mb-0">
+                                Berakhir pada: <strong class="text-dark">{{ \Carbon\Carbon::parse($bioSeason->tanggal_akhir)->translatedFormat('d F Y - H:i') }} WIB</strong>
+                            </p>
+                        </div>
+                    @else
+                        <div class="icon-shape bg-gradient-danger shadow-danger text-center rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-lock text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 text-dark font-weight-bold">Periode Pembaruan Ditutup</h6>
+                            <p class="text-sm text-secondary mb-0">
+                                @if($bioSeason && $bioSeason->tanggal_mulai && $bioSeason->tanggal_akhir)
+                                    Jadwal Akses: {{ \Carbon\Carbon::parse($bioSeason->tanggal_mulai)->translatedFormat('d M Y') }} s/d {{ \Carbon\Carbon::parse($bioSeason->tanggal_akhir)->translatedFormat('d M Y') }}
+                                @else
+                                    Jadwal pembaruan belum ditentukan oleh Admin.
+                                @endif
+                            </p>
+                        </div>
+                    @endif
+                </div>
+
+                <div>
+                    @if($isBiodataOpen)
+                        @if($pengajuanPending)
+                            <button class="btn bg-gradient-secondary mb-0 shadow-sm" disabled>
+                                <i class="fas fa-hourglass-half me-1"></i> Menunggu Persetujuan...
+                            </button>
+                        @else
+                            <a href="{{ route('sis.biodata.edit') }}" class="btn bg-gradient-primary mb-0 shadow-sm px-4 py-2">
+                                <i class="fas fa-edit me-2"></i> Lengkapi / Ubah Biodata
+                            </a>
+                        @endif
+                    @else
+                        <button class="btn btn-outline-secondary mb-0 px-4 py-2" disabled>
+                            <i class="fas fa-ban me-2"></i> Form Terkunci
+                        </button>
+                    @endif
+                </div>
+            </div>
         </div>
 
         <div class="row">

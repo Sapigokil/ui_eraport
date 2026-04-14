@@ -596,6 +596,17 @@ Route::middleware(['auth'])->group(function () {
             });
         });
 
+        // ==========================================================================
+        // D. SETTING SEASON BIODATA SISWA
+        // ==========================================================================
+        Route::group(['prefix' => 'bio-season', 'as' => 'bio_season.'], function () {
+            Route::controller(\App\Http\Controllers\BioSeasonController::class)->group(function () {
+                Route::get('/', 'index')->name('index');
+                Route::post('/store', 'store')->name('store'); 
+                Route::delete('/reset', 'reset')->name('reset'); // Rute baru untuk tombol Reset
+            });
+        });
+
         // Backup & Restore Database
         Route::controller(\App\Http\Controllers\BackupRestoreController::class)->prefix('backup')->name('backup.')->group(function () {
             Route::get('/', 'index')->name('index');

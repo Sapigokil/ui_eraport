@@ -525,7 +525,8 @@
 
             {{-- Setting E-Rapor --}}
             @php 
-                $eraporSettingRoutes = ['settings.erapor.*'];
+                // Hapus route season dari array agar menu tidak ikut menyala
+                $eraporSettingRoutes = ['settings.erapor.kok.*', 'settings.erapor.bobot.*', 'settings.erapor.event.*'];
                 $isEraporSetActive = request()->routeIs($eraporSettingRoutes);
             @endphp
             <li class="nav-item">
@@ -540,30 +541,55 @@
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.kok.index') ? 'active' : '' }}" href="{{ route('settings.erapor.kok.index') }}"><span class="sidenav-normal"> Set Kokurikuler </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.bobot.index') ? 'active' : '' }}" href="{{ route('settings.erapor.bobot.index') }}"><span class="sidenav-normal"> Bobot Nilai </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.event.index') ? 'active' : '' }}" href="{{ route('settings.erapor.event.index') }}"><span class="sidenav-normal"> Event Dashboard </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.season.index') ? 'active' : '' }}" href="{{ route('settings.erapor.season.index') }}"><span class="sidenav-normal"> Set Season </span></a></li>
                     </ul>
                 </div>
             </li>
 
             {{-- Setting Rapor PKL --}}
             @php 
-                $pklSettingRoutes = ['settings.pkl.*'];
+                // Hapus route season pkl dari array
+                $pklSettingRoutes = ['settings.pkl.index', 'settings.pkl.template', 'settings.pkl.import'];
                 $isPklSetActive = request()->routeIs($pklSettingRoutes);
             @endphp
             <li class="nav-item">
                 <a data-bs-toggle="collapse" href="#settingPklMenu" class="nav-link {{ $isPklSetActive ? 'active' : '' }}" aria-controls="settingPklMenu" role="button" aria-expanded="{{ $isPklSetActive ? 'true' : 'false' }}">
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                        <i class="fas fa-sliders-h text-sm"></i>
+                        <i class="fas fa-briefcase text-sm"></i>
                     </div>
                     <span class="nav-link-text">Setting Rapor Pkl</span>
                 </a>
                 <div class="collapse {{ $isPklSetActive ? 'show' : '' }}" id="settingPklMenu">
                     <ul class="nav">
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.index') ? 'active' : '' }}" href="{{ route('settings.pkl.index') }}"><span class="sidenav-normal"> Set Tujuan pembelajaran </span></a></li>
-                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.season.*') ? 'active' : '' }}" href="{{ route('settings.pkl.season.index') }}"><span class="sidenav-normal"> Set Season PKL </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.index') ? 'active' : '' }}" href="{{ route('settings.pkl.index') }}"><span class="sidenav-normal"> Set Tujuan Pembelajaran </span></a></li>
                     </ul>
                 </div>
             </li>
+
+            {{-- 👇 MENU BARU: MANAJEMEN SEASON TERPUSAT 👇 --}}
+            @php 
+                $seasonRoutes = [
+                    'settings.erapor.season.*', 
+                    'settings.pkl.season.*', 
+                    'settings.bio_season.*'
+                ];
+                $isSeasonActive = request()->routeIs($seasonRoutes);
+            @endphp
+            <li class="nav-item">
+                <a data-bs-toggle="collapse" href="#settingSeasonMenu" class="nav-link {{ $isSeasonActive ? 'active' : '' }}" aria-controls="settingSeasonMenu" role="button" aria-expanded="{{ $isSeasonActive ? 'true' : 'false' }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-calendar-alt text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Setting Season</span>
+                </a>
+                <div class="collapse {{ $isSeasonActive ? 'show' : '' }}" id="settingSeasonMenu">
+                    <ul class="nav">
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.season.*') ? 'active' : '' }}" href="{{ route('settings.erapor.season.index') }}"><span class="sidenav-normal"> Season Akademik </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.pkl.season.*') ? 'active' : '' }}" href="{{ route('settings.pkl.season.index') }}"><span class="sidenav-normal"> Season PKL </span></a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.bio_season.*') ? 'active' : '' }}" href="{{ route('settings.bio_season.index') }}"><span class="sidenav-normal"> Season Biodata Siswa </span></a></li>
+                    </ul>
+                </div>
+            </li>
+            {{-- 👆 END MENU SEASON 👆 --}}
 
             {{-- System & User --}}
             @php 

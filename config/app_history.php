@@ -11,11 +11,20 @@ return [
     |
     */
 
-    'current_version' => '1.0.19',
+    'current_version' => '1.0.20',
     
-    'last_updated' => '2026-04-10',
+    'last_updated' => '2026-04-14',
 
     'changelog' => [
+        [
+            'version' => '1.0.20',
+            'date'    => '2026-04-14',
+            'notes'   => [
+                'Penambahan Season Pada Form Biodata untuk mengatur periode pembaruan biodata siswa',
+                'Penambahan Validasi pada Form Biodata untuk memastikan data yang diinput sesuai dengan periode yang sudah diatur',
+                'Penambahan Fitur Reset Jadwal Biodata untuk mengembalikan status portal biodata menjadi belum diatur',
+            ],
+        ],
         [
             'version' => '1.0.19',
             'date'    => '2026-04-10',
