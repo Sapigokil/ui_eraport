@@ -713,6 +713,7 @@
             {{-- ========================================================= --}}
             {{-- 7. PERSONAL --}}
             {{-- ========================================================= --}}
+            @if(!auth()->user()->hasRole('siswa_erapor') && auth()->user()->level != 'siswa_erapor')
             <li class="nav-item mt-3">
                 <div class="sidenav-category text-uppercase">Personal</div>
             </li>
@@ -725,6 +726,7 @@
                     <span class="nav-link-text">Ubah Password</span>
                 </a>
             </li>
+            @endif
 
             @can('setting.menu')
             <li class="nav-item">
