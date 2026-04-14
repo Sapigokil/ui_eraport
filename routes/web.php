@@ -655,6 +655,7 @@ Route::middleware(['auth'])->group(function () {
         // Halaman Laporan PSTS
         Route::get('/psts', [\App\Http\Controllers\SisPstsController::class, 'index'])->name('psts.index');
         Route::get('/psts/detail/{tahun_ajaran}/{semester}/{id_kelas}', [\App\Http\Controllers\SisPstsController::class, 'detail'])->name('psts.detail');
+        Route::get('/psts/cetak/{tahun_ajaran}/{semester}/{id_kelas}/{jenis}', [\App\Http\Controllers\SisPstsController::class, 'cetak'])->name('psts.cetak');
         
     });
 

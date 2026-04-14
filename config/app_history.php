@@ -23,6 +23,7 @@ return [
                 'Penambahan Season Pada Form Biodata untuk mengatur periode pembaruan biodata siswa',
                 'Penambahan Validasi pada Form Biodata untuk memastikan data yang diinput sesuai dengan periode yang sudah diatur',
                 'Penambahan Fitur Reset Jadwal Biodata untuk mengembalikan status portal biodata menjadi belum diatur',
+                'Penambahan Menu Laporan PSTS, untuk melihat dan mencetak laporan PSTS per periode (tahun ajaran + semester) dan kelas',
             ],
         ],
         [

@@ -52,18 +52,23 @@
                                     
                                     {{-- Render Header Dinamis (S1, S2, STS, Project, dll) --}}
                                     @foreach($jenis_penilaian_unik as $jp)
+                                        @php
+                                            // LOGIKA PREFIX: Jika angka, jadikan "Sumatif 1", jika bukan biarkan aslinya
+                                            $label_jp = is_numeric($jp) ? 'Sumatif ' . $jp : $jp;
+                                        @endphp
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                                             @if($jp == 'Project')
-                                                <span class="badge bg-gradient-success p-1">{{ $jp }}</span>
+                                                <span class="badge bg-gradient-success p-1">{{ $label_jp }}</span>
                                             @elseif(str_contains($jp, 'STS') || str_contains($jp, 'SAS'))
-                                                <span class="badge bg-gradient-info p-1">{{ $jp }}</span>
+                                                <span class="badge bg-gradient-info p-1">{{ $label_jp }}</span>
                                             @else
-                                                {{ $jp }}
+                                                {{ $label_jp }}
                                             @endif
                                         </th>
                                     @endforeach
                                 </tr>
                             </thead>
+                            
                             <tbody>
                                 @php $nomor_global = 1; @endphp
                                 
@@ -99,6 +104,31 @@
                                     @endforeach
                                 @endforeach
                             </tbody>
+
+                            {{-- 👇 BLOK BARU: FOOTER TOMBOL DOWNLOAD PDF PER KOLOM 👇 --}}
+                            <tfoot class="bg-light">
+                                <tr>
+                                    <td colspan="2" class="text-end align-middle font-weight-bold text-sm py-3 pe-4 text-dark">
+                                        <i class="fas fa-print me-1 text-secondary"></i> Cetak Laporan per Penilaian:
+                                    </td>
+                                    
+                                    @foreach($jenis_penilaian_unik as $jp)
+                                        <td class="text-center align-middle py-3">
+                                            {{-- PERBAIKAN: Parameter disesuaikan persis dengan yang ada di web.php --}}
+                                            <a href="{{ route('sis.psts.cetak', [
+                                                'tahun_ajaran' => str_replace('/', '-', $ta), 
+                                                'semester' => $semester, 
+                                                'id_kelas' => $kelas->id_kelas, 
+                                                'jenis' => $jp
+                                            ]) }}" target="_blank" class="btn btn-outline-danger btn-xs mb-0 px-2 py-1 shadow-sm" title="Cetak PDF">
+                                                <i class="fas fa-file-pdf me-1"></i> PDF
+                                            </a>
+                                        </td>
+                                    @endforeach
+                                </tr>
+                            </tfoot>
+                            {{-- 👆 END BLOK BARU 👆 --}}
+                            
                         </table>
                     </div>
                 @endif

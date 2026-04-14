@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\Siswa;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 
 class SisPstsController extends Controller
 {
@@ -109,7 +112,6 @@ class SisPstsController extends Controller
         ];
 
         foreach ($raw_nilai as $n) {
-            // ✅ Menerjemahkan integer menjadi string label, jika tidak ada di array jadikan 'Lainnya'
             $id_kategori = $n->kategori;
             $kelompok = $kategoriLabel[$id_kategori] ?? 'Lainnya'; 
             
@@ -127,14 +129,11 @@ class SisPstsController extends Controller
             return strcmp($a, $b);
         });
 
-        // Urutkan kelompok mapel (Sesuai urutan id 1, 2, 3, 4 jika diperlukan, namun ksort menggunakan abjad key)
-        // Karena kita ingin urutannya Umum -> Kejuruan -> Pilihan -> Mulok, 
-        // kita bisa menggunakan uksort untuk mengurutkan berdasarkan array kunci asli.
+        // Urutkan kelompok mapel
         uksort($data_psts, function($a, $b) use ($kategoriLabel) {
             $posA = array_search($a, $kategoriLabel);
             $posB = array_search($b, $kategoriLabel);
             
-            // Jika tidak ditemukan di array (misal 'Lainnya'), taruh paling bawah
             $posA = $posA === false ? 99 : $posA;
             $posB = $posB === false ? 99 : $posB;
             
@@ -147,5 +146,104 @@ class SisPstsController extends Controller
         }
 
         return view('sismenu.psts.detail', compact('data_psts', 'jenis_penilaian_unik', 'ta', 'semester', 'kelas'));
+    }
+
+    // =========================================================================
+    // METHOD BARU: CETAK PDF PSTS
+    // =========================================================================
+    public function cetak($tahun_ajaran, $semester, $id_kelas, $jenis)
+    {
+        $user = Auth::user();
+        $id_siswa = $user->id_siswa;
+        
+        $ta = str_replace('-', '/', $tahun_ajaran);
+
+        // 1. DATA SISWA & KELAS
+        $siswa = Siswa::with('kelas')->where('id_siswa', $id_siswa)->firstOrFail();
+        $kelas = DB::table('kelas')->where('id_kelas', $id_kelas)->first();
+
+        // Penentuan Fase (Tingkat 10 = E, Tingkat 11/12 = F)
+        $fase = (isset($kelas->tingkat) && $kelas->tingkat == 10) ? 'E' : 'F';
+
+        // 2. DATA INFO SEKOLAH
+        $infoSekolah = DB::table('info_sekolah')->first();
+
+        // 3. TARIK DATA NILAI KHUSUS JENIS YANG DIPILIH (BESERTA CAPAIAN)
+        $kategoriLabel = [
+            1 => 'MATA PELAJARAN UMUM',
+            2 => 'MATA PELAJARAN KEJURUAN',
+            3 => 'MATA PELAJARAN PILIHAN',
+            4 => 'MUATAN LOKAL',
+        ];
+
+        $data_psts = [];
+
+        if ($jenis === 'Project') {
+            $raw_data = DB::table('project')
+                ->join('mata_pelajaran', 'project.id_mapel', '=', 'mata_pelajaran.id_mapel')
+                ->where('project.id_siswa', $id_siswa)
+                ->where('project.tahun_ajaran', $ta)
+                ->where('project.semester', $semester)
+                ->where('project.id_kelas', $id_kelas)
+                ->select(
+                    'mata_pelajaran.nama_mapel', 
+                    'mata_pelajaran.kategori', 
+                    'project.nilai',
+                    'project.tujuan_pembelajaran as capaian' // Langsung dari tabel project
+                )
+                ->get();
+        } else {
+            // Jika Sumatif (Angka 1, 2, dst)
+            $raw_data = DB::table('sumatif')
+                ->join('mata_pelajaran', 'sumatif.id_mapel', '=', 'mata_pelajaran.id_mapel')
+                ->where('sumatif.id_siswa', $id_siswa)
+                ->where('sumatif.tahun_ajaran', $ta)
+                ->where('sumatif.semester', $semester)
+                ->where('sumatif.id_kelas', $id_kelas)
+                ->where('sumatif.sumatif', $jenis)
+                ->select(
+                    'mata_pelajaran.nama_mapel', 
+                    'mata_pelajaran.kategori', 
+                    'sumatif.nilai',
+                    'sumatif.tujuan_pembelajaran as capaian' // Langsung dari tabel sumatif
+                )
+                ->get();
+        }
+
+        // Format ulang ke array untuk di-loop di view PDF
+        foreach ($raw_data as $row) {
+            $kelompok = $kategoriLabel[$row->kategori] ?? 'LAINNYA';
+            
+            $data_psts[$kelompok][$row->nama_mapel] = [
+                'nilai' => $row->nilai,
+                'capaian' => $row->capaian ?? '-'
+            ];
+        }
+
+        // Urutkan kelompok mapel
+        uksort($data_psts, function($a, $b) use ($kategoriLabel) {
+            $posA = array_search($a, $kategoriLabel);
+            $posB = array_search($b, $kategoriLabel);
+            $posA = $posA === false ? 99 : $posA;
+            $posB = $posB === false ? 99 : $posB;
+            return $posA <=> $posB;
+        });
+
+        // Urutkan mapel secara alfabetis
+        foreach ($data_psts as $kel => &$mapels) {
+            ksort($mapels);
+        }
+
+        $semesterInt = $semester;
+
+        // 4. LOAD PDF (Variabel guru wali tidak dikirim lagi karena dihapus)
+        $pdf = Pdf::loadView('sismenu.psts.data', compact(
+            'siswa', 'kelas', 'infoSekolah', 'tahun_ajaran', 'semester', 'semesterInt',
+            'fase', 'jenis', 'data_psts'
+        ))->setPaper('a4', 'portrait');
+
+        $nama_file = "PSTS_" . str_replace('/', '-', $tahun_ajaran) . "_Smt{$semester}_" . strtoupper($siswa->nama_siswa) . "_" . ($jenis == 'Project' ? 'Project' : "Sumatif_{$jenis}") . ".pdf";
+
+        return $pdf->stream($nama_file);
     }
 }
