@@ -24,7 +24,8 @@ return [
                 'Penambahan Validasi pada Form Biodata untuk memastikan data yang diinput sesuai dengan periode yang sudah diatur',
                 'Penambahan Fitur Reset Jadwal Biodata untuk mengembalikan status portal biodata menjadi belum diatur',
                 'Penambahan Menu Laporan PSTS, untuk melihat dan mencetak laporan PSTS per periode (tahun ajaran + semester) dan kelas',
-            ],
+                'Rollback halaman login sistem agar lebuh aman menggunakan Username dan Password',
+                ],
         ],
         [
             'version' => '1.0.19',
