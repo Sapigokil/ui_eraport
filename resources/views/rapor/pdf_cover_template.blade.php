@@ -237,7 +237,8 @@
             Pas Foto
         </div>
         <div class="box-ttd">
-            {{ $infoSekolah->kota_kab ?? 'Salatiga' }}, ..................................<br>
+            {{-- 👇 PERBAIKAN: Format Title Case untuk Kota/Kab 👇 --}}
+            {{ \Illuminate\Support\Str::title($infoSekolah->kota_kab ?? 'Salatiga') }}, ..................................<br>
             Kepala Sekolah<br><br><br><br><br>
             <span class="font-bold" style="text-decoration: underline;">{{ $infoSekolah->nama_kepsek ?? '__________________________' }}</span><br>
             NIP. {{ $infoSekolah->nip_kepsek ?? '-' }}
@@ -339,7 +340,8 @@
             <td></td> <td></td>
             <td></td>
             <td>
-                {{ $infoSekolah->kota_kab ?? 'Salatiga' }}, ..............................<br>
+                {{-- 👇 PERBAIKAN: Format Title Case untuk Kota/Kab 👇 --}}
+                {{ \Illuminate\Support\Str::title($infoSekolah->kota_kab ?? 'Salatiga') }}, ..............................<br>
                 Kepala Sekolah,<br>
                 <div style="height: 25px;"></div> ..................................................<br>
                 NIP.<br><br>
@@ -381,7 +383,8 @@
                 <td class="sel-dalam sel-atas" style="width: 30%;">Nama Siswa</td>
                 <td class="sel-dalam sel-atas" style="width: 35%;"><span class="garis-isi-statis"></span></td>
                 <td rowspan="7" class="sel-ttd" style="width: 30%; vertical-align: middle;">
-                    {{ $infoSekolah->kota_kab ?? 'Salatiga' }} ,...................<br>
+                    {{-- 👇 PERBAIKAN: Format Title Case untuk Kota/Kab 👇 --}}
+                    {{ \Illuminate\Support\Str::title($infoSekolah->kota_kab ?? 'Salatiga') }} ,...................<br>
                     Kepala Sekolah,<br><br><br>
                     <div style="height: 35px;"></div> <div style="border-bottom: 1px dotted #000; width: 90%; margin-bottom: 3px;"></div>
                     NIP.

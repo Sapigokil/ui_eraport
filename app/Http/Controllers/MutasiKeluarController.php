@@ -13,32 +13,75 @@ use Illuminate\Support\Facades\Auth;
 class MutasiKeluarController extends Controller
 {
     /**
-     * Halaman Utama Mutasi Keluar
+     * Halaman Utama Mutasi Keluar (Menampilkan Riwayat dengan Pagination & Filter)
      */
     public function index(Request $request)
     {
         $kelas = Kelas::orderBy('nama_kelas')->get();
-        $siswaAktif = collect();
         
-        // 1. Load Siswa Aktif berdasarkan Filter Kelas
-        if ($request->has('id_kelas') && $request->id_kelas != '') {
-            $siswaAktif = Siswa::where('status', 'aktif')
-                        ->where('id_kelas', $request->id_kelas)
-                        ->orderBy('nama_siswa')
-                        ->get();
+        // 👇 PERBAIKAN: Tambahkan relasi 'kelasTerakhir' di dalam with() 👇
+        $query = RiwayatMutasiKeluar::with(['siswa', 'kelasTerakhir']); 
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('tgl_mutasi', [$request->start_date, $request->end_date]);
+        } elseif ($request->filled('start_date')) {
+            $query->whereDate('tgl_mutasi', '>=', $request->start_date);
+        } elseif ($request->filled('end_date')) {
+            $query->whereDate('tgl_mutasi', '<=', $request->end_date);
         }
 
-        // 2. Load Riwayat Mutasi (History)
-        $riwayat = RiwayatMutasiKeluar::with(['siswa', 'kelas'])
-                    ->orderBy('tgl_mutasi', 'desc')
-                    ->limit(50) // Batasi agar tidak berat
-                    ->get();
+        if ($request->filled('id_kelas')) {
+            $query->where('id_kelas_terakhir', $request->id_kelas); 
+        }
 
-        return view('mutasi.keluar_index', compact('kelas', 'siswaAktif', 'riwayat'));
+        $query->orderBy('tgl_mutasi', 'desc');
+
+        $perPage = $request->input('per_page', 10);
+        if ($perPage === 'all') {
+            $riwayat = $query->get(); 
+        } else {
+            $riwayat = $query->paginate((int)$perPage);
+        }
+
+        return view('mutasi.keluar_index', compact('kelas', 'riwayat'));
     }
 
     /**
-     * Proses Simpan Mutasi Keluar
+     * Halaman Form Create Mutasi
+     */
+    public function create()
+    {
+        $kelas = Kelas::orderBy('nama_kelas', 'ASC')->get();
+        return view('mutasi.keluar_form', compact('kelas'));
+    }
+
+    /**
+     * Menangani Permintaan AJAX untuk Dropdown Siswa
+     */
+    public function getSiswaByKelas($id_kelas)
+    {
+        $siswa = Siswa::where('id_kelas', $id_kelas)
+                      ->where('status', 'aktif')
+                      ->select('id_siswa', 'nama_siswa', 'nisn', 'nipd')
+                      ->orderBy('nama_siswa', 'ASC')
+                      ->get();
+
+        return response()->json(['data' => $siswa]);
+    }
+
+    /**
+     * Halaman Edit Mutasi
+     */
+    public function edit($id)
+    {
+        $mutasi = RiwayatMutasiKeluar::with('siswa')->findOrFail($id);
+        $kelas = Kelas::orderBy('nama_kelas', 'ASC')->get();
+
+        return view('mutasi.keluar_form', compact('mutasi', 'kelas'));
+    }
+
+    /**
+     * Proses Simpan Mutasi Keluar Baru
      */
     public function store(Request $request)
     {
@@ -54,10 +97,9 @@ class MutasiKeluarController extends Controller
         try {
             $siswa = Siswa::findOrFail($request->id_siswa);
             
-            // 1. Simpan ke Riwayat
             RiwayatMutasiKeluar::create([
                 'id_siswa'          => $siswa->id_siswa,
-                'id_kelas_terakhir' => $siswa->id_kelas, // Simpan kelas terakhir sebelum keluar
+                'id_kelas_terakhir' => $siswa->id_kelas, 
                 'jenis_mutasi'      => $request->jenis_mutasi,
                 'tgl_mutasi'        => $request->tgl_mutasi,
                 'alasan'            => $request->alasan,
@@ -65,28 +107,56 @@ class MutasiKeluarController extends Controller
                 'user_input'        => Auth::user()->name ?? 'System',
             ]);
 
-            // 2. Update Status Siswa di Tabel Utama
             $siswa->update([
-                'status' => 'keluar',
-                'id_kelas' => null // Lepas dari relasi kelas langsung di tabel siswa (jika kolom ada)
+                'status'   => 'keluar',
+                'id_kelas' => null 
             ]);
 
-            // 3. Lepas dari Detail Siswa (Jika pakai tabel detail_siswa untuk plotting kelas)
             DetailSiswa::where('id_siswa', $siswa->id_siswa)->update([
                 'id_kelas' => null
             ]);
 
             DB::commit();
-            return back()->with('success', 'Siswa berhasil diproses mutasi keluar.');
+            return redirect()->route('mutasi.keluar.index')->with('success', 'Siswa berhasil diproses mutasi keluar.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 
     /**
-     * Batalkan Mutasi (Kembalikan ke Aktif) - Opsional
+     * Proses Simpan Perubahan Edit Data Mutasi
+     */
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'jenis_mutasi'   => 'required|string',
+            'tgl_mutasi'     => 'required|date',
+            'alasan'         => 'required|string',
+            'sekolah_tujuan' => 'nullable|string',
+        ]);
+
+        try {
+            $mutasi = RiwayatMutasiKeluar::findOrFail($id);
+            
+            $mutasi->update([
+                'jenis_mutasi'   => $request->jenis_mutasi,
+                'tgl_mutasi'     => $request->tgl_mutasi,
+                'alasan'         => $request->alasan,
+                'sekolah_tujuan' => $request->sekolah_tujuan,
+                'user_input'     => Auth::user()->name ?? 'System',
+            ]);
+
+            return redirect()->route('mutasi.keluar.index')->with('success', 'Catatan mutasi berhasil diperbarui.');
+
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Batalkan Mutasi (Kembalikan ke Aktif)
      */
     public function destroy($id)
     {
@@ -95,19 +165,42 @@ class MutasiKeluarController extends Controller
             $riwayat = RiwayatMutasiKeluar::findOrFail($id);
             $siswa = Siswa::findOrFail($riwayat->id_siswa);
 
-            // Kembalikan status siswa
             $siswa->update(['status' => 'aktif']);
             
-            // Note: Kelas tidak dikembalikan otomatis, harus di-plotting ulang via menu Pindah Kelas/Anggota Kelas
-            // Hapus data riwayat
             $riwayat->delete();
 
             DB::commit();
-            return back()->with('success', 'Mutasi dibatalkan. Siswa kembali aktif (Tanpa Kelas). Silakan plotting ulang kelasnya.');
+            return back()->with('success', 'Mutasi dibatalkan. Siswa kembali aktif (namun belum memiliki kelas). Silakan atur kelasnya di menu Anggota Kelas.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal membatalkan: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membatalkan mutasi: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Cetak Surat Mutasi Keluar (PDF)
+     */
+    public function cetakPdf(Request $request, $id)
+    {
+        $request->validate([
+            'tanggal_ttd' => 'required|date'
+        ]);
+
+        // Ambil data mutasi beserta relasinya
+        $mutasi = RiwayatMutasiKeluar::with(['siswa', 'kelasTerakhir'])->findOrFail($id);
+        
+        // Ambil profil/info sekolah (Sesuaikan dengan nama Model pengaturan sekolah Anda)
+        $infoSekolah = \App\Models\InfoSekolah::first(); 
+        
+        // Tanggal TTD dari inputan Modal
+        $tanggal_ttd = $request->tanggal_ttd;
+
+        // Generate PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('mutasi.pdf_mutasi_keluar', compact('mutasi', 'infoSekolah', 'tanggal_ttd'))
+                ->setPaper('a4', 'portrait');
+
+        // Buka di tab baru (stream)
+        return $pdf->stream('Surat_Mutasi_' . ($mutasi->siswa->nama_siswa ?? 'Siswa') . '.pdf');
     }
 }

@@ -36,8 +36,9 @@
                                 $kelas = $siswa->kelas ?? null;
                                 $ekskul = $siswa->ekskul ?? null;
 
+                                // 👇 PERBAIKAN: Menambahkan locale('id') agar berbahasa Indonesia 👇
                                 $formatDate = function($date) {
-                                    return $date ? \Carbon\Carbon::parse($date)->isoFormat('D MMMM YYYY') : '-';
+                                    return $date ? \Carbon\Carbon::parse($date)->locale('id')->isoFormat('D MMMM YYYY') : '-';
                                 };
                                 $formatTingkat = function($tingkat) {
                                     return match($tingkat) {

@@ -273,7 +273,7 @@
         <tr>
             <td class="col-title-left">Nama Sekolah</td>
             <td class="col-dots">:</td>
-            <td class="col-value-left" style="font-weight: normal;">{{ $infoSekolah->nama_sekolah ?? '-' }}</td>
+            <td class="col-value-left" style="font-weight: normal;">{{ $info_sekolah->nama_sekolah ?? '-' }}</td>
             
             <td class="col-spacer"></td>
             
@@ -290,7 +290,7 @@
         <tr>
             <td class="col-title-left">Alamat</td>
             <td class="col-dots">:</td>
-            <td class="col-value-left font-alamat">{{ $infoSekolah->jalan ?? '-' }}</td>
+            <td class="col-value-left font-alamat">{{ $info_sekolah->jalan ?? '-' }}</td>
             
             <td class="col-spacer"></td>
             
@@ -448,17 +448,9 @@
             <td style="width: 30%;">
                 </td>
 
-            {{-- <td style="width: 35%;">
-                Salatiga, {{ \Carbon\Carbon::now()->isoFormat('D MMMM Y') }}<br>
-                Wali Kelas,
-                <div class="space-ttd"></div>
-                <span class="font-bold" style="text-decoration: underline;">
-                    {{ $nama_wali ?? 'NAMA WALI KELAS' }}
-                </span><br>
-                NIP. {{ $nip_wali ?? '-' }}
-            </td> --}}
             <td style="width: 35%;">
-                Salatiga, 19 Desember 2025<br>
+                {{-- 👇 PERUBAHAN NAMA KOTA DINAMIS & TANGGAL DARI INPUTAN 👇 --}}
+                {{ \Illuminate\Support\Str::title($info_sekolah->kota_kab ?? 'Salatiga') }}, {{ \Carbon\Carbon::parse($tanggal_cetak_override ?? $tanggal_cetak ?? now())->locale('id')->isoFormat('D MMMM YYYY') }}<br>
                 Wali Kelas,
                 <div class="space-ttd"></div>
                 <span class="font-bold" style="text-decoration: underline;">

@@ -128,6 +128,28 @@
             </div>
         </div>
 
+        {{-- 👇 PANEL SET INPUT TANGGAL CETAK GLOBAL 👇 --}}
+        <div class="row mb-4">
+            <div class="col-md-5">
+                <div class="card shadow-xs border border-warning">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="icon icon-shape bg-light shadow-none text-center border-radius-md me-3">
+                                <i class="fas fa-calendar-alt text-warning opacity-10"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <label class="form-label mb-0 text-xs font-weight-bold text-uppercase">Set Tanggal Cetak Rapor</label>
+                                <input type="date" id="tgl_cetak_global" class="form-control form-control-sm border-warning" value="{{ date('Y-m-d') }}">
+                            </div>
+                        </div>
+                        <p class="text-xxs text-secondary mt-2 mb-0 italic">
+                            <i class="fas fa-info-circle me-1"></i> Tanggal ini akan muncul sebagai titimangsa (tanda tangan) di PDF rapor siswa.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- KONTEN TABEL SISWA --}}
         <div class="row">
             <div class="col-12">
@@ -175,7 +197,6 @@
                             <table class="table align-items-center mb-0 table-hover">
                                 <thead class="bg-light">
                                     <tr>
-                                        {{-- TH MASTER CHECKBOX (DITAMBAHKAN ONCLICK) --}}
                                         <th class="text-center" style="width: 3%">
                                             <div class="form-check d-flex justify-content-center mb-0">
                                                 <input class="form-check-input border-secondary" type="checkbox" id="checkAll" onclick="toggleAll(this)">
@@ -191,7 +212,6 @@
                                 <tbody>
                                     @forelse($finalSiswaList as $idx => $s)
                                     <tr>
-                                        {{-- TD CHECKBOX SATUAN (DITAMBAHKAN ONCLICK) --}}
                                         <td class="text-center">
                                             <div class="form-check d-flex justify-content-center mb-0">
                                                 <input class="form-check-input border-secondary check-siswa" type="checkbox" id="check-siswa-{{ $s->id_siswa }}" value="{{ $s->id_siswa }}" onclick="toggleSingle()">
@@ -239,10 +259,11 @@
                                             <div class="d-flex justify-content-center gap-2">
                                                 
                                                 @if($s->is_ready_print)
-                                                    <a href="{{ route('rapornilai.cetak_proses', $s->id_siswa) }}?semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}" 
-                                                       target="_blank" class="btn btn-xs bg-gradient-primary mb-0 px-3" data-bs-toggle="tooltip" title="Cetak PDF">
+                                                    
+                                                    {{-- 👇 PERBAIKAN: Tombol Cetak langsung memanggil cetakSatuan() 👇 --}}
+                                                    <button type="button" onclick="cetakSatuan('{{ $s->id_siswa }}')" class="btn btn-xs bg-gradient-primary mb-0 px-3" data-bs-toggle="tooltip" title="Cetak PDF">
                                                         <i class="fas fa-print me-1"></i> Cetak
-                                                    </a>
+                                                    </button>
                                                     
                                                     <button onclick="unlockRapor('{{ $s->id_siswa }}', '{{ addslashes($s->nama_siswa) }}')" 
                                                             class="btn btn-xs btn-outline-danger mb-0 px-3" data-bs-toggle="tooltip" title="Buka Kunci untuk Edit/Update">
@@ -309,10 +330,20 @@
     });
 
     // ==========================================
-    // LOGIKA MASTER CHECKBOX (INLINE ONCLICK PANTI BADAI)
+    // LOGIKA TANGGAL CETAK
     // ==========================================
-    
-    // Fungsi saat master checkbox diklik
+    function getTglCetak() {
+        const tgl = document.getElementById('tgl_cetak_global').value;
+        if(!tgl) {
+            Swal.fire('Perhatian!', 'Silakan pilih Tanggal Cetak Rapor terlebih dahulu pada kotak kuning.', 'warning');
+            return null;
+        }
+        return tgl;
+    }
+
+    // ==========================================
+    // LOGIKA MASTER CHECKBOX
+    // ==========================================
     function toggleAll(source) {
         let checkboxes = document.querySelectorAll('.check-siswa');
         checkboxes.forEach(function(cb) {
@@ -320,18 +351,15 @@
         });
     }
 
-    // Fungsi saat checkbox satuan diklik
     function toggleSingle() {
         let total = document.querySelectorAll('.check-siswa').length;
         let checked = document.querySelectorAll('.check-siswa:checked').length;
         let checkAllBox = document.getElementById('checkAll');
-        
         if(checkAllBox) {
             checkAllBox.checked = (total === checked && total > 0);
         }
     }
 
-    // Helper: Ambil semua ID yang dicentang
     function getCheckedIds() {
         let ids = [];
         document.querySelectorAll('.check-siswa:checked').forEach(function(checkbox) {
@@ -345,14 +373,8 @@
     // ==========================================
     function bulkAction(actionType, actionName) {
         var selectedIds = getCheckedIds();
-        
         if (selectedIds.length === 0) {
-            Swal.fire({
-                title: 'Perhatian!',
-                text: 'Silakan centang minimal 1 siswa terlebih dahulu untuk melakukan aksi massal.',
-                icon: 'warning',
-                confirmButtonColor: '#344767'
-            });
+            Swal.fire({ title: 'Perhatian!', text: 'Silakan centang minimal 1 siswa terlebih dahulu untuk melakukan aksi massal.', icon: 'warning', confirmButtonColor: '#344767' });
             return;
         }
 
@@ -371,27 +393,14 @@
         Swal.fire({
             title: actionName + ' Massal',
             text: `Anda yakin akan mengeksekusi aksi ini untuk ${selectedIds.length} siswa terpilih? Sistem hanya akan memproses siswa yang statusnya sesuai.`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Lanjutkan!',
-            confirmButtonColor: iconColor
+            icon: 'question', showCancelButton: true, confirmButtonText: 'Ya, Lanjutkan!', confirmButtonColor: iconColor
         }).then((res) => {
             if (res.isConfirmed) {
                 Swal.fire({title: 'Memproses...', text: 'Jangan tutup halaman ini.', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-                
                 fetch(targetUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': "{{ csrf_token() }}",
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        id_siswa_array: selectedIds,
-                        id_kelas: "{{ $id_kelas }}", 
-                        semester: "{{ $selectedSemester }}",
-                        tahun_ajaran: "{{ $selectedTA }}"
-                    })
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept': 'application/json' },
+                    body: JSON.stringify({ id_siswa_array: selectedIds, id_kelas: "{{ $id_kelas }}", semester: "{{ $selectedSemester }}", tahun_ajaran: "{{ $selectedTA }}" })
                 })
                 .then(response => response.json().then(data => ({ status: response.status, body: data })))
                 .then(res => {
@@ -401,9 +410,7 @@
                         throw new Error(res.body.message || 'Terjadi kesalahan sistem internal.');
                     }
                 })
-                .catch(error => {
-                    Swal.fire('Gagal!', error.message, 'error');
-                });
+                .catch(error => { Swal.fire('Gagal!', error.message, 'error'); });
             }
         });
     }
@@ -419,8 +426,11 @@
             return;
         }
 
+        const tgl = getTglCetak();
+        if(!tgl) return;
+
         var idsString = selectedIds.join(',');
-        var downloadUrl = "{{ route('rapornilai.download_massal_merge') }}?id_kelas={{ $id_kelas }}&semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}&ids=" + idsString;
+        var downloadUrl = "{{ route('rapornilai.download_massal_merge') }}?id_kelas={{ $id_kelas }}&semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}&tanggal_cetak=" + tgl + "&ids=" + idsString;
         
         window.open(downloadUrl, '_blank');
         
@@ -436,20 +446,10 @@
     // ==========================================
     function actionAjax(url, idSiswa) {
         Swal.fire({title: 'Memproses...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-        
         fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': "{{ csrf_token() }}",
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                id_siswa: idSiswa,
-                id_kelas: "{{ $id_kelas }}", 
-                semester: "{{ $selectedSemester }}",
-                tahun_ajaran: "{{ $selectedTA }}"
-            })
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': "{{ csrf_token() }}", 'Accept': 'application/json' },
+            body: JSON.stringify({ id_siswa: idSiswa, id_kelas: "{{ $id_kelas }}", semester: "{{ $selectedSemester }}", tahun_ajaran: "{{ $selectedTA }}" })
         })
         .then(response => response.json().then(data => ({ status: response.status, body: data })))
         .then(res => {
@@ -459,45 +459,39 @@
                 throw new Error(res.body.message || 'Terjadi kesalahan sistem internal.');
             }
         })
-        .catch(error => {
-            Swal.fire('Gagal!', error.message, 'error');
-        });
+        .catch(error => { Swal.fire('Gagal!', error.message, 'error'); });
     }
 
-    // 1. GENERATE ADMIN (SATUAN)
+    // CETAK SATUAN
+    function cetakSatuan(idSiswa) {
+        const tgl = getTglCetak();
+        if(!tgl) return;
+
+        const url = "{{ route('rapornilai.cetak_proses', ':id') }}"
+            .replace(':id', idSiswa) + 
+            `?semester={{ $selectedSemester }}&tahun_ajaran={{ $selectedTA }}&tanggal_cetak=${tgl}`;
+        
+        window.open(url, '_blank');
+    }
+
     function generateRaporAdmin(idSiswa, namaSiswa) {
-        Swal.fire({
-            title: 'Generate Rapor?',
-            text: `Sistem akan menarik data nilai terbaru untuk ${namaSiswa}.`,
-            icon: 'info', showCancelButton: true, confirmButtonText: 'Ya, Generate!', confirmButtonColor: '#344767'
-        }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.generate_rapor') }}", idSiswa); });
+        Swal.fire({ title: 'Generate Rapor?', text: `Sistem akan menarik data nilai terbaru untuk ${namaSiswa}.`, icon: 'info', showCancelButton: true, confirmButtonText: 'Ya, Generate!', confirmButtonColor: '#344767' })
+        .then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.generate_rapor') }}", idSiswa); });
     }
 
-    // 2. RE-GENERATE (SATUAN)
     function regenerateRapor(idSiswa, namaSiswa) {
-        Swal.fire({
-            title: 'Update Nilai?',
-            text: `Tarik ulang nilai untuk ${namaSiswa}? Data rapor draft saat ini akan ditimpa.`,
-            icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Update!', confirmButtonColor: '#fb8c00'
-        }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.generate_rapor') }}", idSiswa); });
+        Swal.fire({ title: 'Update Nilai?', text: `Tarik ulang nilai untuk ${namaSiswa}? Data rapor draft saat ini akan ditimpa.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Update!', confirmButtonColor: '#fb8c00' })
+        .then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.generate_rapor') }}", idSiswa); });
     }
 
-    // 3. UNLOCK RAPOR (SATUAN)
     function unlockRapor(idSiswa, namaSiswa) {
-        Swal.fire({
-            title: 'Buka Kunci?',
-            text: `Status rapor ${namaSiswa} akan dikembalikan ke DRAFT agar bisa diedit kembali.`,
-            icon: 'question', showCancelButton: true, confirmButtonText: 'Ya, Buka Kunci!', confirmButtonColor: '#ea0606'
-        }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.unlock_rapor') }}", idSiswa); });
+        Swal.fire({ title: 'Buka Kunci?', text: `Status rapor ${namaSiswa} akan dikembalikan ke DRAFT agar bisa diedit kembali.`, icon: 'question', showCancelButton: true, confirmButtonText: 'Ya, Buka Kunci!', confirmButtonColor: '#ea0606' })
+        .then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.unlock_rapor') }}", idSiswa); });
     }
 
-    // 4. FINALISASI RAPOR (SATUAN)
     function finalisasiRapor(idSiswa, namaSiswa) {
-        Swal.fire({
-            title: 'Finalisasi Rapor?',
-            text: `Pastikan nilai sudah benar. Status ${namaSiswa} akan diubah menjadi SIAP CETAK.`,
-            icon: 'success', showCancelButton: true, confirmButtonText: 'Ya, Finalisasi!', confirmButtonColor: '#17ad37'
-        }).then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.finalisasi_rapor') }}", idSiswa); });
+        Swal.fire({ title: 'Finalisasi Rapor?', text: `Pastikan nilai sudah benar. Status ${namaSiswa} akan diubah menjadi SIAP CETAK.`, icon: 'success', showCancelButton: true, confirmButtonText: 'Ya, Finalisasi!', confirmButtonColor: '#17ad37' })
+        .then((res) => { if(res.isConfirmed) actionAjax("{{ route('rapornilai.finalisasi_rapor') }}", idSiswa); });
     }
 </script>
 @endsection

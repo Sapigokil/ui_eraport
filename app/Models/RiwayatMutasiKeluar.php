@@ -20,4 +20,11 @@ class RiwayatMutasiKeluar extends Model
     {
         return $this->belongsTo(Kelas::class, 'id_kelas_terakhir', 'id_kelas');
     }
+
+    // Tambahkan ini di dalam class RiwayatMutasiKeluar
+    public function kelasTerakhir()
+    {
+        // Parameter: (Nama Model, 'foreign_key', 'owner_key')
+        return $this->belongsTo(Kelas::class, 'id_kelas_terakhir', 'id_kelas');
+    }
 }

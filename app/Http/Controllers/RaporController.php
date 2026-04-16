@@ -242,19 +242,13 @@ class RaporController extends Controller
         $catatan = DB::table('catatan')->where([
             'id_siswa' => $id_siswa, 'semester' => $semesterInt, 'tahun_ajaran' => $tahun_ajaran
         ])->first();
-
-        // ---------------------------------------------------------------------
-        // REVISI VALIDASI SILANG EKSKUL (DOUBLE CHECK PENDAFTARAN & NILAI)
-        // ---------------------------------------------------------------------
         
-        // a. Ambil list ekskul di mana siswa berstatus sebagai anggota aktif saat ini
         $activeEkskuls = DB::table('ekskul_siswa')
             ->join('ekskul', 'ekskul_siswa.id_ekskul', '=', 'ekskul.id_ekskul')
             ->where('ekskul_siswa.id_siswa', $id_siswa)
             ->select('ekskul.id_ekskul', 'ekskul.nama_ekskul')
             ->get();
 
-        // b. Ambil semua nilai ekskul yang pernah diinput untuk siswa ini
         $nilaiEkskuls = DB::table('nilai_ekskul')
             ->where('id_siswa', $id_siswa)
             ->where('semester', $semesterInt)
@@ -263,20 +257,14 @@ class RaporController extends Controller
             ->keyBy('id_ekskul');
 
         $ekskulSnapshot = [];
-        
-        // c. Looping HANYA berdasarkan Ekskul yang aktif diikuti siswa
         foreach($activeEkskuls as $ae) {
             $nilai = $nilaiEkskuls->get($ae->id_ekskul);
-            
             $ekskulSnapshot[] = [
                 'nama'       => $ae->nama_ekskul, 
-                'predikat'   => $nilai->predikat ?? '-',   // Skenario 1: Jika belum dinilai, beri strip (-)
-                'keterangan' => $nilai->keterangan ?? '-'  // Skenario 1: Jika belum ada keterangan, beri strip (-)
+                'predikat'   => $nilai->predikat ?? '-',  
+                'keterangan' => $nilai->keterangan ?? '-' 
             ];
         }
-        // Skenario 2 otomatis tertangani: Jika siswa dicoret dari ekskul (tidak ada di $activeEkskuls),
-        // maka data nilainya diabaikan dan tidak akan masuk ke $ekskulSnapshot, tanpa menghapus data aslinya.
-        // ---------------------------------------------------------------------
 
         DB::table('nilai_akhir_rapor')->updateOrInsert(
             [
@@ -375,7 +363,6 @@ class RaporController extends Controller
         $berhasil = 0; $dilewati = 0; $gagal = 0;
 
         foreach ($id_siswa_array as $id_siswa) {
-            // FILTER: Lewati jika data sudah final/cetak (Mencegah timpa paksa tanpa unlock)
             $cekStatus = DB::table('nilai_akhir_rapor')->where(['id_siswa' => $id_siswa, 'semester' => $semesterInt, 'tahun_ajaran' => $request->tahun_ajaran])->first();
             if ($cekStatus && in_array($cekStatus->status_data, ['final', 'cetak'])) {
                 $dilewati++;
@@ -406,7 +393,6 @@ class RaporController extends Controller
         DB::beginTransaction();
         try {
             foreach ($id_siswa_array as $id_siswa) {
-                // FILTER: Hanya memfinalisasi yang berstatus DRAFT
                 $cek = DB::table('nilai_akhir_rapor')->where(['id_siswa' => $id_siswa, 'semester' => $semesterInt, 'tahun_ajaran' => $request->tahun_ajaran])->first();
                 if (!$cek || $cek->status_data !== 'draft') {
                     $dilewati++;
@@ -436,7 +422,6 @@ class RaporController extends Controller
         DB::beginTransaction();
         try {
             foreach ($id_siswa_array as $id_siswa) {
-                // FILTER: Hanya me-unlock yang sudah final atau cetak
                 $cek = DB::table('nilai_akhir_rapor')->where(['id_siswa' => $id_siswa, 'semester' => $semesterInt, 'tahun_ajaran' => $request->tahun_ajaran])->first();
                 if (!$cek || !in_array($cek->status_data, ['final', 'cetak'])) {
                     $dilewati++;
@@ -466,9 +451,15 @@ class RaporController extends Controller
         $tahun_ajaran = $request->tahun_ajaran;
         $semesterInt = $this->getSemesterInt($semesterRaw);
         
+        // 👇 PERBAIKAN: Menangkap parameter tanggal cetak dari JS URL
+        $tanggal_cetak = $request->tanggal_cetak ?? date('Y-m-d');
+
         $data = $this->persiapkanDataRapor($id_siswa, $semesterRaw, $tahun_ajaran);
 
         if (!$data) return "<script>alert('Data Rapor belum dikunci/final. Silakan Generate terlebih dahulu.');window.close();</script>";
+
+        // 👇 Inject ke array data PDF
+        $data['tanggal_cetak_override'] = $tanggal_cetak;
 
         DB::table('nilai_akhir_rapor')->where('id_siswa', $id_siswa)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->update(['status_data' => 'cetak']);
         DB::table('nilai_akhir')->where('id_siswa', $id_siswa)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->update(['status_data' => 'cetak']);
@@ -589,6 +580,9 @@ class RaporController extends Controller
         $tahun_ajaran = $request->tahun_ajaran;
         $semesterRaw = $request->semester ?? 'Ganjil';
         $semesterInt = $this->getSemesterInt($semesterRaw);
+        
+        // 👇 PERBAIKAN: Menangkap parameter tanggal cetak
+        $tanggal_cetak = $request->tanggal_cetak ?? date('Y-m-d');
 
         // Filter Smart Massal berdasarkan Checkbox
         $querySiswa = Siswa::where('id_kelas', $id_kelas);
@@ -610,6 +604,9 @@ class RaporController extends Controller
         foreach ($siswaList as $siswa) {
             $data = $this->persiapkanDataRapor($siswa->id_siswa, $semesterRaw, $tahun_ajaran);
             if (!$data) continue; 
+            
+            // 👇 Inject ke array data PDF
+            $data['tanggal_cetak_override'] = $tanggal_cetak;
 
             DB::table('nilai_akhir_rapor')->where('id_siswa', $siswa->id_siswa)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->update(['status_data' => 'cetak']);
             DB::table('nilai_akhir')->where('id_siswa', $siswa->id_siswa)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->update(['status_data' => 'cetak']);

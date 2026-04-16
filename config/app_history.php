@@ -11,11 +11,20 @@ return [
     |
     */
 
-    'current_version' => '1.0.20',
+    'current_version' => '1.0.21',
     
-    'last_updated' => '2026-04-14',
+    'last_updated' => '2026-04-16',
 
     'changelog' => [
+        [
+            'version' => '1.0.21',
+            'date'    => '2026-04-16',
+            'notes'   => [
+                'Perbaikan Halaman Mutasi Keluar serta menambahkan fitur cetak surat mutasi keluar dalam format PDF',
+                'Perbaikan Halaman pada menu siswa penggantian text dan label',
+
+                ],
+        ],
         [
             'version' => '1.0.20',
             'date'    => '2026-04-14',

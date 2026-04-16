@@ -221,24 +221,39 @@ Route::middleware(['auth'])->group(function () {
     // Permission: mutasi.view (Admin Erapor)
     // ==========================================================================
     Route::group(['prefix' => 'mutasi', 'as' => 'mutasi.', 'middleware' => ['can:mutasi.menu']], function () {
-        Route::get('/keluar', [MutasiKeluarController::class, 'index'])->name('keluar.index');
-        Route::post('/keluar', [MutasiKeluarController::class, 'store'])->name('keluar.store');
-        Route::delete('/keluar/{id}', [MutasiKeluarController::class, 'destroy'])->name('keluar.destroy');
-        Route::get('/pindah', [MutasiPindahController::class, 'index'])->name('pindah.index');
-        Route::post('/pindah', [MutasiPindahController::class, 'store'])->name('pindah.store');
+        
+        // Rute Mutasi Keluar
+        Route::get('/keluar', [\App\Http\Controllers\MutasiKeluarController::class, 'index'])->name('keluar.index');
+        Route::get('/keluar/create', [\App\Http\Controllers\MutasiKeluarController::class, 'create'])->name('keluar.create');
+        Route::post('/keluar', [\App\Http\Controllers\MutasiKeluarController::class, 'store'])->name('keluar.store');
+        
+        // 👇 TAMBAHAN ROUTE EDIT DAN UPDATE 👇
+        Route::get('/keluar/{id}/edit', [\App\Http\Controllers\MutasiKeluarController::class, 'edit'])->name('keluar.edit');
+        Route::put('/keluar/{id}', [\App\Http\Controllers\MutasiKeluarController::class, 'update'])->name('keluar.update');
+        
+        Route::delete('/keluar/{id}', [\App\Http\Controllers\MutasiKeluarController::class, 'destroy'])->name('keluar.destroy');
+        
+        // 👇 PERBAIKAN URL AJAX (Hapus /mutasi di depannya karena sudah ada di prefix) 👇
+        Route::get('/keluar/get-siswa-by-kelas/{id_kelas}', [\App\Http\Controllers\MutasiKeluarController::class, 'getSiswaByKelas'])->name('keluar.get_siswa');
+        Route::post('/keluar/{id}/cetak', [\App\Http\Controllers\MutasiKeluarController::class, 'cetakPdf'])->name('keluar.cetak');
+
+        // Rute Mutasi Pindah
+        Route::get('/pindah', [\App\Http\Controllers\MutasiPindahController::class, 'index'])->name('pindah.index');
+        Route::post('/pindah', [\App\Http\Controllers\MutasiPindahController::class, 'store'])->name('pindah.store');
         
         // ---> ROUTE DASHBOARD PROSES AKHIR TAHUN <---
-        Route::get('/dashboard-akhir-tahun', [MutasiDashboardController::class, 'index'])->name('dashboard_akhir.index');
+        Route::get('/dashboard-akhir-tahun', [\App\Http\Controllers\MutasiDashboardController::class, 'index'])->name('dashboard_akhir.index');
 
-        Route::get('/kenaikan', [MutasiKenaikanController::class, 'index'])->name('kenaikan.index');
-        Route::post('/kenaikan', [MutasiKenaikanController::class, 'store'])->name('kenaikan.store');
+        // Route Kenaikan
+        Route::get('/kenaikan', [\App\Http\Controllers\MutasiKenaikanController::class, 'index'])->name('kenaikan.index');
+        Route::post('/kenaikan', [\App\Http\Controllers\MutasiKenaikanController::class, 'store'])->name('kenaikan.store');
 
         // Route Kelulusan
-        Route::get('/kelulusan', [MutasiKelulusanController::class, 'index'])->name('kelulusan.index');
-        Route::post('/kelulusan', [MutasiKelulusanController::class, 'store'])->name('kelulusan.store');
+        Route::get('/kelulusan', [\App\Http\Controllers\MutasiKelulusanController::class, 'index'])->name('kelulusan.index');
+        Route::post('/kelulusan', [\App\Http\Controllers\MutasiKelulusanController::class, 'store'])->name('kelulusan.store');
 
         // ---> ROUTE RIWAYAT KENAIKAN / KELULUSAN <---
-        Route::get('/riwayat', [MutasiRiwayatController::class, 'index'])->name('riwayat.index');
+        Route::get('/riwayat', [\App\Http\Controllers\MutasiRiwayatController::class, 'index'])->name('riwayat.index');
     });
 
     // ==========================================================================

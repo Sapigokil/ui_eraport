@@ -34,8 +34,9 @@
                                 // Perbaikan relasi detailGuru
                                 $detail = $guru->detailGuru ?? new \App\Models\DetailGuru();
                                 
+                                // 👇 PERBAIKAN: Menambahkan locale('id') di sini 👇
                                 $formatDate = function($date) {
-                                    return $date ? \Carbon\Carbon::parse($date)->isoFormat('D MMMM YYYY') : '-';
+                                    return $date ? \Carbon\Carbon::parse($date)->locale('id')->isoFormat('D MMMM YYYY') : '-';
                                 };
                                 $formatBool = function($value) {
                                     return $value == 1 ? '<span class="text-success font-weight-bold">Ya</span>' : '<span class="text-danger font-weight-bold">Tidak</span>';

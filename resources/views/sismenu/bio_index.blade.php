@@ -71,19 +71,6 @@
             }
         </script>
 
-        {{-- BUTTON LINK MENUJU HALAMAN EDIT --}}
-        {{-- <div class="d-flex justify-content-end mb-3">
-            @if(!$pengajuanPending)
-                <a href="{{ route('sis.biodata.edit') }}" class="btn bg-gradient-primary shadow-sm">
-                    <i class="fas fa-edit me-2"></i> Lengkapi / Ubah Biodata
-                </a>
-            @else
-                <button type="button" class="btn btn-secondary shadow-sm" disabled>
-                    <i class="fas fa-lock me-2"></i> Menunggu Persetujuan...
-                </button>
-            @endif
-        </div> --}}
-
         {{-- PANEL STATUS PERIODE BIODATA & TOMBOL AKSI --}}
         <div class="card shadow-sm border-0 mt-4 mb-4">
             <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap">
@@ -96,7 +83,7 @@
                         <div>
                             <h6 class="mb-0 text-dark font-weight-bold">Periode Pembaruan Dibuka</h6>
                             <p class="text-sm text-secondary mb-0">
-                                Berakhir pada: <strong class="text-dark">{{ \Carbon\Carbon::parse($bioSeason->tanggal_akhir)->translatedFormat('d F Y - H:i') }} WIB</strong>
+                                Berakhir pada: <strong class="text-dark">{{ \Carbon\Carbon::parse($bioSeason->tanggal_akhir)->locale('id')->isoFormat('D MMMM Y - HH:mm') }} WIB</strong>
                             </p>
                         </div>
                     @else
@@ -107,7 +94,7 @@
                             <h6 class="mb-0 text-dark font-weight-bold">Periode Pembaruan Ditutup</h6>
                             <p class="text-sm text-secondary mb-0">
                                 @if($bioSeason && $bioSeason->tanggal_mulai && $bioSeason->tanggal_akhir)
-                                    Jadwal Akses: {{ \Carbon\Carbon::parse($bioSeason->tanggal_mulai)->translatedFormat('d M Y') }} s/d {{ \Carbon\Carbon::parse($bioSeason->tanggal_akhir)->translatedFormat('d M Y') }}
+                                    Jadwal Akses: {{ \Carbon\Carbon::parse($bioSeason->tanggal_mulai)->locale('id')->isoFormat('D MMMM Y') }} s/d {{ \Carbon\Carbon::parse($bioSeason->tanggal_akhir)->locale('id')->isoFormat('D MMMM Y') }}
                                 @else
                                     Jadwal pembaruan belum ditentukan oleh Admin.
                                 @endif
@@ -181,7 +168,8 @@
                                     <tr>
                                         <td width="30%" class="font-weight-bold text-secondary text-sm">Tempat, Tanggal Lahir</td>
                                         <td width="2%">:</td>
-                                        <td class="text-sm text-dark">{{ $siswa->detail->tempat_lahir ?? '-' }}, {{ $siswa->detail->tanggal_lahir ? \Carbon\Carbon::parse($siswa->detail->tanggal_lahir)->format('d F Y') : '-' }}</td>
+                                        {{-- 👇 PERBAIKAN: Menggunakan locale('id')->isoFormat('D MMMM Y') 👇 --}}
+                                        <td class="text-sm text-dark">{{ $siswa->detail->tempat_lahir ?? '-' }}, {{ $siswa->detail->tanggal_lahir ? \Carbon\Carbon::parse($siswa->detail->tanggal_lahir)->locale('id')->isoFormat('D MMMM Y') : '-' }}</td>
                                     </tr>
                                     <tr>
                                         <td class="font-weight-bold text-secondary text-sm">Agama</td>

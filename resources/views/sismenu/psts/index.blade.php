@@ -79,8 +79,8 @@
                         <i class="fas fa-chart-pie text-white" style="font-size: 6rem;"></i>
                     </div>
                     <div class="card-body p-4 position-relative z-index-1 d-flex flex-column justify-content-center">
-                        <h4 class="text-white font-weight-bold mb-1">Laporan PSTS</h4>
-                        <p class="text-white opacity-8 mb-0 text-sm">Riwayat capaian nilai sumatif tengah semester Anda.</p>
+                        <h4 class="text-white font-weight-bold mb-1">Laporan Penilaian Sumatif dan Project</h4>
+                        <p class="text-white opacity-8 mb-0 text-sm">Riwayat capaian nilai sumatif dan project Anda.</p>
                     </div>
                 </div>
             </div>
