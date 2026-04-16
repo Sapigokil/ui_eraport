@@ -22,7 +22,7 @@ return [
             'notes'   => [
                 'Perbaikan Halaman Mutasi Keluar serta menambahkan fitur cetak surat mutasi keluar dalam format PDF',
                 'Perbaikan Halaman pada menu siswa penggantian text dan label',
-
+                'Optimasi Session pada chrome versi mobile sering muncul page expired',
                 ],
         ],
         [
