@@ -1,153 +1,119 @@
 @extends('layouts.app') 
 
-@section('page-title', 'Proses Kenaikan Kelas')
+@section('page-title', 'Eksekusi Kenaikan Kelas')
 
 @section('content')
-<style>
-    /* Custom Colors untuk Dropdown Kenaikan Kelas */
-    .select-tinggal { color: #dc3545 !important; font-weight: bold !important; } /* Merah */
-    .select-naik-sama { color: #6f42c1 !important; font-weight: bold !important; } /* Ungu */
-    .select-naik-beda { color: #fd7e14 !important; font-weight: bold !important; } /* Orange */
-</style>
-<main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
+<main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg pt-4">
     <x-app.navbar />
 
     <div class="container-fluid py-4 px-5">
-        {{-- TOMBOL KEMBALI --}}
+        
         <div class="mb-3">
-            <a href="{{ route('mutasi.dashboard_akhir.index') }}" class="btn btn-sm btn-white border-secondary shadow-sm mb-0 text-dark font-weight-bold">
+            <a href="{{ route('mutasi.kenaikan_dashboard.index') }}" class="btn btn-sm btn-white border-secondary shadow-sm mb-0 text-dark font-weight-bold">
                 <i class="fas fa-arrow-left me-2"></i> Kembali ke Dashboard
             </a>
         </div>
-        
-        {{-- HEADER BANNER --}}
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm border-0 bg-gradient-primary overflow-hidden position-relative">
-                    <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3">
-                        <i class="fas fa-layer-group text-white" style="font-size: 10rem;"></i>
+
+        {{-- BANNER HEADER DINAMIS --}}
+        <div class="card shadow-sm border-0 mb-4 overflow-hidden" style="border-radius: 1rem; background: {{ $bg_gradient }};">
+            <div class="card-body p-3 position-relative"> 
+                <div style="position: absolute; top: -30px; right: -30px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                
+                <div class="row align-items-center position-relative z-index-1">
+                    <div class="col-md-5 col-lg-6 text-white">
+                        <h5 class="text-white font-weight-bolder mb-1">
+                            <i class="fas fa-chalkboard-teacher me-2"></i> {{ $kelasAsalTerpilih->nama_kelas }}
+                        </h5>
+                        <p class="mb-0 text-sm opacity-9">
+                            TA: <b>{{ $taLama }}</b> &nbsp;|&nbsp; Wali: <b>{{ $kelasAsalTerpilih->wali_kelas ?? 'Tanpa Wali' }}</b>
+                        </p>
                     </div>
-                    <div class="card-body p-4 position-relative z-index-1">
-                        <div class="row align-items-center text-white">
-                            <div class="col-md-8">
-                                <h3 class="text-white font-weight-bold mb-1">Proses Kenaikan Kelas</h3>
-                                <p class="text-white opacity-8 mb-0">
-                                    <i class="fas fa-info-circle me-1"></i> Proses massal pemindahan siswa ke tingkat selanjutnya pada akhir tahun ajaran.
-                                </p>
-                            </div>
+                    
+                    {{-- STATISTIK DI SISI KANAN BANNER --}}
+                    <div class="col-md-7 col-lg-6 mt-3 mt-md-0 d-flex justify-content-md-end justify-content-between text-white">
+                        <div class="text-center px-3 border-end" style="border-color: rgba(255,255,255,0.2) !important;">
+                            <h4 class="text-white font-weight-bolder mb-0">{{ count($dataSiswa) }}</h4>
+                            <span style="font-size: 0.65rem;" class="text-uppercase opacity-8">Siswa</span>
+                        </div>
+                        <div class="text-center px-3 border-end" style="border-color: rgba(255,255,255,0.2) !important;">
+                            <h4 class="text-white font-weight-bolder mb-0">{{ $stat['belum'] }}</h4>
+                            <span style="font-size: 0.65rem;" class="text-uppercase opacity-8"><i class="fas fa-hourglass-half"></i> Belum</span>
+                        </div>
+                        <div class="text-center px-3 border-end" style="border-color: rgba(255,255,255,0.2) !important;">
+                            <h4 class="text-white font-weight-bolder mb-0">{{ $stat['naik'] }}</h4>
+                            <span style="font-size: 0.65rem;" class="text-uppercase opacity-8"><i class="fas fa-level-up-alt"></i> Naik</span>
+                        </div>
+                        <div class="text-center px-3">
+                            <h4 class="text-white font-weight-bolder mb-0">{{ $stat['tinggal'] }}</h4>
+                            <span style="font-size: 0.65rem;" class="text-uppercase opacity-8"><i class="fas fa-level-down-alt"></i> Gagal</span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- 1. FILTER KELAS ASAL --}}
-        {{-- <div class="card shadow-sm border mb-4">
-            <div class="card-body p-4">
-                <form action="{{ route('mutasi.kenaikan.index') }}" method="GET" class="row g-3 align-items-end">
+        {{-- TABEL DATA --}}
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom p-3">
+                <div class="row align-items-center">
                     <div class="col-md-6">
-                        <label class="form-label fw-bold text-xs text-uppercase text-secondary">Pilih Kelas Asal (Tingkat Saat Ini)</label>
-                        <select name="id_kelas_asal" class="form-select border-secondary ps-2" onchange="this.form.submit()">
-                            <option value="">- Pilih Kelas -</option>
-                            @foreach($kelasAsalList as $k)
-                                <option value="{{ $k->id_kelas }}" {{ $id_kelas_asal == $k->id_kelas ? 'selected' : '' }}>
-                                    {{ $k->nama_kelas }} (Tingkat {{ $k->tingkat }})
-                                </option>
-                            @endforeach
-                        </select>
+                        <h6 class="mb-0 text-dark font-weight-bold">Daftar Keputusan Kenaikan Kelas</h6>
                     </div>
-                    <div class="col-md-6">
-                        <p class="text-sm text-muted mb-0 mt-2">
-                            *Hanya menampilkan kelas aktif di bawah tingkat kelulusan. Siswa kelas akhir diproses pada menu <b>Kelulusan</b>.
-                        </p>
-                    </div>
-                </form>
-            </div>
-        </div> --}}
-
-        {{-- 2. AREA PROSES KENAIKAN --}}
-        @if($id_kelas_asal && $dataSiswa->isNotEmpty())
-        
-        <form id="formKenaikanKelas" action="{{ route('mutasi.kenaikan.store') }}" method="POST">
-            @csrf
-            {{-- DATA HIDDEN UNTUK RIWAYAT --}}
-            <input type="hidden" name="id_kelas_lama" value="{{ $id_kelas_asal }}">
-            <input type="hidden" name="tahun_ajaran_lama" value="{{ $taLama }}">
-            <input type="hidden" name="tahun_ajaran_baru" value="{{ $taBaru }}">
-
-            <div class="card shadow-sm border mb-4">
-                <div class="card-header bg-light pb-3 border-bottom d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0 text-dark font-weight-bold">Daftar Siswa Aktif: {{ $kelasAsalTerpilih->nama_kelas }}</h6>
-                        <span class="text-xs text-secondary">Total: <b>{{ $dataSiswa->count() }}</b> Siswa akan diproses.</span>
-                    </div>
-                    <div class="text-end">
-                        <span class="badge bg-secondary mb-1">TA Lama: {{ $taLama }}</span>
-                        <i class="fas fa-arrow-right text-secondary mx-2"></i>
-                        <span class="badge bg-primary mb-1">TA Baru: {{ $taBaru }}</span>
+                    <div class="col-md-6 text-md-end mt-2 mt-md-0">
+                        <div class="btn-group shadow-sm">
+                            <button type="button" id="btn-set-naik" class="btn btn-xs btn-outline-primary mb-0">
+                                <i class="fas fa-level-up-alt me-1"></i> Semua Naik Kelas
+                            </button>
+                            <button type="button" id="btn-set-tinggal" class="btn btn-xs btn-outline-danger mb-0">
+                                <i class="fas fa-level-down-alt me-1"></i> Semua Tinggal
+                            </button>
+                        </div>
                     </div>
                 </div>
-                
+            </div>
+
+            <form action="{{ route('mutasi.kenaikan.store') }}" method="POST">
+                @csrf
+                <input type="hidden" name="id_kelas_lama" value="{{ $id_kelas_asal }}">
+                <input type="hidden" name="tahun_ajaran_lama" value="{{ $taLama }}">
+                <input type="hidden" name="tahun_ajaran_baru" value="{{ $taBaru }}">
+
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table align-items-center mb-0 table-hover">
-                            <thead>
+                            <thead class="bg-light">
                                 <tr>
-                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 5%;">No</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 35%;">Nama Siswa / NISN</th>
-                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 15%;">Status Saat Ini</th>
-                                    <th class="text-uppercase text-primary text-xxs font-weight-bolder opacity-9 bg-gray-100" style="width: 45%;">Tetapkan Kelas Tujuan</th>
+                                    <th class="text-center text-xxs font-weight-bolder opacity-7" style="width: 5%">No</th>
+                                    <th class="text-xxs font-weight-bolder opacity-7 ps-3" style="width: 15%">NISN</th>
+                                    <th class="text-xxs font-weight-bolder opacity-7 ps-3">Nama Lengkap Siswa</th>
+                                    <th class="text-center text-xxs font-weight-bolder opacity-7" style="width: 25%">Keputusan Akhir</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($dataSiswa as $i => $siswa)
-                                <tr class="border-bottom">
-                                    <td class="align-middle text-center text-sm font-weight-bold">{{ $i + 1 }}</td>
-                                    <td class="align-middle px-3">
+                                @foreach($dataSiswa as $idx => $siswa)
+                                <tr>
+                                    <td class="text-center text-sm text-secondary">{{ $idx + 1 }}</td>
+                                    <td class="text-sm font-weight-bold text-dark ps-3">{{ $siswa->nisn ?? '-' }}</td>
+                                    <td class="ps-3">
                                         <h6 class="mb-0 text-sm font-weight-bold text-dark">{{ $siswa->nama_siswa }}</h6>
-                                        <p class="text-xs text-secondary mb-0">{{ $siswa->nisn }}</p>
                                     </td>
-                                    <td class="align-middle">
-                                        <span class="badge badge-sm bg-gradient-success">Aktif</span>
-                                    </td>
-                                    <td class="align-middle px-3 bg-gray-50">
-                                        @php
-                                            // Menentukan warna awal saat halaman dimuat
-                                            $initialColor = 'select-naik-sama'; // Default ungu (Naik Kelas Sesuai Jurusan)
-                                            if (!$idKelasDefaultTujuan) {
-                                                $initialColor = 'select-tinggal'; // Jika auto-mapping gagal, merah
-                                            }
-                                        @endphp
-                                        
-                                        {{-- Tambahkan onchange="updateColor(this)" pada tag select --}}
-                                        <select name="tujuan[{{ $siswa->id_siswa }}]" class="form-select form-select-sm border-secondary {{ $initialColor }}" onchange="updateSelectColor(this)">
-                                            @foreach($pilihanKelasTujuan as $tujuan)
-                                                @php
-                                                    $isSelected = false;
-                                                    $optColorClass = '';
-
-                                                    // 1. Kondisi Tinggal Kelas (Merah)
-                                                    if ($tujuan->id_kelas == $id_kelas_asal) {
-                                                        $optColorClass = 'select-tinggal';
-                                                        if (!$idKelasDefaultTujuan) $isSelected = true;
-                                                    } 
-                                                    // 2. Kondisi Naik Kelas - Jurusan Sama / Default (Ungu)
-                                                    elseif ($idKelasDefaultTujuan && $tujuan->id_kelas == $idKelasDefaultTujuan) {
-                                                        $optColorClass = 'select-naik-sama';
-                                                        $isSelected = true;
-                                                    } 
-                                                    // 3. Kondisi Naik Kelas - Beda Jurusan / Lainnya (Orange)
-                                                    else {
-                                                        $optColorClass = 'select-naik-beda';
-                                                    }
-                                                @endphp
-
-                                                {{-- Simpan class warna di data-color untuk dibaca JavaScript --}}
-                                                <option value="{{ $tujuan->id_kelas }}" data-color="{{ $optColorClass }}" class="{{ $optColorClass }}" {{ $isSelected ? 'selected' : '' }}>
-                                                    {{ $tujuan->nama_kelas }} 
-                                                    {{ $tujuan->id_kelas == $id_kelas_asal ? ' -- (TINGGAL KELAS)' : ' -- (NAIK KELAS)' }}
-                                                </option>
-                                            @endforeach
+                                    <td class="text-center p-2">
+                                        <select name="tujuan[{{ $siswa->id_siswa }}]" class="form-select form-select-sm status-dropdown fw-bold text-center mx-auto" style="width: 250px;">
+                                            <option value="" {{ $siswa->status_kenaikan == 'belum' ? 'selected' : '' }}>-- Belum Diproses --</option>
+                                            
+                                            <option value="tinggal" {{ $siswa->status_kenaikan == 'tinggal_kelas' ? 'selected' : '' }}>
+                                                ✖ TINGGAL KELAS ({{ $kelasAsalTerpilih->nama_kelas }})
+                                            </option>
+                                            
+                                            <optgroup label="Naik Ke Kelas:">
+                                                @foreach($pilihanKelasTujuan as $kt)
+                                                    @if($kt->id_kelas != $id_kelas_asal)
+                                                        <option value="{{ $kt->id_kelas }}" {{ $siswa->id_kelas_tujuan == $kt->id_kelas ? 'selected' : '' }}>
+                                                            ✔️ NAIK KE {{ $kt->nama_kelas }}
+                                                        </option>
+                                                    @endif
+                                                @endforeach
+                                            </optgroup>
                                         </select>
                                     </td>
                                 </tr>
@@ -156,63 +122,69 @@
                         </table>
                     </div>
                 </div>
-                <div class="card-footer bg-white text-end border-top">
-                    <button type="button" onclick="confirmProses()" class="btn btn-primary bg-gradient-primary btn-lg mb-0 shadow-sm">
-                        <i class="fas fa-save me-2"></i> PROSES KENAIKAN KELAS
+
+                <div class="card-footer bg-light border-top p-3 d-flex justify-content-between align-items-center">
+                    <p class="text-xs text-secondary mb-0">
+                        <i class="fas fa-info-circle me-1"></i> Data akan disimpan sebagai <b>Draf</b> hingga proses eksekusi di Akhir Tahun Ajaran.
+                    </p>
+                    <button type="submit" class="btn btn-primary mb-0 shadow-sm px-4">
+                        <i class="fas fa-save me-2"></i> Simpan Draf Kenaikan
                     </button>
                 </div>
-            </div>
-        </form>
-
-        @elseif($id_kelas_asal && $dataSiswa->isEmpty())
-        <div class="card shadow-sm border mt-4">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-users-slash text-danger mb-3 fa-3x opacity-5"></i>
-                <h5 class="text-dark font-weight-bold">Tidak Ada Siswa Aktif</h5>
-                <p class="text-secondary text-sm mb-0">Semua siswa di kelas ini mungkin sudah diluluskan, dimutasi, atau belum ada data siswa yang diinput.</p>
-            </div>
+            </form>
         </div>
-        @endif
-
     </div>
     <x-app.footer />
 </main>
 
-{{-- OVERLAY LOADING --}}
-<div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 999999;">
-    <div class="d-flex flex-column align-items-center">
-        <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status"></div> 
-        <span>Sedang Memproses Kenaikan Kelas...</span>
-    </div>
-</div>
+<style>
+    .status-dropdown { border: 1px solid #d2d6da; transition: all 0.2s; background-color: #fff; }
+    .status-dropdown:focus { border-color: #5e72e4; box-shadow: 0 0 0 2px rgba(94, 114, 228, 0.2); }
+    
+    select option[value="tinggal"] { color: #f5365c; font-weight: bold; }
+    select optgroup option { color: #5e72e4; font-weight: bold; }
+    
+    .border-naik { border: 2px solid #5e72e4 !important; color: #5e72e4 !important; background-color: rgba(94, 114, 228, 0.05) !important; }
+    .border-tinggal { border: 2px solid #f5365c !important; color: #f5365c !important; background-color: rgba(245, 54, 92, 0.05) !important; }
+</style>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    function confirmProses() {
-        if (confirm('PERINGATAN!\n\nApakah Anda yakin ingin memproses kenaikan kelas ini? Data kelas seluruh siswa yang dipilih akan langsung di-update. Pastikan tahun ajaran dan kelas tujuan sudah benar!')) {
-            $('#loadingOverlay').attr('style', 'display: flex !important; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 999999;');
-            
-            setTimeout(function() {
-                document.getElementById('formKenaikanKelas').submit();
-            }, 100);
+document.addEventListener("DOMContentLoaded", function() {
+    const dropdowns = document.querySelectorAll('.status-dropdown');
+    const defaultKelasTujuan = "{{ $idKelasDefaultTujuan }}";
+
+    function updateStyle(el) {
+        el.classList.remove('border-naik', 'border-tinggal');
+        if(el.value === 'tinggal') {
+            el.classList.add('border-tinggal');
+        } else if(el.value !== "") {
+            el.classList.add('border-naik');
         }
     }
 
-    // Fungsi untuk merubah warna dropdown sesuai opsi yang dipilih
-    function updateSelectColor(selectElement) {
-        // 1. Hapus semua class warna yang mungkin menempel sebelumnya
-        selectElement.classList.remove('select-tinggal', 'select-naik-sama', 'select-naik-beda');
-        
-        // 2. Ambil elemen <option> yang sedang dipilih
-        var selectedOption = selectElement.options[selectElement.selectedIndex];
-        
-        // 3. Baca atribut 'data-color' dari <option> tersebut
-        var newColorClass = selectedOption.getAttribute('data-color');
-        
-        // 4. Pasang class warna baru ke elemen <select> induknya
-        if (newColorClass) {
-            selectElement.classList.add(newColorClass);
+    dropdowns.forEach(dd => updateStyle(dd));
+
+    dropdowns.forEach(dd => {
+        dd.addEventListener('change', function() { updateStyle(this); });
+    });
+
+    document.getElementById('btn-set-naik').addEventListener('click', function() {
+        if(!defaultKelasTujuan) {
+            alert('Sistem tidak menemukan kelas tujuan otomatis (Gagal prediksi). Silakan pilih kelas manual untuk setiap siswa.');
+            return;
         }
-    }
+        dropdowns.forEach(dd => {
+            dd.value = defaultKelasTujuan;
+            updateStyle(dd);
+        });
+    });
+
+    document.getElementById('btn-set-tinggal').addEventListener('click', function() {
+        dropdowns.forEach(dd => {
+            dd.value = 'tinggal';
+            updateStyle(dd);
+        });
+    });
+});
 </script>
 @endsection

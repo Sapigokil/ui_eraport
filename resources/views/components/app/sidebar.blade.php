@@ -121,7 +121,6 @@
         .sidenav-category {
             font-size: 0.7rem;
             font-weight: 700;
-            color: rgba(255, 255, 255, 0.4);
             letter-spacing: 0.5px;
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
@@ -157,48 +156,32 @@
             {{-- ========================================================= --}}
             @canany(['master.menu', 'pkl.data.menu', 'mutasi.menu'])
             <li class="nav-item mt-3">
-                <div class="sidenav-category text-uppercase">Data Pokok</div>
+                <div class="sidenav-category text-uppercase text-warning">Data Pokok</div>
             </li>
             @endcanany
 
             {{-- MASTER DATA --}}
             @can('master.menu') 
             @php 
-                // ✅ PERBAIKAN: Menambahkan 'validasi_bio.*' ke dalam daftar masterRoutes agar menu tetap terbuka
                 $masterRoutes = [
                     'master.sekolah.*', 'master.guru.*', 'master.siswa.*', 'master.validasi_bio.*', 'master.kelas.*', 
                     'master.mapel.*', 'master.pembelajaran.*'
                 ];
                 $isMasterActive = request()->routeIs($masterRoutes); 
 
-                // ✅ QUERY BADGE NOTIFIKASI: Menghitung jumlah pengajuan yang masih pending
+                // QUERY BADGE NOTIFIKASI
                 $pendingBioCount = \App\Models\PengajuanBiodata::where('status', 'pending')->count();
-            
-                // DEKLARASI VARIABEL BARU
                 $subMenuHadAlert = $pendingBioCount > 0;
-
             @endphp
             
             <li class="nav-item">
-                {{-- <a data-bs-toggle="collapse" href="#masterDataMenu" class="nav-link {{ $isMasterActive ? 'active' : '' }}" aria-controls="masterDataMenu" role="button" aria-expanded="{{ $isMasterActive ? 'true' : 'false' }}">
-                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                        <i class="fas fa-database text-sm"></i>
-                    </div>
-                    <span class="nav-link-text">Master Data
-                        @if($pendingBioCount > 0)
-                            <span class="badge bg-gradient-danger py-1 px-2" style="font-size: 0.55rem;">{{ $pendingBioCount }}</span>
-                        @endif
-                    </span>
-                </a> --}}
                 <a data-bs-toggle="collapse" href="#masterDataMenu" class="nav-link {{ $isMasterActive ? 'active' : '' }} d-flex align-items-center" aria-controls="masterDataMenu" role="button" aria-expanded="{{ $isMasterActive ? 'true' : 'false' }}">
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
                         <i class="fas fa-database text-sm"></i>
                     </div>
                     
-                    {{-- Menerapkan Flexbox pada label teks --}}
                     <span class="nav-link-text w-100 d-flex justify-content-between align-items-center pe-4">
                         <span>Master Data</span>
-                        
                         @if($subMenuHadAlert)
                             <span class="badge bg-gradient-danger py-1 px-2 shadow-sm" style="font-size: 0.55rem; line-height: 1;">{{ $pendingBioCount }}</span>
                         @endif
@@ -209,10 +192,9 @@
                     <ul class="nav">
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.sekolah.*') ? 'active' : '' }}" href="{{ route('master.sekolah.index') }}"><span class="sidenav-normal"> Data Sekolah </span></a></li>
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.guru.*') ? 'active' : '' }}" href="{{ route('master.guru.index') }}"><span class="sidenav-normal"> Data Guru </span></a></li>
-                        
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('master.siswa.*') ? 'active' : '' }}" href="{{ route('master.siswa.index') }}"><span class="sidenav-normal"> Data Siswa </span></a></li>
                         
-                        {{-- ✅ TAMBAHAN MENU BARU: Validasi Data Siswa dengan Notifikasi Badge --}}
+                        {{-- Validasi Data Siswa dengan Notifikasi Badge --}}
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('master.validasi_bio.*') ? 'active' : '' }}" href="{{ route('master.validasi_bio.index') }}">
                                 <span class="sidenav-normal d-flex align-items-center justify-content-between w-100"> 
@@ -290,13 +272,13 @@
             </li>
             @endcan
 
-            {{-- MUTASI & KENAIKAN --}}
+            {{-- MUTASI HARIAN --}}
             @can('mutasi.menu')
             @php
-                $mutasiRoutes = ['mutasi.keluar.*', 'mutasi.pindah.*', 'mutasi.kenaikan.*', 'mutasi.kelulusan.*', 'mutasi.dashboard_akhir.*', 'mutasi.riwayat.*'];
+                // Di Opsi A, "Kenaikan Kelulusan" dikeluarkan dari mutasi harian
+                $mutasiRoutes = ['mutasi.keluar.*', 'mutasi.pindah.*'];
                 $isMutasiActive = request()->routeIs($mutasiRoutes); 
             @endphp
-            
             <li class="nav-item">
                 <a data-bs-toggle="collapse" href="#menuMutasi" class="nav-link {{ $isMutasiActive ? 'active' : '' }}" aria-controls="menuMutasi" role="button" aria-expanded="{{ $isMutasiActive ? 'true' : 'false' }}">
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
@@ -317,16 +299,6 @@
                                 <span class="sidenav-normal"> Pindah Kelas </span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ Request::routeIs('mutasi.dashboard_akhir.*', 'mutasi.kenaikan.*', 'mutasi.kelulusan.*') ? 'active' : '' }}" href="{{ route('mutasi.dashboard_akhir.index') }}">
-                                <span class="sidenav-normal"> Kenaikan Kelulusan </span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ Request::routeIs('mutasi.riwayat.*') ? 'active' : '' }}" href="{{ route('mutasi.riwayat.index') }}">
-                                <span class="sidenav-normal"> Riwayat Kenaikan </span>
-                            </a>
-                        </li>
                     </ul>
                 </div>
             </li>
@@ -344,7 +316,7 @@
             {{-- ========================================================= --}}
             @canany(['nilai.menu', 'ekskul.menu', 'rapor.menu', 'ledger.menu'])
             <li class="nav-item mt-3">
-                <div class="sidenav-category text-uppercase">Akademik</div>
+                <div class="sidenav-category text-uppercase text-warning">Akademik</div>
             </li>
             @endcanany
 
@@ -461,7 +433,7 @@
             {{-- ========================================================= --}}
             @canany(['pkl.nilai.menu', 'rapor.menu'])
             <li class="nav-item mt-3">
-                <div class="sidenav-category text-uppercase">Prakerin</div>
+                <div class="sidenav-category text-uppercase text-warning">Prakerin</div>
             </li>
             @endcanany
 
@@ -513,19 +485,77 @@
                 <hr class="horizontal light my-2">
             </li>
             @endcanany
-            
+
+            {{-- ========================================================= --}}
+            {{-- 👇 PROSES AKHIR TAHUN 👇 --}}
+            {{-- ========================================================= --}}
+            @can('mutasi.menu') 
+            <li class="nav-item mt-3">
+                <div class="sidenav-category text-uppercase text-warning">Proses Akhir Tahun</div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('mutasi.kelulusan_dashboard.*', 'mutasi.kelulusan.*') ? 'active' : '' }}" href="{{ route('mutasi.kelulusan_dashboard.index') }}"> 
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-graduation-cap text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Proses Kelulusan</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('mutasi.kenaikan_dashboard.*', 'mutasi.kenaikan.*') ? 'active' : '' }}" href="{{ route('mutasi.kenaikan_dashboard.index') }}"> 
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-level-up-alt text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Proses Kenaikan</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                {{-- Mengarah ke Dashboard Eksekutif Pengumuman --}}
+                <a class="nav-link {{ request()->routeIs('mutasi.dashboard.*', 'pengumuman.*') ? 'active' : '' }}" href="{{ route('mutasi.dashboard.index') }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-bullhorn text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Pengumuman</span>
+                </a>
+            </li>
+
+            {{-- 👇 MENU BARU: TUTUP TAHUN AJARAN (WIZARD EKSEKUSI) 👇 --}}
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('mutasi.eksekusi.*') ? 'active' : '' }}" href="{{ route('mutasi.eksekusi.index') }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-rocket text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Tutup Tahun Ajaran</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('mutasi.riwayat.*') ? 'active' : '' }}" href="{{ route('mutasi.riwayat.index') }}">
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-history text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Riwayat Eksekusi</span>
+                </a>
+            </li>
+
+            <li class="nav-item mt-3">
+                <hr class="horizontal light my-2">
+            </li>
+            @endcan
             
             {{-- ========================================================= --}}
             {{-- 6. PENGATURAN (Admin 1 Pintu) --}}
             {{-- ========================================================= --}}
             @can('setting.menu')
             <li class="nav-item mt-3">
-                <div class="sidenav-category text-uppercase">Pengaturan</div>
+                <div class="sidenav-category text-uppercase text-warning">Pengaturan</div>
             </li>
 
             {{-- Setting E-Rapor --}}
             @php 
-                // Hapus route season dari array agar menu tidak ikut menyala
                 $eraporSettingRoutes = ['settings.erapor.kok.*', 'settings.erapor.bobot.*', 'settings.erapor.event.*'];
                 $isEraporSetActive = request()->routeIs($eraporSettingRoutes);
             @endphp
@@ -547,7 +577,6 @@
 
             {{-- Setting Rapor PKL --}}
             @php 
-                // Hapus route season pkl dari array
                 $pklSettingRoutes = ['settings.pkl.index', 'settings.pkl.template', 'settings.pkl.import'];
                 $isPklSetActive = request()->routeIs($pklSettingRoutes);
             @endphp
@@ -565,7 +594,7 @@
                 </div>
             </li>
 
-            {{-- 👇 MENU BARU: MANAJEMEN SEASON TERPUSAT 👇 --}}
+            {{-- MANAJEMEN SEASON TERPUSAT --}}
             @php 
                 $seasonRoutes = [
                     'settings.erapor.season.*', 
@@ -589,7 +618,6 @@
                     </ul>
                 </div>
             </li>
-            {{-- 👆 END MENU SEASON 👆 --}}
 
             {{-- System & User --}}
             @php 
@@ -611,9 +639,9 @@
                 </div>
             </li>
 
-            {{-- 👇 TOMBOL TOGGLE SIMULASI DI SIDEBAR 👇 --}}
+            {{-- TOMBOL TOGGLE SIMULASI DI SIDEBAR --}}
             <li class="nav-item mt-4">
-                <div class="sidenav-category text-uppercase">Lingkungan Sistem</div>
+                <div class="sidenav-category text-uppercase text-warning">Lingkungan Sistem</div>
             </li>
 
             <li class="nav-item">
@@ -644,8 +672,6 @@
                     <span class="nav-link-text">Backup & Restore</span>
                 </a>
             </li>
-            {{-- 👆 END TOMBOL SIDEBAR 👆 --}}
-
             @endcan 
 
             @can('setting.menu')
@@ -662,17 +688,24 @@
                 @if(auth()->user()->hasRole('siswa_erapor') || auth()->user()->level == 'siswa_erapor')
                     
                     @php
-                        // Hitung respon admin yang belum dibaca siswa khusus untuk user ini
                         $id_siswa = auth()->user()->id_siswa;
+                        
+                        // Hitung respon admin yang belum dibaca siswa (Biodata)
                         $notifBalikAdmin = \App\Models\PengajuanBiodata::where('id_siswa', $id_siswa)
                                             ->whereIn('status', ['disetujui', 'ditolak'])
                                             ->where('is_read', 0)
+                                            ->count();
+                                            
+                        // 👇 PERBAIKAN: Hitung Pengumuman yang belum dibaca DAN sudah berstatus 'published'
+                        $notifPengumuman = \App\Models\PengumumanSiswa::where('id_siswa', $id_siswa)
+                                            ->where('has_seen', 0)
+                                            ->where('status', 'published') // Wajib ditambahkan agar 'hold' tidak terhitung
                                             ->count();
                     @endphp
 
                     {{-- FLAT DESIGN KHUSUS UNTUK ROLE SISWA ASLI --}}
                     <li class="nav-item mt-3">
-                        <div class="sidenav-category text-uppercase">Profil Saya</div>
+                        <div class="sidenav-category text-uppercase text-warning">Profil Saya</div>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('sis.biodata') || request()->routeIs('sis.biodata.*') ? 'active' : '' }}" href="{{ route('sis.biodata') }}">
@@ -689,7 +722,7 @@
                     </li>
 
                     <li class="nav-item mt-3">
-                        <div class="sidenav-category text-uppercase">Hasil Belajar</div>
+                        <div class="sidenav-category text-uppercase text-warning">Hasil Belajar</div>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('sis.psts.*') ? 'active' : '' }}" href="{{ route('sis.psts.index') }}">
@@ -697,6 +730,21 @@
                                 <i class="fas fa-file-invoice text-sm"></i>
                             </div>
                             <span class="nav-link-text">Laporan PSTS</span>
+                        </a>
+                    </li>
+                    
+                    {{-- MENU PENGUMUMAN --}}
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('sis.pengumuman') ? 'active' : '' }}" href="{{ route('sis.pengumuman') }}">
+                            <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                                <i class="fas fa-envelope-open-text text-sm"></i>
+                            </div>
+                            <span class="nav-link-text d-flex justify-content-between align-items-center w-100">
+                                Pengumuman
+                                @if($notifPengumuman > 0)
+                                    <span class="badge bg-gradient-danger py-1 px-2 shadow-sm" style="font-size: 0.55rem; line-height: 1;">Baru</span>
+                                @endif
+                            </span>
                         </a>
                     </li>
 
@@ -715,7 +763,7 @@
             {{-- ========================================================= --}}
             @if(!auth()->user()->hasRole('siswa_erapor') && auth()->user()->level != 'siswa_erapor')
             <li class="nav-item mt-3">
-                <div class="sidenav-category text-uppercase">Personal</div>
+                <div class="sidenav-category text-uppercase text-warning">Personal</div>
             </li>
             
             <li class="nav-item">

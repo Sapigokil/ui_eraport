@@ -11,12 +11,21 @@ return [
     |
     */
 
-    'current_version' => '1.0.21',
+    'current_version' => '1.0.22',
     
-    'last_updated' => '2026-04-16',
+    'last_updated' => '2026-04-27',
 
     'changelog' => [
         [
+            'version' => '1.0.22',
+            'date'    => '2026-04-27',
+            'notes'   => [
+                'Perombakan Halaman Mutasi Untuk mengakomodasi fitur Pengumuman di Halaman Siswa',
+                'Penambahan Jadwal Pengumuman Kenaikan Kelas dan Kelulusan untuk memudahkan admin dalam mengatur jadwal pengumuman kepada siswa',
+                'Halaman Eksekusi Mutasi Kenaikan Kelas dan Kelulusan untuk memproses data mutasi yang sudah disimpan sebagai draf menjadi final dan langsung mengupdate data siswa serta mengirimkan pengumuman kepada siswa',
+                'Halaman Riwayat Mutasi Kenaikan Kelas dan Kelulusan untuk melihat data mutasi yang sudah final beserta detailnya',
+                ],
+        ],[
             'version' => '1.0.21',
             'date'    => '2026-04-16',
             'notes'   => [
