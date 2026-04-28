@@ -38,22 +38,41 @@
                         {{-- TIMELINE STYLE --}}
                         <div class="timeline timeline-one-side mt-4" data-timeline-axis-style="dashed">
                             
+                            @php
+                                // Hitung total riwayat untuk penanda accordion
+                                $totalLogs = count($history['changelog'] ?? []);
+                            @endphp
+
                             @forelse($history['changelog'] as $index => $log)
-                                <div class="timeline-block mb-3">
-                                    <span class="timeline-step">
+                                
+                                {{-- 👇 Mulai Accordion untuk Log ke-11 dan seterusnya 👇 --}}
+                                @if($index == 10)
+                                    <div class="accordion mt-4 w-100" id="accordionOlderLogs">
+                                        <div class="accordion-item border rounded shadow-sm">
+                                            <h2 class="accordion-header" id="headingOlderLogs">
+                                                <button class="accordion-button collapsed font-weight-bold text-secondary text-sm px-4 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOlderLogs" aria-expanded="false" aria-controls="collapseOlderLogs">
+                                                    <i class="fas fa-archive text-warning me-2"></i> Tampilkan Versi Lama ({{ $totalLogs - 10 }} Pembaruan Sebelumnya)
+                                                </button>
+                                            </h2>
+                                            <div id="collapseOlderLogs" class="accordion-collapse collapse" aria-labelledby="headingOlderLogs" data-bs-parent="#accordionOlderLogs">
+                                                <div class="accordion-body bg-light pt-4 pb-2 px-4 border-top">
+                                @endif
+
+                                <div class="timeline-block mb-4">
+                                    <span class="timeline-step shadow-sm">
                                         @if($index == 0)
-                                            {{-- Versi Terbaru Icon Beda --}}
                                             <i class="fas fa-star text-warning text-gradient"></i>
                                         @else
                                             <i class="fas fa-check-circle text-success text-gradient"></i>
                                         @endif
                                     </span>
+                                    
                                     <div class="timeline-content">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <h6 class="text-dark text-sm font-weight-bold mb-0">
                                                 Versi {{ $log['version'] }}
                                                 @if($index == 0)
-                                                    <span class="badge badge-sm bg-gradient-warning ms-2">Terbaru</span>
+                                                    <span class="badge badge-sm bg-gradient-warning ms-2 shadow-sm">Terbaru</span>
                                                 @endif
                                             </h6>
                                             <span class="text-secondary text-xs font-weight-bold">
@@ -61,18 +80,27 @@
                                             </span>
                                         </div>
                                         
-                                        <div class="bg-gray-100 border-radius-lg p-3 border">
+                                        <div class="bg-gray-100 border-radius-lg p-3 border shadow-sm">
                                             <ul class="list-unstyled mb-0">
                                                 @foreach($log['notes'] as $note)
                                                     <li class="d-flex align-items-start text-sm text-secondary mb-1">
                                                         <i class="fas fa-angle-right text-xs mt-1 me-2 text-dark"></i>
-                                                        <span style="line-height: 1.5;">{{ $note }}</span>
+                                                        <span style="line-height: 1.5; text-align: justify;">{{ $note }}</span>
                                                     </li>
                                                 @endforeach
                                             </ul>
                                         </div>
                                     </div>
                                 </div>
+
+                                {{-- 👇 Tutup div Accordion jika iterasi telah mencapai log terakhir 👇 --}}
+                                @if($loop->last && $totalLogs > 10)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
                             @empty
                                 <div class="text-center py-5">
                                     <p class="text-secondary">Belum ada riwayat pembaruan.</p>
@@ -95,6 +123,7 @@
     .timeline {
         position: relative;
         padding-left: 3rem;
+        width: 100%; /* Pastikan container utama penuh */
     }
     .timeline:before {
         content: '';
@@ -108,6 +137,8 @@
     .timeline-block {
         position: relative;
         margin-bottom: 2rem;
+        display: block; /* Hindari perilaku flex yang menyusut */
+        width: 95%; /* Paksa lebar 100% */
     }
     .timeline-step {
         position: absolute;
@@ -121,8 +152,20 @@
         line-height: 26px;
         z-index: 1;
     }
+    
+    /* 👇 INI KUNCI UTAMANYA: Mengalahkan CSS Bawaan Template 👇 */
     .timeline-content {
         position: relative;
+        width: 100% !important; 
+        max-width: 100% !important; /* Membunuh max-width bawaan template */
+        padding-left: 1rem;
+    }
+    
+    /* Kustomisasi Accordion khusus timeline */
+    #accordionOlderLogs .accordion-button:not(.collapsed) {
+        color: #344767;
+        background-color: #f8f9fa;
+        box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.125);
     }
 </style>
 @endsection

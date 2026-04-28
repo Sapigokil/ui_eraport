@@ -24,6 +24,7 @@ return [
                 'Penambahan Jadwal Pengumuman Kenaikan Kelas dan Kelulusan untuk memudahkan admin dalam mengatur jadwal pengumuman kepada siswa',
                 'Halaman Eksekusi Mutasi Kenaikan Kelas dan Kelulusan untuk memproses data mutasi yang sudah disimpan sebagai draf menjadi final dan langsung mengupdate data siswa serta mengirimkan pengumuman kepada siswa',
                 'Halaman Riwayat Mutasi Kenaikan Kelas dan Kelulusan untuk melihat data mutasi yang sudah final beserta detailnya',
+                'Perombakan Sidebar agar lebih mudah diakses dan menampilkan menu yang relevan berdasarkan role pengguna',
                 ],
         ],[
             'version' => '1.0.21',
