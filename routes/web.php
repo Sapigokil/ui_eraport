@@ -435,9 +435,9 @@ Route::middleware(['auth'])->group(function () {
             
             // Level 1: Dashboard Eksekutif
             Route::get('/dashboard', [MutasiNaikLulusDashController::class, 'index'])->name('dashboard.index');
-           Route::post('/dashboard/update-jadwal', [MutasiNaikLulusDashController::class, 'updateJadwal'])->name('update_jadwal');
-           Route::post('/dashboard/delete-jadwal', [MutasiNaikLulusDashController::class, 'deleteJadwal'])->name('delete_jadwal');
-           
+            Route::post('/dashboard/update-jadwal', [MutasiNaikLulusDashController::class, 'updateJadwal'])->name('update_jadwal');
+            Route::post('/dashboard/delete-jadwal', [MutasiNaikLulusDashController::class, 'deleteJadwal'])->name('delete_jadwal');
+            
             // Dashboard Split
             Route::get('/kelulusan/dashboard', [MutasiDashboardController::class, 'kelulusanIndex'])->name('kelulusan_dashboard.index');
             Route::get('/kenaikan/dashboard', [MutasiDashboardController::class, 'index'])->name('kenaikan_dashboard.index');
@@ -445,6 +445,11 @@ Route::middleware(['auth'])->group(function () {
             // Form & Submit Kelulusan
             Route::get('/kelulusan', [MutasiKelulusanController::class, 'index'])->name('kelulusan.index');
             Route::post('/kelulusan', [MutasiKelulusanController::class, 'store'])->name('kelulusan.store');
+
+            // ROUTE UPLOAD, VIEW, & DELETE SKL
+            Route::post('/kelulusan/upload-skl/{id_siswa}', [MutasiKelulusanController::class, 'uploadSklAjax'])->name('kelulusan.upload_skl');
+            Route::get('/kelulusan/view-skl/{id_siswa}', [MutasiKelulusanController::class, 'viewSkl'])->name('kelulusan.view_skl');
+            Route::delete('/kelulusan/delete-skl/{id_siswa}', [MutasiKelulusanController::class, 'deleteSklAjax'])->name('kelulusan.delete_skl');
 
             // Form & Submit Kenaikan
             Route::get('/kenaikan', [MutasiKenaikanController::class, 'index'])->name('kenaikan.index');
@@ -579,7 +584,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // ==========================================================================
-// MODULE: PORTAL SISWA 
+// 👇 MODULE: PORTAL SISWA 👇
 // ==========================================================================
 Route::group(['prefix' => 'sis', 'as' => 'sis.', 'middleware' => ['auth', 'can:siswa.menu']], function () {
     
@@ -591,6 +596,9 @@ Route::group(['prefix' => 'sis', 'as' => 'sis.', 'middleware' => ['auth', 'can:s
     Route::get('/psts', [\App\Http\Controllers\SisPstsController::class, 'index'])->name('psts.index');
     Route::get('/psts/detail/{tahun_ajaran}/{semester}/{id_kelas}', [\App\Http\Controllers\SisPstsController::class, 'detail'])->name('psts.detail');
     Route::get('/psts/cetak/{tahun_ajaran}/{semester}/{id_kelas}/{jenis}', [\App\Http\Controllers\SisPstsController::class, 'cetak'])->name('psts.cetak');
+    
+    // ROUTE DOWNLOAD SKL SISWA
+    Route::get('/pengumuman/download-skl', [\App\Http\Controllers\PengumumanController::class, 'downloadSkl'])->name('pengumuman.download_skl');
     
     Route::get('/pengumuman', [\App\Http\Controllers\PengumumanController::class, 'index'])->name('pengumuman');
     Route::post('/pengumuman/baca', [\App\Http\Controllers\PengumumanController::class, 'tandaiDibaca'])->name('pengumuman.baca');

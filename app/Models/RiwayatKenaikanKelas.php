@@ -25,6 +25,7 @@ class RiwayatKenaikanKelas extends Model
         'status',           
         'user_admin',
         'status_eksekusi',
+        'file_skl', // Kolom baru untuk menyimpan nama file SKL
     ];
 
     /**

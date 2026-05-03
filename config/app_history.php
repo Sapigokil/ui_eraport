@@ -11,11 +11,19 @@ return [
     |
     */
 
-    'current_version' => '1.0.22',
+    'current_version' => '1.0.23',
     
-    'last_updated' => '2026-04-27',
+    'last_updated' => '2026-05-03',
 
     'changelog' => [
+        [
+            'version' => '1.0.23',
+            'date'    => '2026-05-03',
+            'notes'   => [
+                'Penambahan Fitur Download SKL (Surat Keterangan Lulus) pada Halaman Pengumuman Siswa yang dinyatakan Lulus',
+                'Fitur ini memungkinkan siswa yang sudah dinyatakan Lulus untuk langsung mendownload SKL mereka dalam format PDF sebagai bukti resmi kelulusan',
+                ],
+        ],
         [
             'version' => '1.0.22',
             'date'    => '2026-04-27',
@@ -26,7 +34,8 @@ return [
                 'Halaman Riwayat Mutasi Kenaikan Kelas dan Kelulusan untuk melihat data mutasi yang sudah final beserta detailnya',
                 'Perombakan Sidebar agar lebih mudah diakses dan menampilkan menu yang relevan berdasarkan role pengguna',
                 ],
-        ],[
+        ],
+        [
             'version' => '1.0.21',
             'date'    => '2026-04-16',
             'notes'   => [

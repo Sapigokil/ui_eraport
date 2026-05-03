@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\PengumumanSiswa;
-use App\Models\PengumumanSetting; // Import Model Baru
+use App\Models\PengumumanSetting; 
 use Carbon\Carbon;
 
 class PengumumanController extends Controller
@@ -40,6 +40,7 @@ class PengumumanController extends Controller
         $pesan = '';
         $jenis = 'kenaikan';
         $catatanTambahan = '';
+        $fileSkl = null; // Variabel penampung ketersediaan file SKL
 
         // Tentukan Tahun Ajaran Default (untuk tampilan jika data draf belum ada)
         $tahunSekarang = date('Y');
@@ -82,6 +83,18 @@ class PengumumanController extends Controller
             } elseif ($statusRaw == 'lulus') {
                 $status = 'sukses';
                 $pesan = 'L U L U S';
+                
+                // Cek apakah file SKL tersedia di tabel riwayat_kenaikan_kelas
+                $riwayat = DB::table('riwayat_kenaikan_kelas')
+                    ->where('id_siswa', $id_siswa)
+                    ->where('tahun_ajaran_lama', $pengumuman->tahun_ajaran)
+                    ->whereNotNull('file_skl')
+                    ->first();
+                    
+                if ($riwayat) {
+                    $fileSkl = $riwayat->file_skl;
+                }
+                
             } elseif (in_array($statusRaw, ['tidak lulus', 'tidak_lulus'])) {
                 $status = 'gagal';
                 $pesan = 'TIDAK LULUS';
@@ -90,7 +103,7 @@ class PengumumanController extends Controller
 
         return view('sismenu.pengumuman', compact(
             'siswa', 'waktuPengumuman', 'isWaktuBuka', 'isAktif', 
-            'status', 'pesan', 'jenis', 'pengumuman', 'catatanTambahan', 'defaultTA'
+            'status', 'pesan', 'jenis', 'pengumuman', 'catatanTambahan', 'defaultTA', 'fileSkl'
         ));
     }
 
@@ -113,5 +126,34 @@ class PengumumanController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Sudah pernah dibaca sebelumnya atau data tidak valid.']);
+    }
+
+    /**
+     * 👇 FUNGSI BARU: Download SKL Siswa 👇
+     */
+    public function downloadSkl()
+    {
+        $user = Auth::user(); 
+        $id_siswa = $user->id_siswa ?? $user->id; 
+
+        $riwayat = DB::table('riwayat_kenaikan_kelas')
+            ->where('id_siswa', $id_siswa)
+            ->where('status', 'lulus') 
+            ->whereNotNull('file_skl')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$riwayat) {
+            return abort(404, 'File SKL tidak tersedia atau Anda belum dinyatakan Lulus.');
+        }
+
+        $path = storage_path('app/skl/' . $riwayat->file_skl);
+
+        if (!file_exists($path)) {
+            return abort(404, 'File PDF fisik tidak ditemukan di server. Silakan hubungi Wali Kelas.');
+        }
+
+        // Return file sebagai force download
+        return response()->download($path, 'Surat_Keterangan_Lulus.pdf');
     }
 }
