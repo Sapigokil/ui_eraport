@@ -228,7 +228,7 @@ document.addEventListener("DOMContentLoaded", function() {
             container.innerHTML = '<span class="badge bg-warning text-xxs px-3 py-2 shadow-sm"><i class="fas fa-spinner fa-spin me-2"></i>Mengunggah...</span>';
 
             // Kirim ke server
-            fetch(`/mutasi/kelulusan/upload-skl/${idSiswa}`, {
+            fetch(`{{ url('mutasi/kelulusan/upload-skl') }}/${idSiswa}`, {
                 method: 'POST',
                 body: formData
             })
@@ -261,7 +261,7 @@ document.addEventListener("DOMContentLoaded", function() {
             container.innerHTML = '<span class="badge bg-danger text-xxs px-3 py-2 shadow-sm"><i class="fas fa-spinner fa-spin me-2"></i>Menghapus...</span>';
 
             // Kirim request DELETE ke server
-            fetch(`/mutasi/kelulusan/delete-skl/${idSiswa}`, {
+            fetch(`{{ url('mutasi/kelulusan/delete-skl') }}/${idSiswa}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -279,8 +279,9 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             })
             .catch(err => {
-                alert('Terjadi kesalahan koneksi saat menghapus.');
-                window.location.reload();
+                console.error("Error Asli: ", err);
+                alert('Error JS: ' + err.message + '\n\nCek tab Console (F12) untuk detailnya.');
+                // window.location.reload(); // Kita matikan reload sementara agar pesan error bisa dibaca
             });
         });
     });
