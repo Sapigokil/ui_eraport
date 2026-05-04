@@ -176,9 +176,13 @@ class MutasiKelulusanController extends Controller
      */
     public function uploadSklAjax(Request $request, $id_siswa)
     {
+        // 👇 PERBAIKAN: Batas maksimal ukuran file dinaikkan menjadi 5MB (5120 KB)
         $request->validate([
-            'file_skl' => 'required|mimes:pdf|max:2048',
+            'file_skl' => 'required|mimes:pdf|max:5120',
             'tahun_ajaran_lama' => 'required'
+        ], [
+            'file_skl.max' => 'Ukuran file SKL maksimal adalah 5MB.',
+            'file_skl.mimes' => 'File harus berformat PDF.'
         ]);
 
         $taLama = $request->tahun_ajaran_lama;
@@ -254,7 +258,7 @@ class MutasiKelulusanController extends Controller
     }
 
     /**
-     * 👇 FUNGSI BARU: Hapus SKL via AJAX per baris 👇
+     * FUNGSI: Hapus SKL via AJAX per baris
      */
     public function deleteSklAjax(Request $request, $id_siswa)
     {
