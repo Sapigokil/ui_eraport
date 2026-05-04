@@ -209,7 +209,7 @@ document.addEventListener("DOMContentLoaded", function() {
         dropdowns.forEach(dd => { dd.value = 'tidak_lulus'; updateStyle(dd); });
     });
 
-    // 2. LOGIKA UPLOAD AJAX OTOMATIS
+    // 2. 👇 LOGIKA UPLOAD AJAX (DENGAN PENANGANAN ERROR LARAVEL) 👇
     document.querySelectorAll('.upload-skl-auto').forEach(input => {
         input.addEventListener('change', function() {
             if (!this.files.length) return;
@@ -230,19 +230,34 @@ document.addEventListener("DOMContentLoaded", function() {
             // Kirim ke server
             fetch(`{{ url('mutasi/kelulusan/upload-skl') }}/${idSiswa}`, {
                 method: 'POST',
+                headers: {
+                    // Wajib agar Laravel merespon dengan format JSON jika terjadi error validasi!
+                    'Accept': 'application/json' 
+                },
                 body: formData
             })
-            .then(response => response.json())
+            .then(async response => {
+                if (!response.ok) {
+                    let errorData = await response.json().catch(() => null);
+                    if (response.status === 422 && errorData && errorData.errors) {
+                        // Kumpulkan pesan error validasi (seperti: file melebihi 5MB)
+                        let errorMessages = Object.values(errorData.errors).flat().join('\n');
+                        throw new Error(errorMessages);
+                    }
+                    throw new Error('Terjadi kesalahan sistem (Status: ' + response.status + '). Cek log server.');
+                }
+                return response.json();
+            })
             .then(data => {
                 if(data.success) {
                     window.location.reload();
                 } else {
-                    alert('Gagal mengunggah file: ' + (data.message || 'Format file salah atau ukuran terlalu besar.'));
+                    alert('Gagal mengunggah file: ' + (data.message || 'File tidak valid.'));
                     window.location.reload();
                 }
             })
             .catch(err => {
-                alert('Terjadi kesalahan koneksi saat mengunggah.');
+                alert('GAGAL UPLOAD:\n' + err.message);
                 window.location.reload();
             });
         });
@@ -265,6 +280,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({ tahun_ajaran_lama: taLama })
@@ -279,9 +295,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             })
             .catch(err => {
-                console.error("Error Asli: ", err);
-                alert('Error JS: ' + err.message + '\n\nCek tab Console (F12) untuk detailnya.');
-                // window.location.reload(); // Kita matikan reload sementara agar pesan error bisa dibaca
+                alert('Terjadi kesalahan koneksi saat menghapus: ' + err.message);
+                window.location.reload();
             });
         });
     });
