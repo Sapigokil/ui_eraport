@@ -26,9 +26,8 @@ class PengumumanController extends Controller
             return redirect()->back()->with('error', 'Data identitas siswa tidak ditemukan.');
         }
 
-        // 2. Ambil Data dari tabel pengumuman_siswa (Hanya yang sudah Published)
+        // 2. Ambil Data pengumuman terbaru (Tanpa memfilter 'published' dulu agar bisa kita seleksi)
         $pengumuman = PengumumanSiswa::where('id_siswa', $id_siswa)
-                        ->where('status', 'published') 
                         ->orderBy('created_at', 'desc')
                         ->first();
 
@@ -40,40 +39,52 @@ class PengumumanController extends Controller
         $pesan = '';
         $jenis = 'kenaikan';
         $catatanTambahan = '';
-        $fileSkl = null; // Variabel penampung ketersediaan file SKL
+        $fileSkl = null;
 
-        // Tentukan Tahun Ajaran Default (untuk tampilan jika data draf belum ada)
         $tahunSekarang = date('Y');
         $bulanSekarang = date('n');
         $defaultTA = ($bulanSekarang >= 7) ? $tahunSekarang . '/' . ($tahunSekarang + 1) : ($tahunSekarang - 1) . '/' . $tahunSekarang;
 
+        // 👇 CEK PERLINDUNGAN STATUS "HOLD" VS "HAK ISTIMEWA ALUMNI" 👇
+        if ($pengumuman) {
+            $statusRaw = strtolower($pengumuman->status_hasil);
+            $isAlumni = ($pengumuman->has_seen == 1 && $statusRaw == 'lulus');
+
+            // Jika status pengumuman ditarik kembali (hold) karena jadwal dihapus admin,
+            // DAN dia BUKAN alumni yang sudah membuka surat, maka kita sembunyikan datanya.
+            if ($pengumuman->status !== 'published' && !$isAlumni) {
+                $pengumuman = null; 
+            }
+        }
+
+        // 3. PROSES DATA JIKA LOLOS SELEKSI
         if ($pengumuman) {
             $jenis = $pengumuman->jenis;
             $catatanTambahan = $pengumuman->catatan;
-            $statusRaw = strtolower($pengumuman->status_hasil);
+            $statusRaw = strtolower($pengumuman->status_hasil); 
 
-            // 3. LOGIKA GATEKEEPER JADWAL (Membaca tabel pengumuman_setting)
+            // Cek Jadwal di tabel Setting
             $setting = PengumumanSetting::where('jenis', $pengumuman->jenis)
                         ->where('tahun_ajaran', $pengumuman->tahun_ajaran)
                         ->first();
 
             if ($setting) {
                 $isAktif = $setting->is_aktif;
-                $waktuPengumuman = $setting->waktu_buka; // Sudah otomatis Carbon dari casting model
+                $waktuPengumuman = $setting->waktu_buka; 
                 $waktuTutup = $setting->waktu_tutup;
                 $sekarang = Carbon::now();
 
-                // Cek apakah sekarang berada di dalam rentang waktu buka & tutup
+                // Hitung rentang waktu buka & tutup
                 if ($sekarang->between($waktuPengumuman, $waktuTutup)) {
                     $isWaktuBuka = true;
                 } elseif ($sekarang->greaterThan($waktuTutup)) {
-                    $isAktif = false; // Otomatis tutup jika waktu sudah lewat
+                    $isAktif = false; 
                 } else {
-                    $isWaktuBuka = false; // Belum waktunya (akan muncul countdown)
+                    $isWaktuBuka = false; 
                 }
             }
 
-            // 4. Menentukan status visual (Lulus/Naik/Gagal)
+            // Menentukan status visual (Lulus/Naik/Gagal)
             if (in_array($statusRaw, ['naik', 'naik kelas', 'y'])) {
                 $status = 'sukses';
                 $pesan = 'NAIK KELAS';
@@ -84,7 +95,7 @@ class PengumumanController extends Controller
                 $status = 'sukses';
                 $pesan = 'L U L U S';
                 
-                // Cek apakah file SKL tersedia di tabel riwayat_kenaikan_kelas
+                // Cek ketersediaan file SKL di tabel riwayat
                 $riwayat = DB::table('riwayat_kenaikan_kelas')
                     ->where('id_siswa', $id_siswa)
                     ->where('tahun_ajaran_lama', $pengumuman->tahun_ajaran)
@@ -98,6 +109,15 @@ class PengumumanController extends Controller
             } elseif (in_array($statusRaw, ['tidak lulus', 'tidak_lulus'])) {
                 $status = 'gagal';
                 $pesan = 'TIDAK LULUS';
+            }
+
+            // ====================================================================
+            // BYPASS GATEKEEPER KHUSUS SISWA LULUS YANG SUDAH BUKA AMPLOP 
+            // Hak istimewa agar alumni tetap bisa melihat SKL selamanya
+            // ====================================================================
+            if ($pengumuman->has_seen == 1 && $statusRaw == 'lulus') {
+                $isAktif = true;
+                $isWaktuBuka = true;
             }
         }
 
@@ -115,6 +135,8 @@ class PengumumanController extends Controller
         $user = Auth::user(); 
         $id_siswa = $user->id_siswa ?? $user->id; 
 
+        // Untuk menandai dibaca, kita tetap harus memastikan bahwa statusnya memang sedang published
+        // agar siswa tidak bisa menembak API saat jadwal masih 'hold'
         $pengumuman = PengumumanSiswa::where('id_siswa', $id_siswa)
                         ->where('status', 'published')
                         ->orderBy('created_at', 'desc')
@@ -129,7 +151,7 @@ class PengumumanController extends Controller
     }
 
     /**
-     * 👇 FUNGSI BARU: Download SKL Siswa 👇
+     * Download SKL Siswa
      */
     public function downloadSkl()
     {

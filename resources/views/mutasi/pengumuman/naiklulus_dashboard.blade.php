@@ -1,6 +1,6 @@
 @extends('layouts.app') 
 
-@section('page-title', 'Pusat Kendali Akhir Tahun')
+@section('page-title', 'Penjadwalan Pengumuman')
 
 @section('content')
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg pt-4">
@@ -10,8 +10,9 @@
         
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h3 class="text-dark font-weight-bolder mb-0">Overview Proses Akhir Tahun</h3>
-                <p class="text-secondary mb-0">Monitor progres kelulusan dan kenaikan kelas secara global.</p>
+                {{-- 👇 REVISI JUDUL DAN DESKRIPSI 👇 --}}
+                <h3 class="text-dark font-weight-bolder mb-0">Penjadwalan Pengumuman</h3>
+                <p class="text-secondary mb-0">Set Penjadwalan Pengumuman Kelulusan dan Kenaikan Kelas.</p>
             </div>
             <div>
                 <form action="{{ route('mutasi.dashboard.index') }}" method="GET">
@@ -45,7 +46,6 @@
                                             {{ $jadwalLulus->waktu_buka->locale('id')->isoFormat('D MMMM Y, HH:mm') }} - {{ $jadwalLulus->waktu_tutup->locale('id')->isoFormat('D MMMM Y, HH:mm') }} WIB
                                         </h6>
                                         
-                                        {{-- 👇 INDIKATOR STATUS OTOMATIS KELULUSAN 👇 --}}
                                         @if($jadwalLulus->waktu_tutup->isPast())
                                             <span class="badge bg-danger ms-2 px-2 py-1 shadow-sm" style="font-size: 0.6rem;"><i class="fas fa-lock me-1"></i> Sesi Berakhir</span>
                                         @elseif($jadwalLulus->waktu_buka->isFuture())
@@ -86,6 +86,31 @@
                             </div>
                         </div>
 
+                        {{-- 👇 REVISI MONITORING BACA PENGUMUMAN (Lebih Merapat) 👇 --}}
+                        <div class="bg-white border-radius-md p-3 mb-4 border border-warning shadow-sm">
+                            <p class="text-xs font-weight-bold text-dark mb-2"><i class="fas fa-eye text-warning me-1"></i> Status Pantauan Siswa</p>
+                            <div class="d-flex justify-content-start align-items-center gap-5">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon icon-shape icon-sm bg-success text-white text-center rounded-circle me-3">
+                                        <i class="fas fa-check-double" style="font-size: 0.6rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-sm font-weight-bolder">{{ $bacaLulus['sudah'] }} Siswa</h6>
+                                        <p class="text-xs text-secondary mb-0">Sudah Membaca</p>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="icon icon-shape icon-sm bg-secondary text-white text-center rounded-circle me-3">
+                                        <i class="fas fa-envelope" style="font-size: 0.6rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-sm font-weight-bolder">{{ $bacaLulus['belum'] }} Siswa</h6>
+                                        <p class="text-xs text-secondary mb-0">Belum Membaca</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <a href="{{ route('mutasi.kelulusan_dashboard.index', ['tahun_ajaran' => $ta]) }}" class="btn btn-warning text-white w-100 shadow-sm mb-0">
                             Kelola Detail per Kelas <i class="fas fa-arrow-right ms-2"></i>
                         </a>
@@ -113,7 +138,6 @@
                                             {{ $jadwalNaik->waktu_buka->locale('id')->isoFormat('D MMMM Y, HH:mm') }} - {{ $jadwalNaik->waktu_tutup->locale('id')->isoFormat('D MMMM Y, HH:mm') }} WIB
                                         </h6>
                                         
-                                        {{-- 👇 INDIKATOR STATUS OTOMATIS KENAIKAN 👇 --}}
                                         @if($jadwalNaik->waktu_tutup->isPast())
                                             <span class="badge bg-danger ms-2 px-2 py-1 shadow-sm" style="font-size: 0.6rem;"><i class="fas fa-lock me-1"></i> Sesi Berakhir</span>
                                         @elseif($jadwalNaik->waktu_buka->isFuture())
@@ -151,6 +175,31 @@
                             <div class="col-4">
                                 <h4 class="mb-0 font-weight-bolder text-secondary opacity-7">{{ $statNaik['belum'] }}</h4>
                                 <p class="text-xxs text-uppercase font-weight-bold text-secondary mb-0">Belum</p>
+                            </div>
+                        </div>
+
+                        {{-- 👇 REVISI MONITORING BACA PENGUMUMAN (Lebih Merapat) 👇 --}}
+                        <div class="bg-white border-radius-md p-3 mb-4 border border-primary shadow-sm">
+                            <p class="text-xs font-weight-bold text-dark mb-2"><i class="fas fa-eye text-primary me-1"></i> Status Pantauan Siswa</p>
+                            <div class="d-flex justify-content-start align-items-center gap-5">
+                                <div class="d-flex align-items-center">
+                                    <div class="icon icon-shape icon-sm bg-success text-white text-center rounded-circle me-3">
+                                        <i class="fas fa-check-double" style="font-size: 0.6rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-sm font-weight-bolder">{{ $bacaNaik['sudah'] }} Siswa</h6>
+                                        <p class="text-xs text-secondary mb-0">Sudah Membaca</p>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="icon icon-shape icon-sm bg-secondary text-white text-center rounded-circle me-3">
+                                        <i class="fas fa-envelope" style="font-size: 0.6rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 text-sm font-weight-bolder">{{ $bacaNaik['belum'] }} Siswa</h6>
+                                        <p class="text-xs text-secondary mb-0">Belum Membaca</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

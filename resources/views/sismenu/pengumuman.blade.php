@@ -138,7 +138,7 @@
                                 <h5 class="text-dark font-weight-bolder">Selamat atas pencapaian Anda! 🎉</h5>
                                 <p class="text-sm text-secondary mb-2">Teruslah semangat belajar dan kejar cita-cita Anda di masa depan.</p>
                                 
-                                {{-- 👇 TOMBOL DOWNLOAD SKL 👇 --}}
+                                {{-- TOMBOL DOWNLOAD SKL --}}
                                 @if(!empty($fileSkl))
                                     <a href="{{ route('sis.pengumuman.download_skl') }}" class="btn btn-primary mt-3 shadow-sm rounded-pill px-4" target="_blank">
                                         <i class="fas fa-file-download me-2"></i> Download SKL (PDF)

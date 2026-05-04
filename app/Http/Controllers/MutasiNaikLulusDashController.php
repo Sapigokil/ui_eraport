@@ -40,6 +40,12 @@ class MutasiNaikLulusDashController extends Controller
         ];
         $statLulus['belum'] = max(0, $totalSiswaLulusan - ($statLulus['lulus'] + $statLulus['gagal']));
 
+        // Statistik Baca Pengumuman Lulus
+        $bacaLulus = [
+            'sudah' => DB::table('pengumuman_siswa')->where('jenis', 'kelulusan')->where('tahun_ajaran', $ta)->where('has_seen', 1)->count(),
+            'belum' => DB::table('pengumuman_siswa')->where('jenis', 'kelulusan')->where('tahun_ajaran', $ta)->where('has_seen', 0)->count(),
+        ];
+
         // --- B. KENAIKAN ---
         $idsKenaikan = $kelasMaster->where('tingkat', '<', $maxTingkat)->pluck('id_kelas')->toArray();
         $totalSiswaKenaikan = Siswa::whereIn('id_kelas', $idsKenaikan)->where('status', 'aktif')->count();
@@ -50,6 +56,12 @@ class MutasiNaikLulusDashController extends Controller
         ];
         $statNaik['belum'] = max(0, $totalSiswaKenaikan - ($statNaik['naik'] + $statNaik['tinggal']));
 
+        // Statistik Baca Pengumuman Naik
+        $bacaNaik = [
+            'sudah' => DB::table('pengumuman_siswa')->where('jenis', 'kenaikan')->where('tahun_ajaran', $ta)->where('has_seen', 1)->count(),
+            'belum' => DB::table('pengumuman_siswa')->where('jenis', 'kenaikan')->where('tahun_ajaran', $ta)->where('has_seen', 0)->count(),
+        ];
+
         $jadwalLulus = PengumumanSetting::where('jenis', 'kelulusan')->where('tahun_ajaran', $ta)->first();
         $jadwalNaik = PengumumanSetting::where('jenis', 'kenaikan')->where('tahun_ajaran', $ta)->first();
 
@@ -58,8 +70,8 @@ class MutasiNaikLulusDashController extends Controller
 
         return view('mutasi.pengumuman.naiklulus_dashboard', compact(
             'ta', 'listTA', 'maxTingkat',
-            'totalSiswaLulusan', 'statLulus', 'jadwalLulus',
-            'totalSiswaKenaikan', 'statNaik', 'jadwalNaik'
+            'totalSiswaLulusan', 'statLulus', 'jadwalLulus', 'bacaLulus',
+            'totalSiswaKenaikan', 'statNaik', 'jadwalNaik', 'bacaNaik'
         ));
     }
 
@@ -232,7 +244,6 @@ class MutasiNaikLulusDashController extends Controller
                 
                 if ($siswa) {
                     if ($r->status == 'lulus') {
-                        // 👇 PERBAIKAN: Disimpan sesuai nilai ENUM yang ada yaitu 'lulus'
                         DB::table('siswa')->where('id_siswa', $r->id_siswa)->update(['status' => 'lulus']);
                         $countLulus++;
                     } elseif ($r->status == 'tidak_lulus') {
