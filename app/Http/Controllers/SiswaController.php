@@ -14,6 +14,7 @@ use Carbon\Carbon; // Digunakan untuk format tanggal
 use Illuminate\Support\Arr;
 use Maatwebsite\Excel\Facades\Excel; // BARU: Facade Maatwebsite/Excel
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Exports\SiswaExport; // BARU: Export class untuk Excel
 
 
 class SiswaController extends Controller
@@ -21,39 +22,23 @@ class SiswaController extends Controller
     // Field fillable untuk Siswa
     protected $siswaFillable = ['nipd', 'nisn', 'nama_siswa', 'jenis_kelamin', 'tingkat', 'id_kelas', 'id_ekskul'];
 
-    /**
-     * Tampilkan daftar semua siswa (index).
-     */
-    public function index(Request $request)
+    // Helper Fungsi untuk Filter (Agar konsisten antara Index, Excel, dan PDF)
+    private function applyFilters($query, Request $request)
     {
-        // 0. Ambil List Kelas untuk Dropdown
-        // Kita kirim variabel $listKelas ke view
-        $listKelas = \App\Models\Kelas::orderBy('nama_kelas')->get();
-
-        // 1. Inisialisasi Query
-        $query = Siswa::with('kelas', 'ekskul');
-
-        // 2. Filter Status
         $statusFilter = $request->get('status', 'aktif');
         if ($statusFilter !== 'semua') {
             $query->where('status', $statusFilter);
         }
 
-        // 3. Filter Kelas (BARU)
-        // Default 'all' (Semua Kelas) -> Tidak perlu where
         if ($request->has('id_kelas')) {
             $filterKelas = $request->id_kelas;
-
             if ($filterKelas == 'no_class') {
-                // Tampilkan siswa yang kolom id_kelas-nya NULL
                 $query->whereNull('id_kelas');
             } elseif ($filterKelas != 'all' && $filterKelas != '') {
-                // Tampilkan siswa di kelas spesifik
                 $query->where('id_kelas', $filterKelas);
             }
         }
 
-        // 4. Pencarian
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -62,11 +47,19 @@ class SiswaController extends Controller
                   ->orWhere('nipd', 'like', '%' . $search . '%');
             });
         }
-        
-        $query->orderBy('nama_siswa', 'asc');
-        $siswas = $query->paginate(20)->withQueryString();
+        return $query;
+    }
 
-        // Jangan lupa compact 'listKelas'
+    /**
+     * Tampilkan daftar semua siswa (index).
+     */
+    public function index(Request $request)
+    {
+        $listKelas = Kelas::orderBy('nama_kelas')->get();
+        $query = Siswa::with('kelas', 'ekskul');
+        $query = $this->applyFilters($query, $request); // Panggil Helper
+        
+        $siswas = $query->orderBy('nama_siswa', 'asc')->paginate(20)->withQueryString();
         return view('siswa.index', compact('siswas', 'listKelas'));
     }
 
@@ -831,70 +824,37 @@ class SiswaController extends Controller
     }
 
 
-        // =========================================================================
+    // =========================================================================
     // EXPORT PDF & CSV SISWA
     // =========================================================================
 
-    public function exportPdf()
+    /**
+     * EXPORT EXCEL (Menggantikan CSV)
+     */
+    public function exportExcel(Request $request)
     {
-        $siswas = Siswa::with('kelas', 'ekskul')->get()->map(function ($s) {
-            return [
-                'nama'   => (string) $s->nama_siswa,
-                'nipd'   => (string) $s->nipd,
-                'nisn'   => (string) $s->nisn,
-                'kelas'  => (string) (optional($s->kelas)->nama_kelas ?? '-'),
-                'ekskul' => (string) (optional($s->ekskul)->nama_ekskul ?? '-'),
-            ];
-        });
-
-        $namaSekolah = \App\Models\InfoSekolah::value('nama_sekolah');
-
-        return Pdf::loadView(
-            'siswa.exports.data_siswa_pdf',
-            compact('siswas', 'namaSekolah')
-        )
-        ->setPaper('a4', 'portrait') // 🔥 WAJIB
-        ->download('data-siswa.pdf');
+        return Excel::download(new SiswaExport($request), 'data_siswa_lengkap.xlsx');
     }
 
-    public function exportCsv()
+    /**
+     * EXPORT PDF (Perbaikan Error 500 InfoSekolah Not Found)
+     */
+    public function exportPdf(Request $request)
     {
-        $siswas = Siswa::with('kelas', 'ekskul')->get();
+        ini_set('memory_limit', '256M');
 
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="data-siswa.csv"',
-        ];
+        $query = Siswa::with(['kelas', 'detail']);
+        $query = $this->applyFilters($query, $request); // Filter harus ikut
 
-        $callback = function () use ($siswas) {
-            $file = fopen('php://output', 'w');
+        $siswas = $query->orderBy('nama_siswa', 'asc')->get();
+        
+        // 👇 SOLUSI ERROR 500: Memanggil model dengan namespace lengkap 👇
+        $namaSekolah = \App\Models\InfoSekolah::value('nama_sekolah') ?? 'E-RAPOR';
 
-            fputcsv($file, [
-                'NIPD',
-                'NISN',
-                'Nama Siswa',
-                'Jenis Kelamin',
-                'Tingkat',
-                'Kelas',
-                'Ekskul'
-            ]);
+        $pdf = Pdf::loadView('siswa.exports.data_siswa_pdf', compact('siswas', 'namaSekolah'))
+                  ->setPaper('a4', 'landscape'); // Landscape agar lebih lega
 
-            foreach ($siswas as $s) {
-                fputcsv($file, [
-                    $s->nipd,
-                    $s->nisn,
-                    $s->nama_siswa,
-                    $s->jenis_kelamin,
-                    $s->tingkat,
-                    optional($s->kelas)->nama_kelas,
-                    optional($s->ekskul)->nama_ekskul,
-                ]);
-            }
-
-            fclose($file);
-        };
-
-        return response()->stream($callback, 200, $headers);
+        return $pdf->download('Data_Siswa_' . date('Ymd') . '.pdf');
     }
 
 

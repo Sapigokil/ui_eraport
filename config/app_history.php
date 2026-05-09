@@ -22,6 +22,7 @@ return [
             'notes'   => [
                 'Penambahan Fitur Download SKL (Surat Keterangan Lulus) pada Halaman Pengumuman Siswa yang dinyatakan Lulus',
                 'Fitur ini memungkinkan siswa yang sudah dinyatakan Lulus untuk langsung mendownload SKL mereka dalam format PDF sebagai bukti resmi kelulusan',
+                'Bug Fix, Export Data Siswa',
                 ],
         ],
         [

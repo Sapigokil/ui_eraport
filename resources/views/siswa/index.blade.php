@@ -15,10 +15,12 @@
                         
                         {{-- 1. HEADER UTAMA (Gaya Banner) --}}
                         <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                            <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 overflow-hidden position-relative">
+                            {{-- 👇 PERBAIKAN: Mengganti overflow-hidden menjadi overflow-visible 👇 --}}
+                            <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 overflow-visible position-relative">
+                                
                                 {{-- Dekorasi Icon Besar --}}
-                                <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3">
-                                    <i class="fas fa-user-graduate text-white" style="font-size: 8rem;"></i>
+                                <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3" style="overflow: hidden; height: 100%; border-radius: 0.5rem;">
+                                    <i class="fas fa-user-graduate text-white" style="font-size: 8rem; margin-top: -10px;"></i>
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center position-relative z-index-1 px-3">
@@ -34,20 +36,21 @@
                                     {{-- KELOMPOK TOMBOL AKSI: EXPORT, IMPORT, TAMBAH --}}
                                     <div class="pe-3 d-flex align-items-center">
                                         
-                                        {{-- 1. Dropdown Export (Baru Dipindah Kesini) --}}
+                                        {{-- Dropdown Export --}}
                                         <div class="dropdown me-2">
                                             <button class="btn btn-outline-white btn-sm mb-0 dropdown-toggle" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
                                                 <i class="fas fa-file-export me-1"></i> Export
                                             </button>
-                                            <ul class="dropdown-menu" aria-labelledby="dropdownExport">
-                                                <li>
-                                                    <a class="dropdown-item" href="{{ route('master.siswa.export.pdf') }}">
-                                                        <i class="fas fa-file-pdf text-danger me-2"></i> Export ke PDF
+                                            <ul class="dropdown-menu shadow-lg" aria-labelledby="dropdownExport">
+                                                {{-- <li>
+                                                    <a class="dropdown-item" href="{{ route('master.siswa.export.pdf', request()->all()) }}">
+                                                        <i class="fas fa-file-pdf text-danger me-2"></i> Export ke PDF (Filtered)
                                                     </a>
-                                                </li>
+                                                </li> --}}
                                                 <li>
-                                                    <a class="dropdown-item" href="{{ route('master.siswa.export.csv') }}">
-                                                        <i class="fas fa-file-csv text-success me-2"></i> Export ke CSV
+                                                    {{-- Ganti link CSV menjadi Excel --}}
+                                                    <a class="dropdown-item" href="{{ route('master.siswa.export.excel', request()->all()) }}">
+                                                        <i class="fas fa-file-excel text-success me-2"></i> Export ke Excel (Sesuai Filter)
                                                     </a>
                                                 </li>
                                             </ul>
@@ -59,7 +62,7 @@
                                             <button class="btn btn-outline-white btn-sm mb-0 dropdown-toggle" type="button" id="dropdownImport" data-bs-toggle="dropdown" aria-expanded="false">
                                                 <i class="fas fa-file-import me-1"></i> Import
                                             </button>
-                                            <ul class="dropdown-menu" aria-labelledby="dropdownImport">
+                                            <ul class="dropdown-menu shadow-lg" aria-labelledby="dropdownImport">
                                                 <li>
                                                     <a class="dropdown-item" href="#" onclick="document.getElementById('form_import_xlsx').querySelector('input[type=file]').click(); return false;">
                                                         <i class="fas fa-file-excel text-success me-2"></i> Import Excel (.xlsx)
@@ -102,7 +105,7 @@
                             </div>
 
                             {{-- FILTER & SEARCH BAR --}}
-                            <div class="p-4 border-bottom bg-gray-50">
+                            <div class="p-4 border-bottom bg-gray-50 mt-3">
                                 <form method="GET" action="{{ route('master.siswa.index') }}">
                                     <div class="row align-items-end g-3">
                                         

@@ -129,8 +129,9 @@ Route::middleware(['auth'])->group(function () {
         
         // Siswa
         Route::resource('siswa', SiswaController::class)->names('siswa')->parameters(['siswa' => 'siswa']);
+        // Ganti export.csv menjadi excel
+        Route::get('siswa/export/excel', [SiswaController::class, 'exportExcel'])->name('siswa.export.excel');
         Route::get('siswa/export/pdf', [SiswaController::class, 'exportPdf'])->name('siswa.export.pdf');
-        Route::get('siswa/export/csv', [SiswaController::class, 'exportCsv'])->name('siswa.export.csv');
         Route::post('siswa/import/csv', [SiswaController::class, 'importCsv'])->name('siswa.import.csv');
         Route::post('siswa/import/xlsx', [SiswaController::class, 'importXlsx'])->name('siswa.import.xlsx');
 
