@@ -202,10 +202,10 @@
                             <hr class="my-4">
 
                             {{-- ================================================= --}}
-                            <h6 class="text-sm font-weight-bolder mb-3 text-success">IV. Data Orang Tua/Wali</h6>
+                            <h6 class="text-sm font-weight-bolder mb-3 text-success">IV. Data Orang Tua</h6>
                             <div class="row">
                                 {{-- AYAH --}}
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <h6 class="text-xs font-weight-bold mb-2 text-dark">AYAH</h6>
                                     <dl class="row text-sm mb-0">
                                         <dt class="col-sm-5 text-secondary">Nama :</dt>
@@ -221,7 +221,7 @@
                                     </dl>
                                 </div>
                                 {{-- IBU --}}
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <h6 class="text-xs font-weight-bold mb-2 text-dark">IBU</h6>
                                     <dl class="row text-sm mb-0">
                                         <dt class="col-sm-5 text-secondary">Nama :</dt>
@@ -236,8 +236,19 @@
                                         <dd class="col-sm-7 font-weight-bold">{{ $detail->penghasilan_ibu ?? '-' }}</dd>
                                     </dl>
                                 </div>
+                                <div class="col-md-12">
+                                    <p class="text-sm mb-3"><span class="text-secondary me-1">Alamat Orang Tua:</span> <span class="font-weight-bold">{{ $detail->alamat_ortu ?? '-' }}</span></p>
+                                </div>
+                            </div>
+
+
+                            <hr class="my-4">
+
+                            {{-- ================================================= --}}
+                            <h6 class="text-sm font-weight-bolder mb-3 text-success">IV. Data Wali</h6>
+                            <div class="row">
                                 {{-- WALI --}}
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <h6 class="text-xs font-weight-bold mb-2 text-dark">WALI</h6>
                                     <dl class="row text-sm mb-0">
                                         <dt class="col-sm-5 text-secondary">Nama :</dt>
@@ -251,6 +262,9 @@
                                         <dt class="col-sm-5 text-secondary">Penghasilan :</dt>
                                         <dd class="col-sm-7 font-weight-bold">{{ $detail->penghasilan_wali ?? '-' }}</dd>
                                     </dl>
+                                </div>
+                                <div class="col-md-12">
+                                    <p class="text-sm mb-3"><span class="text-secondary me-1">Alamat Wali:</span> <span class="font-weight-bold">{{ $detail->alamat_wali ?? '-' }}</span></p>
                                 </div>
                             </div>
 

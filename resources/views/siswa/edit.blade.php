@@ -89,7 +89,7 @@
                                 <div class="row">
                                     <div class="col-md-4 mb-3">
                                         <label for="jenis_kelamin" class="form-label">Jenis Kelamin</label>
-                                        <select name="jenis_kelamin" id="jenis_kelamin" class="form-control @error('jenis_kelamin') is-invalid @enderror" required>
+                                        <select name="jenis_kelamin" id="jenis_kelamin" class="form-control rounded-pill py-2 @error('jenis_kelamin') is-invalid @enderror" required>
                                         <option value="">-- Pilih Jenis Kelamin --</option>
                                         
                                         <option value="L" {{ (old('jenis_kelamin', $siswa->jenis_kelamin) == 'L') ? 'selected' : '' }}>
@@ -234,20 +234,19 @@
                                 <hr class="my-4">
 
                                 {{-- ================================================= --}}
-                                {{-- 🛑 FIX POIN: III. Alamat & Kontak --}}
                                 <h6 class="text-sm font-weight-bolder mb-3 text-danger"><i class="fas fa-map-marker-alt me-1"></i> III. Alamat & Kontak</h6>
                                 <hr>
                                 
-                                {{-- Baris 1: Alamat --}}
+                                {{-- Baris 1: Alamat Saat Ini (Domisili) --}}
                                 <div class="row">
                                     <div class="col-md-12 mb-3">
-                                        <label for="alamat" class="form-label">Alamat Lengkap (Jalan)</label>
-                                        <textarea name="alamat" class="form-control @error('alamat') is-invalid @enderror">{{ $getValue('alamat', 'detail') }}</textarea>
+                                        <label for="alamat" class="form-label">Alamat Lengkap (Domisili Siswa Saat Ini)</label>
+                                        <textarea name="alamat" class="form-control rounded-3 py-2 @error('alamat') is-invalid @enderror">{{ $getValue('alamat', 'detail') }}</textarea>
                                         @error('alamat') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
                                 
-                                {{-- Baris 2: RT, RW, Kodepos --}}
+                                {{-- Baris 2: RT, RW, Kodepos (DIRUBAH JADI DROPDOWN) --}}
                                 <div class="row">
                                     <div class="col-md-4 mb-3">
                                         <label for="rt" class="form-label">RT</label>
@@ -258,8 +257,12 @@
                                         <input type="text" name="rw" class="form-control rounded-pill py-2" value="{{ $getValue('rw', 'detail') }}">
                                     </div>
                                     <div class="col-md-4 mb-3">
-                                        <label for="kode_pos" class="form-label">Kode Pos</label>
-                                        <input type="text" name="kode_pos" class="form-control rounded-pill py-2" value="{{ $getValue('kode_pos', 'detail') }}">
+                                        <label for="kode_pos" class="form-label">Kode Pos (Wilayah)</label>
+                                        <select name="kode_pos" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Wilayah Kode Pos --</option>
+                                            <option value="Dalam Kota" {{ $getValue('kode_pos', 'detail') == 'Dalam Kota' ? 'selected' : '' }}>Dalam Kota</option>
+                                            <option value="Luar Kota" {{ $getValue('kode_pos', 'detail') == 'Luar Kota' ? 'selected' : '' }}>Luar Kota</option>
+                                        </select>
                                     </div>
                                 </div>
                                 
@@ -286,48 +289,63 @@
                                         <input type="text" name="no_hp" class="form-control rounded-pill py-2" value="{{ $getValue('no_hp', 'detail') }}">
                                     </div>
                                     <div class="col-md-4 mb-3">
-                                        <label for="no_hp_wali" class="form-label">No. HP Wali</label>
-                                        <input type="text" name="telp_wali" class="form-control rounded-pill py-2" value="{{ $getValue('telp_wali', 'detail') }}">
-                                    </div>
-                                    <div class="col-md-4 mb-3">
                                         <label for="email" class="form-label">Email</label>
                                         <input type="email" name="email" class="form-control rounded-pill py-2" value="{{ $getValue('email', 'detail') }}">
                                     </div>
                                 </div>
                                 
-                                {{-- Baris 5: Jenis Tinggal, Alat Transportasi, Jarak Rumah --}}
-                                <div class="row">
+                                {{-- Baris 6: Lintang, Bujur --}}
+                                <div class="row mb-4">
                                     <div class="col-md-4 mb-3">
-                                        <label for="jenis_tinggal" class="form-label">Jenis Tinggal</label>
-                                        <input type="text" name="jenis_tinggal" class="form-control rounded-pill py-2" value="{{ $getValue('jenis_tinggal', 'detail') }}">
+                                        <label for="lintang" class="form-label">Lintang</label>
+                                        <input type="text" name="lintang" class="form-control rounded-pill py-2" value="{{ $getValue('lintang', 'detail') }}">
                                     </div>
                                     <div class="col-md-4 mb-3">
-                                        <label for="alat_transportasi" class="form-label">Alat Transportasi</label>
-                                        <input type="text" name="alat_transportasi" class="form-control rounded-pill py-2" value="{{ $getValue('alat_transportasi', 'detail') }}">
+                                        <label for="bujur" class="form-label">Bujur</label>
+                                        <input type="text" name="bujur" class="form-control rounded-pill py-2" value="{{ $getValue('bujur', 'detail') }}">
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label for="jarak_rumah" class="form-label">Jarak Rumah (km)</label>
                                         <input type="text" name="jarak_rumah" class="form-control rounded-pill py-2" value="{{ $getValue('jarak_rumah', 'detail') }}">
                                     </div>
                                 </div>
-                                
-                                {{-- Baris 6: Lintang, Bujur --}}
-                                <div class="row mb-4">
+
+                                <hr class="my-4">
+
+                                {{-- Baris 5: Jenis Tinggal (DROPDOWN), Alat Transportasi (DROPDOWN), Jarak Rumah --}}
+                                <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label for="lintang" class="form-label">Lintang</label>
-                                        <input type="text" name="lintang" class="form-control rounded-pill py-2" value="{{ $getValue('lintang', 'detail') }}">
+                                        <label for="jenis_tinggal" class="form-label">Jenis Tinggal</label>
+                                        <select name="jenis_tinggal" id="jenis_tinggal" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Jenis Tinggal --</option>
+                                            @foreach(['Bersama Orang Tua', 'Wali', 'Pesantren', 'Asrama', 'Kost', 'Lainnya'] as $opsi)
+                                                <option value="{{ $opsi }}" {{ $getValue('jenis_tinggal', 'detail') == $opsi ? 'selected' : '' }}>
+                                                    {{ $opsi }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-md-6 mb-3">
-                                        <label for="bujur" class="form-label">Bujur</label>
-                                        <input type="text" name="bujur" class="form-control rounded-pill py-2" value="{{ $getValue('bujur', 'detail') }}">
+                                        <label for="alat_transportasi" class="form-label">Alat Transportasi</label>
+                                        <select name="alat_transportasi" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Transportasi --</option>
+                                            @foreach(['Sepeda motor', 'Angkutan umum/bus/pete-pete', 'Mobil/bus antar jemput', 'Mobil pribadi', 'Sepeda', 'Jalan kaki', 'Lainnya'] as $opsi)
+                                                <option value="{{ $opsi }}" {{ $getValue('alat_transportasi', 'detail') == $opsi ? 'selected' : '' }}>
+                                                    {{ $opsi }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="no_hp_wali" class="form-label">No. HP Wali/Ortu</label>
+                                        <input type="text" name="telp_wali" class="form-control rounded-pill py-2" value="{{ $getValue('telp_wali', 'detail') }}">
                                     </div>
                                 </div>
-                                {{-- END FIX POIN: III. Alamat & Kontak --}}
 
                                 <hr class="my-4">
                                 
                                 {{-- ================================================= --}}
-                                <h6 class="text-sm font-weight-bolder mb-3 text-success"><i class="fas fa-users me-1"></i> IV. Data Orang Tua/Wali</h6>
+                                <h6 class="text-sm font-weight-bolder mb-3 text-success"><i class="fas fa-users me-1"></i> IVa. Data Orang Tua</h6>
                                 <hr>
                                 
                                 {{-- AYAH --}}
@@ -391,37 +409,65 @@
                                         <input type="text" name="penghasilan_ibu" class="form-control rounded-pill py-2" value="{{ $getValue('penghasilan_ibu', 'detail') }}">
                                     </div>
                                 </div>
-
-                                {{-- WALI --}}
-                                <h6 class="text-xs font-weight-bolder text-secondary mb-3">4C. Data Wali (Opsional)</h6>
+                                
+                                {{-- Alamat Orang Tua (Selalu Tampil) --}}
                                 <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label for="nama_wali" class="form-label">Nama Wali</label>
-                                        <input type="text" name="nama_wali" class="form-control rounded-pill py-2" value="{{ $getValue('nama_wali', 'detail') }}">
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label for="tahun_lahir_wali" class="form-label">Tahun Lahir Wali</label>
-                                        <input type="number" name="tahun_lahir_wali" class="form-control rounded-pill py-2" value="{{ $getValue('tahun_lahir_wali', 'detail') }}" maxlength="4">
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label for="nik_wali" class="form-label">NIK Wali</label>
-                                        <input type="text" name="nik_wali" class="form-control rounded-pill py-2" value="{{ $getValue('nik_wali', 'detail') }}" maxlength="20">
+                                    <div class="col-md-12 mb-3">
+                                        <label for="alamat_ortu" class="form-label">Alamat Orang Tua</label>
+                                        <textarea name="alamat_ortu" class="form-control rounded-3 py-2 @error('alamat_ortu') is-invalid @enderror">{{ $getValue('alamat_ortu', 'detail') }}</textarea>
+                                        @error('alamat_ortu') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
-                                <div class="row mb-4">
-                                    <div class="col-md-4 mb-3">
-                                        <label for="pekerjaan_wali" class="form-label">Pekerjaan Wali</label>
-                                        <input type="text" name="pekerjaan_wali" class="form-control rounded-pill py-2" value="{{ $getValue('pekerjaan_wali', 'detail') }}">
+
+                                {{-- ================================================= --}}
+                                {{-- SEKSI WALI (Ditampilkan secara dinamis oleh JS) --}}
+                                {{-- ================================================= --}}
+                                <div id="section_wali">
+                                    <hr class="my-4">
+                                    <h6 class="text-sm font-weight-bolder mb-3 text-success"><i class="fas fa-users me-1"></i> IVb. Data Wali</h6>
+                                    <hr>
+
+                                    {{-- WALI --}}
+                                    <h6 class="text-xs font-weight-bolder text-secondary mb-3">4C. Data Wali Pendamping</h6>
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label for="nama_wali" class="form-label">Nama Wali</label>
+                                            <input type="text" name="nama_wali" class="form-control rounded-pill py-2" value="{{ $getValue('nama_wali', 'detail') }}">
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="tahun_lahir_wali" class="form-label">Tahun Lahir Wali</label>
+                                            <input type="number" name="tahun_lahir_wali" class="form-control rounded-pill py-2" value="{{ $getValue('tahun_lahir_wali', 'detail') }}" maxlength="4">
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="nik_wali" class="form-label">NIK Wali</label>
+                                            <input type="text" name="nik_wali" class="form-control rounded-pill py-2" value="{{ $getValue('nik_wali', 'detail') }}" maxlength="20">
+                                        </div>
                                     </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label for="jenjang_pendidikan_wali" class="form-label">Jenjang Pendidikan Wali</label>
-                                        <input type="text" name="jenjang_pendidikan_wali" class="form-control rounded-pill py-2" value="{{ $getValue('jenjang_pendidikan_wali', 'detail') }}">
+                                    <div class="row mb-4">
+                                        <div class="col-md-4 mb-3">
+                                            <label for="pekerjaan_wali" class="form-label">Pekerjaan Wali</label>
+                                            <input type="text" name="pekerjaan_wali" class="form-control rounded-pill py-2" value="{{ $getValue('pekerjaan_wali', 'detail') }}">
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="jenjang_pendidikan_wali" class="form-label">Jenjang Pendidikan Wali</label>
+                                            <input type="text" name="jenjang_pendidikan_wali" class="form-control rounded-pill py-2" value="{{ $getValue('jenjang_pendidikan_wali', 'detail') }}">
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label for="penghasilan_wali" class="form-label">Penghasilan Wali</label>
+                                            <input type="text" name="penghasilan_wali" class="form-control rounded-pill py-2" value="{{ $getValue('penghasilan_wali', 'detail') }}">
+                                        </div>
                                     </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label for="penghasilan_wali" class="form-label">Penghasilan Wali</label>
-                                        <input type="text" name="penghasilan_wali" class="form-control rounded-pill py-2" value="{{ $getValue('penghasilan_wali', 'detail') }}">
+                                    
+                                    {{-- Alamat Wali --}}
+                                    <div class="row" id="wrapper_alamat_wali">
+                                        <div class="col-md-12 mb-3">
+                                            <label for="alamat_wali" class="form-label">Alamat Wali</label>
+                                            <textarea name="alamat_wali" class="form-control rounded-3 py-2 @error('alamat_wali') is-invalid @enderror">{{ $getValue('alamat_wali', 'detail') }}</textarea>
+                                            @error('alamat_wali') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
                                     </div>
                                 </div>
+                                {{-- END SEKSI WALI --}}
 
                                 <hr class="my-4">
 
@@ -494,4 +540,28 @@
         </div>
         
     </main>
+
+    {{-- LOGIKA JAVASCRIPT UNTUK MENYEMBUNYIKAN/MENAMPILKAN FORM WALI --}}
+    {{-- <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const jenisTinggalDropdown = document.getElementById('jenis_tinggal');
+            const sectionWali = document.getElementById('section_wali');
+
+            function toggleWaliSection() {
+                // Jika user memilih "Bersama Orang Tua", sembunyikan seluruh seksi Wali (termasuk alamatnya)
+                if (jenisTinggalDropdown.value === 'Bersama Orang Tua') {
+                    sectionWali.style.display = 'none';
+                } else {
+                    // Jika memilih selain itu, tampilkan
+                    sectionWali.style.display = 'block';
+                }
+            }
+
+            // Jalankan saat halaman pertama kali dimuat (untuk load data existing)
+            toggleWaliSection();
+
+            // Jalankan setiap kali user mengubah pilihan dropdown
+            jenisTinggalDropdown.addEventListener('change', toggleWaliSection);
+        });
+    </script> --}}
 @endsection

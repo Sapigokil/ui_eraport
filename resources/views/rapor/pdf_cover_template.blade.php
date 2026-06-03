@@ -210,29 +210,29 @@
     <table class="table-identitas-siswa">
         <tr><td class="col-no">1.</td><td class="col-label">Nama Lengkap Peserta Didik</td><td class="col-titik">:</td><td class="col-value">{{ strtoupper($siswa->nama_siswa) }}</td></tr>
         <tr><td class="col-no">2.</td><td class="col-label">Nomor Induk/NISN</td><td class="col-titik">:</td><td class="col-value">{{ $siswa->nipd ?? '-' }} / {{ $siswa->nisn ?? '-' }}</td></tr>
-        <tr><td class="col-no">3.</td><td class="col-label">Tempat, Tanggal Lahir</td><td class="col-titik">:</td><td class="col-value">{{ $det->tempat_lahir ?? '-' }}, {{ $det->tanggal_lahir ? \Carbon\Carbon::parse($det->tanggal_lahir)->locale('id')->translatedFormat('d F Y') : '-' }}</td></tr>
+        <tr><td class="col-no">3.</td><td class="col-label">Tempat, Tanggal Lahir</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->tempat_lahir ?? '-')) }}, {{ $det->tanggal_lahir ? \Carbon\Carbon::parse($det->tanggal_lahir)->locale('id')->translatedFormat('d F Y') : '-' }}</td></tr>
         <tr><td class="col-no">4.</td><td class="col-label">Jenis Kelamin</td><td class="col-titik">:</td><td class="col-value">{{ ($siswa->jenis_kelamin == 'L') ? 'Laki-Laki' : (($siswa->jenis_kelamin == 'P') ? 'Perempuan' : '-') }}</td></tr>
-        <tr><td class="col-no">5.</td><td class="col-label">Agama</td><td class="col-titik">:</td><td class="col-value">{{ $det->agama ?? '-' }}</td></tr>
+        <tr><td class="col-no">5.</td><td class="col-label">Agama</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->agama ?? '-')) }}</td></tr>
         <tr><td class="col-no">6.</td><td class="col-label">Status dalam Keluarga</td><td class="col-titik">:</td><td class="col-value">Anak Kandung</td></tr> 
         <tr><td class="col-no">7.</td><td class="col-label">Anak ke</td><td class="col-titik">:</td><td class="col-value">{{ $det->anak_ke_berapa ?? '-' }}</td></tr>
-        <tr><td class="col-no">8.</td><td class="col-label">Alamat Peserta Didik</td><td class="col-titik">:</td><td class="col-value">{{ $det->alamat ?? '-' }} {{ $det->kelurahan ?? '' }} {{ $det->kecamatan ?? '' }}</td></tr>
+        <tr><td class="col-no">8.</td><td class="col-label">Alamat Peserta Didik</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->alamat ?? '-')) }} {{ ucwords(strtolower($det->kelurahan ?? '' )) }} {{ ucwords(strtolower($det->kecamatan ?? '' )) }}</td></tr>
         <tr><td class="col-no">9.</td><td class="col-label">Nomor Telepon/HP</td><td class="col-titik">:</td><td class="col-value">{{ $det->no_hp ?? '-' }}</td></tr>
         <tr><td class="col-no">10.</td><td class="col-label">Sekolah Asal</td><td class="col-titik">:</td><td class="col-value">{{ $det->sekolah_asal ?? '-' }}</td></tr>
         <tr><td class="col-no">11.</td><td class="col-label">Diterima di sekolah ini</td><td class="col-titik"></td><td class="col-value"></td></tr>
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">Di kelas</td><td class="col-titik">:</td><td class="col-value">{{ $det->kelas_awal ?? '-' }}</td></tr>
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">Pada tanggal</td><td class="col-titik">:</td><td class="col-value">{{ $det->tgl_masuk ? \Carbon\Carbon::parse($det->tgl_masuk)->locale('id')->translatedFormat('d F Y') : '-' }}</td></tr>
         <tr><td class="col-no">12.</td><td class="col-label">Nama Orang Tua</td><td class="col-titik"></td><td class="col-value"></td></tr>
-        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">a. Ayah</td><td class="col-titik">:</td><td class="col-value">{{ $det->nama_ayah ?? '-' }}</td></tr>
-        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">b. Ibu</td><td class="col-titik">:</td><td class="col-value">{{ $det->nama_ibu ?? '-' }}</td></tr>
+        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">a. Ayah</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->nama_ayah ?? '-')) }}</td></tr>
+        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">b. Ibu</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->nama_ibu ?? '-')) }}</td></tr>
         <tr><td class="col-no">13.</td><td class="col-label">Alamat Orang Tua</td><td class="col-titik">:</td><td class="col-value">{{ $det->alamat ?? '-' }}</td></tr>
         <tr><td class="col-no">14.</td><td class="col-label">Nomor Telepon/HP Ortu</td><td class="col-titik">:</td><td class="col-value">{{ $det->telp_wali ?? '-' }}</td></tr>
         <tr><td class="col-no">15.</td><td class="col-label">Pekerjaan Orang Tua</td><td class="col-titik"></td><td class="col-value"></td></tr>
-        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">a. Ayah</td><td class="col-titik">:</td><td class="col-value">{{ $det->pekerjaan_ayah ?? '-' }}</td></tr>
-        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">b. Ibu</td><td class="col-titik">:</td><td class="col-value">{{ $det->pekerjaan_ibu ?? '-' }}</td></tr>
-        <tr><td class="col-no">16.</td><td class="col-label">Nama Wali Siswa</td><td class="col-titik">:</td><td class="col-value">{{ $det->nama_wali ?? '-' }}</td></tr>
+        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">a. Ayah</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->pekerjaan_ayah ?? '-')) }}</td></tr>
+        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">b. Ibu</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->pekerjaan_ibu ?? '-')) }}</td></tr>
+        <tr><td class="col-no">16.</td><td class="col-label">Nama Wali Siswa</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->nama_wali ?? '-')) }}</td></tr>
         <tr><td class="col-no">17.</td><td class="col-label">Alamat Wali Peserta Didik</td><td class="col-titik">:</td><td class="col-value">-</td></tr>
         <tr><td class="col-no">18.</td><td class="col-label">Nomor Telepon Wali</td><td class="col-titik">:</td><td class="col-value">-</td></tr>
-        <tr><td class="col-no">19.</td><td class="col-label">Pekerjaan Wali Peserta Didik</td><td class="col-titik">:</td><td class="col-value">{{ $det->pekerjaan_wali ?? '-' }}</td></tr>
+        <tr><td class="col-no">19.</td><td class="col-label">Pekerjaan Wali Peserta Didik</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->pekerjaan_wali ?? '-')) }}</td></tr>
     </table>
 
     <div class="clearfix">

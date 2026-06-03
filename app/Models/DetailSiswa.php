@@ -20,6 +20,8 @@ class DetailSiswa extends Model
         'tanggal_lahir',
         'agama',
         'alamat',
+        'alamat_ortu', // Kolom Baru
+        'alamat_wali', // Kolom Baru
         'kelurahan',
         'kecamatan',
         'kode_pos',
