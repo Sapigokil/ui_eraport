@@ -134,6 +134,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('siswa/export/pdf', [SiswaController::class, 'exportPdf'])->name('siswa.export.pdf');
         Route::post('siswa/import/csv', [SiswaController::class, 'importCsv'])->name('siswa.import.csv');
         Route::post('siswa/import/xlsx', [SiswaController::class, 'importXlsx'])->name('siswa.import.xlsx');
+        Route::post('siswa/mass-update', [SiswaController::class, 'massUpdate'])->name('siswa.mass_update');
 
         // Rute Validasi Biodata Siswa (Admin)
         Route::get('/validasi-biodata', [\App\Http\Controllers\AdminValidasiBioController::class, 'index'])->name('validasi_bio.index');

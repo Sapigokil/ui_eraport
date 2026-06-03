@@ -36,7 +36,7 @@ class RaporCoverController extends Controller
     /**
      * Cetak Cover Satuan (1 Siswa)
      */
-    public function cetak_satuan($id_siswa)
+    public function cetak_satuan(Request $request, $id_siswa)
     {
         // Masukkan ke dalam array collection agar bisa di-looping di 1 template yang sama
         // Tambahkan 'detail' ke dalam method with()
@@ -46,7 +46,9 @@ class RaporCoverController extends Controller
             return redirect()->back()->with('error', 'Data siswa tidak ditemukan.');
         }
 
-        return $this->generatePdfCover($siswaList, 'Cover_Rapor_' . $siswaList->first()->nama_siswa . '.pdf');
+        $tanggal_cetak = $request->tanggal_cetak; // Tangkap dari URL JS
+
+        return $this->generatePdfCover($siswaList, 'Cover_Rapor_' . $siswaList->first()->nama_siswa . '.pdf', $tanggal_cetak);
     }
 
     /**
@@ -71,14 +73,16 @@ class RaporCoverController extends Controller
             return redirect()->back()->with('error', 'Tidak ada siswa di kelas ini.');
         }
 
+        $tanggal_cetak = $request->tanggal_cetak; // Tangkap dari URL JS
         $namaKelas = $siswaList->first()->kelas->nama_kelas ?? 'Kelas';
-        return $this->generatePdfCover($siswaList, 'Cover_Rapor_Massal_' . $namaKelas . '.pdf');
+        
+        return $this->generatePdfCover($siswaList, 'Cover_Rapor_Massal_' . $namaKelas . '.pdf', $tanggal_cetak);
     }
 
     /**
      * PRIVATE HELPER: Render & Stream PDF
      */
-    private function generatePdfCover($siswaList, $filename)
+    private function generatePdfCover($siswaList, $filename, $tanggal_cetak = null)
     {
         $infoSekolah = InfoSekolah::first();
         if (!$infoSekolah) {
@@ -90,7 +94,7 @@ class RaporCoverController extends Controller
             ];
         }
 
-        $pdf = Pdf::loadView('rapor.pdf_cover_template', compact('siswaList', 'infoSekolah'))
+        $pdf = Pdf::loadView('rapor.pdf_cover_template', compact('siswaList', 'infoSekolah', 'tanggal_cetak'))
                 ->setPaper('a4', 'portrait')
                 ->setOption(['isPhpEnabled' => true, 'isRemoteEnabled' => true]);
 

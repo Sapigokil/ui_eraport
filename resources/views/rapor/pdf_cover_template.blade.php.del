@@ -114,7 +114,6 @@
     <div class="text-center" style="padding-top: 60px;">
         <img src="{{ public_path('images/logo_provinsi.png') }}" class="cover-logo" alt="Logo" onerror="this.style.display='none'">
         
-        <div class="cover-title">LAPORAN HASIL BELAJAR PESERTA DIDIK</div>
         <div class="cover-title">SEKOLAH MENENGAH KEJURUAN</div>
         <div class="cover-title">(SMK) NEGERI 1 SALATIGA</div>
         
@@ -125,9 +124,8 @@
         <div class="box-nama">{{ $siswa->nisn ?? '-' }} / {{ $siswa->nipd ?? '-' }}</div>
         
         <div style="margin-top: 100px;">
-            <div class="cover-subtitle" style="font-size: 12pt;">{{ ucwords(strtolower($infoSekolah->jalan ?? '-')) }}, {{ ucwords(strtolower($infoSekolah->kota_kab ?? '-')) }}, {{ ucwords(strtolower($infoSekolah->provinsi ?? '-')) }}, Kode Pos {{ $infoSekolah->kode_pos ?? '-' }}</div>
-            <div class="cover-subtitle" style="font-size: 12pt;">Telepon {{ $infoSekolah->telp_fax ?? '-' }}, Faksimile {{ $infoSekolah->telp_fax ?? '-' }}</div>
-            <div class="cover-subtitle" style="font-size: 12pt;">Laman {{ strtolower($infoSekolah->website ?? '-') }}, Pos-el {{ strtolower($infoSekolah->email ?? '-') }}</div>
+            <div class="cover-subtitle" style="font-size: 16pt;">KEMENTERIAN PENDIDIKAN DASAR DAN MENENGAH</div>
+            <div class="cover-subtitle" style="font-size: 16pt;">REPUBLIK INDONESIA</div>
         </div>
     </div>
 
@@ -144,8 +142,7 @@
         <tr>
             <td class="col-label2">Nama Sekolah</td>
             <td class="col-titik2">:</td>
-            {{-- <td class="col-value2 font-bold">{{ strtoupper($infoSekolah->nama_sekolah ?? '-') }}</td> --}}
-            <td class="col-value2 font-bold">SMK NEGERI 1 SALATIGA</td>
+            <td class="col-value2 font-bold">{{ strtoupper($infoSekolah->nama_sekolah ?? '-') }}</td>
         </tr>
         <tr>
             <td class="col-label2">NPSN</td>
@@ -160,7 +157,7 @@
         <tr>
             <td class="col-label2">Alamat Sekolah</td>
             <td class="col-titik2">:</td>
-            <td class="col-value2">{{ $infoSekolah->jalan ?? '-' }} {{ $infoSekolah->kota_kab ?? '-' }}</td>
+            <td class="col-value2">{{ $infoSekolah->jalan ?? '-' }}</td>
         </tr>
         <tr>
             <td class="col-label2">Kelurahan / Desa</td>
@@ -185,7 +182,7 @@
         <tr>
             <td class="col-label2">Website</td>
             <td class="col-titik2">:</td>
-            <td class="col-value2">https://{{ $infoSekolah->website ?? '-' }}</td>
+            <td class="col-value2">{{ $infoSekolah->website ?? '-' }}</td>
         </tr>
         <tr>
             <td class="col-label2">E-mail</td>
@@ -210,7 +207,7 @@
     <table class="table-identitas-siswa">
         <tr><td class="col-no">1.</td><td class="col-label">Nama Lengkap Peserta Didik</td><td class="col-titik">:</td><td class="col-value">{{ strtoupper($siswa->nama_siswa) }}</td></tr>
         <tr><td class="col-no">2.</td><td class="col-label">Nomor Induk/NISN</td><td class="col-titik">:</td><td class="col-value">{{ $siswa->nipd ?? '-' }} / {{ $siswa->nisn ?? '-' }}</td></tr>
-        <tr><td class="col-no">3.</td><td class="col-label">Tempat, Tanggal Lahir</td><td class="col-titik">:</td><td class="col-value">{{ $det->tempat_lahir ?? '-' }}, {{ $det->tanggal_lahir ? \Carbon\Carbon::parse($det->tanggal_lahir)->locale('id')->translatedFormat('d F Y') : '-' }}</td></tr>
+        <tr><td class="col-no">3.</td><td class="col-label">Tempat, Tanggal Lahir</td><td class="col-titik">:</td><td class="col-value">{{ $det->tempat_lahir ?? '-' }}, {{ $det->tanggal_lahir ? \Carbon\Carbon::parse($det->tanggal_lahir)->translatedFormat('d F Y') : '-' }}</td></tr>
         <tr><td class="col-no">4.</td><td class="col-label">Jenis Kelamin</td><td class="col-titik">:</td><td class="col-value">{{ ($siswa->jenis_kelamin == 'L') ? 'Laki-Laki' : (($siswa->jenis_kelamin == 'P') ? 'Perempuan' : '-') }}</td></tr>
         <tr><td class="col-no">5.</td><td class="col-label">Agama</td><td class="col-titik">:</td><td class="col-value">{{ $det->agama ?? '-' }}</td></tr>
         <tr><td class="col-no">6.</td><td class="col-label">Status dalam Keluarga</td><td class="col-titik">:</td><td class="col-value">Anak Kandung</td></tr> 
@@ -219,13 +216,13 @@
         <tr><td class="col-no">9.</td><td class="col-label">Nomor Telepon/HP</td><td class="col-titik">:</td><td class="col-value">{{ $det->no_hp ?? '-' }}</td></tr>
         <tr><td class="col-no">10.</td><td class="col-label">Sekolah Asal</td><td class="col-titik">:</td><td class="col-value">{{ $det->sekolah_asal ?? '-' }}</td></tr>
         <tr><td class="col-no">11.</td><td class="col-label">Diterima di sekolah ini</td><td class="col-titik"></td><td class="col-value"></td></tr>
-        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">Di kelas</td><td class="col-titik">:</td><td class="col-value">{{ $det->kelas_awal ?? '-' }}</td></tr>
-        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">Pada tanggal</td><td class="col-titik">:</td><td class="col-value">{{ $det->tgl_masuk ? \Carbon\Carbon::parse($det->tgl_masuk)->locale('id')->translatedFormat('d F Y') : '-' }}</td></tr>
+        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">Di kelas</td><td class="col-titik">:</td><td class="col-value">{{ $siswa->kelas->nama_kelas ?? '-' }}</td></tr>
+        <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">Pada tanggal</td><td class="col-titik">:</td><td class="col-value">................................................</td></tr>
         <tr><td class="col-no">12.</td><td class="col-label">Nama Orang Tua</td><td class="col-titik"></td><td class="col-value"></td></tr>
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">a. Ayah</td><td class="col-titik">:</td><td class="col-value">{{ $det->nama_ayah ?? '-' }}</td></tr>
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">b. Ibu</td><td class="col-titik">:</td><td class="col-value">{{ $det->nama_ibu ?? '-' }}</td></tr>
         <tr><td class="col-no">13.</td><td class="col-label">Alamat Orang Tua</td><td class="col-titik">:</td><td class="col-value">{{ $det->alamat ?? '-' }}</td></tr>
-        <tr><td class="col-no">14.</td><td class="col-label">Nomor Telepon/HP Ortu</td><td class="col-titik">:</td><td class="col-value">{{ $det->telp_wali ?? '-' }}</td></tr>
+        <tr><td class="col-no">14.</td><td class="col-label">Nomor Telepon/HP Ortu</td><td class="col-titik">:</td><td class="col-value">{{ $det->no_hp ?? '-' }}</td></tr>
         <tr><td class="col-no">15.</td><td class="col-label">Pekerjaan Orang Tua</td><td class="col-titik"></td><td class="col-value"></td></tr>
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">a. Ayah</td><td class="col-titik">:</td><td class="col-value">{{ $det->pekerjaan_ayah ?? '-' }}</td></tr>
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">b. Ibu</td><td class="col-titik">:</td><td class="col-value">{{ $det->pekerjaan_ibu ?? '-' }}</td></tr>
@@ -241,12 +238,202 @@
         </div>
         <div class="box-ttd">
             {{-- 👇 PERBAIKAN: Format Title Case untuk Kota/Kab 👇 --}}
-            {{ \Illuminate\Support\Str::title($infoSekolah->kota_kab ?? 'Salatiga') }}, {{ \Carbon\Carbon::parse($tanggal_cetak)->locale('id')->translatedFormat('d F Y') }}<br>
+            {{ \Illuminate\Support\Str::title($infoSekolah->kota_kab ?? 'Salatiga') }}, ..................................<br>
             Kepala Sekolah<br><br><br><br><br>
             <span class="font-bold" style="text-decoration: underline;">{{ $infoSekolah->nama_kepsek ?? '__________________________' }}</span><br>
             NIP. {{ $infoSekolah->nip_kepsek ?? '-' }}
         </div>
     </div>
+
+    <div class="page-break"></div>
+
+    {{-- TAMBAHKAN CSS MANDIRI KHUSUS HALAMAN 4 & 5 DI SINI --}}
+    <style>
+        /* CSS KHUSUS HALAMAN 4 & 5 - Dijamin 100% tidak merusak Halaman 1-3 */
+        .tabel-mutasi-khusus { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 11pt; 
+            margin-bottom: 10px;
+        }
+        /* Pengaturan khusus untuk ISI TABEL (td) */
+        .tabel-mutasi-khusus td { 
+            border: 1px solid black; 
+            padding: 10px 10px; /* Silakan sesuaikan padding isi tabel di sini */
+            vertical-align: middle; 
+            line-height: 1.2; 
+        }
+
+        /* Pengaturan khusus untuk HEADER TABEL (th) */
+        .tabel-mutasi-khusus th { 
+            border: 1px solid black; 
+            padding: 10px 2px; /* <-- Ubah nilai 2px ini untuk mengurangi padding kiri-kanan header */
+            vertical-align: middle; 
+            line-height: 1.2; 
+            text-align: center; 
+            font-weight: bold; 
+            background-color: #f5f5f5;
+        }
+        
+        .tabel-masuk-statis {
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 11pt;
+        }
+        .tabel-masuk-statis th {
+            border: 1px solid black; 
+            background-color: #dbe5f1; 
+            padding: 6px 8px; 
+            text-align: center;
+        }
+        .sel-dalam {
+            border-left: 1px solid black;
+            border-right: 1px solid black;
+            border-top: none;
+            border-bottom: none;
+            padding: 6px 8px; /* SANGAT RAPAT: padding dikecilkan */
+            vertical-align: middle;
+            line-height: 1.1; /* SANGAT RAPAT: spasi teks dikecilkan */
+        }
+        .sel-atas { border-top: 1px solid black; padding-top: 15px; }
+        .sel-bawah { border-bottom: 1px solid black; padding-bottom: 4px; }
+        .garis-isi-statis {
+            border-bottom: 1px solid black;
+            width: 95%; 
+            display: inline-block;
+            margin-top: 4px;
+        }
+        .sel-ttd {
+            border: 1px solid black; 
+            padding: 6px 10px; 
+            vertical-align: top;
+            line-height: 1.2;
+        }
+    </style>
+
+    {{-- ========================================================================= --}}
+    {{-- HALAMAN 4: KETERANGAN PINDAH SEKOLAH (KELUAR) --}}
+    {{-- ========================================================================= --}}
+    <div class="text-center font-bold" style="font-size: 14pt; margin-bottom: 20px;">
+        KETERANGAN PINDAH SEKOLAH
+    </div>
+    <table style="width: 100%; margin-bottom: 10px; font-size: 12pt;">
+        <tr>
+            <td style="width: 160px;">Nama Peserta Didik</td>
+            <td style="width: 15px;">:</td>
+            <td class="font-bold">{{ strtoupper($siswa->nama_siswa) }}</td>
+        </tr>
+    </table>
+
+    <table class="tabel-mutasi-khusus">
+        <tr>
+            <th colspan="4">KELUAR</th>
+        </tr>
+        <tr>
+            <th style="width: 10%;">Tanggal</th>
+            <th style="width: 20%;">Kelas yang<br>ditinggalkan</th>
+            <th style="width: 40%;">Sebab-sebab Keluar atau<br>Atas Permintaan (Tertulis)</th>
+            <th style="width: 30%;">Tanda Tangan Kepala Sekolah,<br>Stempel Sekolah, dan<br>Tanda Tangan Orang Tua/Wali</th>
+        </tr>
+        @for($i=1; $i<=3; $i++)
+        <tr>
+            <td></td> <td></td>
+            <td></td>
+            <td>
+                {{-- 👇 PERBAIKAN: Format Title Case untuk Kota/Kab 👇 --}}
+                {{ \Illuminate\Support\Str::title($infoSekolah->kota_kab ?? 'Salatiga') }}, ..............................<br>
+                Kepala Sekolah,<br>
+                <div style="height: 25px;"></div> ..................................................<br>
+                NIP.<br><br>
+                <div style="height: 5px;"></div>
+                Orang Tua/Wali,<br>
+                <div style="height: 25px;"></div> ..................................................
+            </td>
+        </tr>
+        @endfor
+    </table>
+
+    <div class="page-break"></div>
+
+    {{-- ========================================================================= --}}
+    {{-- HALAMAN 5: KETERANGAN PINDAH SEKOLAH (MASUK) --}}
+    {{-- ========================================================================= --}}
+    <div class="text-center font-bold" style="font-size: 14pt; margin-bottom: 20px;">
+        KETERANGAN PINDAH SEKOLAH
+    </div>
+    <table style="width: 100%; margin-bottom: 10px; font-size: 12pt;">
+        <tr>
+            <td style="width: 160px;">Nama Peserta Didik</td>
+            <td style="width: 15px;">:</td>
+            <td class="font-bold">{{ strtoupper($siswa->nama_siswa) }}</td>
+        </tr>
+    </table>
+
+    {{-- REVISI HALAMAN 5: Menggunakan struktur Rowspan & Class CSS Mandiri --}}
+    <table class="tabel-masuk-statis">
+        <tr>
+            <th style="width: 5%;">NO</th>
+            <th colspan="3">MASUK</th>
+        </tr>
+        
+        @for($i=1; $i<=3; $i++)
+            {{-- Baris 1: Nama Siswa + Tanda Tangan (Rowspan 7) --}}
+            <tr>
+                <td class="sel-dalam sel-atas text-center" style="width: 5%;">1.</td>
+                <td class="sel-dalam sel-atas" style="width: 30%;">Nama Siswa</td>
+                <td class="sel-dalam sel-atas" style="width: 35%;"><span class="garis-isi-statis"></span></td>
+                <td rowspan="7" class="sel-ttd" style="width: 30%; vertical-align: middle;">
+                    {{-- 👇 PERBAIKAN: Format Title Case untuk Kota/Kab 👇 --}}
+                    {{ \Illuminate\Support\Str::title($infoSekolah->kota_kab ?? 'Salatiga') }} ,...................<br>
+                    Kepala Sekolah,<br><br><br>
+                    <div style="height: 35px;"></div> <div style="border-bottom: 1px dotted #000; width: 90%; margin-bottom: 3px;"></div>
+                    NIP.
+                </td>
+            </tr>
+            
+            {{-- Baris 2: Nomor Induk --}}
+            <tr>
+                <td class="sel-dalam text-center">2.</td>
+                <td class="sel-dalam">Nomor Induk</td>
+                <td class="sel-dalam"><span class="garis-isi-statis"></span></td>
+            </tr>
+            
+            {{-- Baris 3: Nama Sekolah --}}
+            <tr>
+                <td class="sel-dalam text-center">3.</td>
+                <td class="sel-dalam">Nama Sekolah</td>
+                <td class="sel-dalam"><span class="garis-isi-statis"></span></td>
+            </tr>
+            
+            {{-- Baris 4: Masuk di Sekolah ini --}}
+            <tr>
+                <td class="sel-dalam text-center">4.</td>
+                <td class="sel-dalam">Masuk di Sekolah ini:</td>
+                <td class="sel-dalam"></td> 
+            </tr>
+            
+            {{-- Baris 5: Tanggal (Menjorok) --}}
+            <tr>
+                <td class="sel-dalam"></td>
+                <td class="sel-dalam" style="padding-left: 20px;">a. Tanggal</td>
+                <td class="sel-dalam"><span class="garis-isi-statis"></span></td>
+            </tr>
+            
+            {{-- Baris 6: Di Kelas (Menjorok) --}}
+            <tr>
+                <td class="sel-dalam"></td>
+                <td class="sel-dalam" style="padding-left: 20px;">b. Di Kelas</td>
+                <td class="sel-dalam"><span class="garis-isi-statis"></span></td>
+            </tr>
+            
+            {{-- Baris 7: Tahun Pelajaran --}}
+            <tr>
+                <td class="sel-dalam sel-bawah text-center">5.</td>
+                <td class="sel-dalam sel-bawah">Tahun Pelajaran</td>
+                <td class="sel-dalam sel-bawah"><span class="garis-isi-statis"></span></td>
+            </tr>
+        @endfor
+    </table>
 
     {{-- Beri pemisah halaman untuk siswa berikutnya JIKA bukan siswa terakhir --}}
     @if(!$loop->last)

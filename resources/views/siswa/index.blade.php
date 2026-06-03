@@ -15,7 +15,6 @@
                         
                         {{-- 1. HEADER UTAMA (Gaya Banner) --}}
                         <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                            {{-- 👇 PERBAIKAN: Mengganti overflow-hidden menjadi overflow-visible 👇 --}}
                             <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 overflow-visible position-relative">
                                 
                                 {{-- Dekorasi Icon Besar --}}
@@ -23,65 +22,73 @@
                                     <i class="fas fa-user-graduate text-white" style="font-size: 8rem; margin-top: -10px;"></i>
                                 </div>
 
-                                <div class="d-flex justify-content-between align-items-center position-relative z-index-1 px-3">
-                                    <div>
-                                        <h6 class="text-white text-capitalize mb-0">
-                                            <i class="fas fa-users me-2"></i> Master Data Siswa
-                                        </h6>
-                                        <p class="text-white text-xs opacity-8 mb-0 ms-4 ps-1">
-                                            Manajemen data induk siswa, import, dan export data
-                                        </p>
-                                    </div>
-                                    
-                                    {{-- KELOMPOK TOMBOL AKSI: EXPORT, IMPORT, TAMBAH --}}
-                                    <div class="pe-3 d-flex align-items-center">
-                                        
-                                        {{-- Dropdown Export --}}
-                                        <div class="dropdown me-2">
-                                            <button class="btn btn-outline-white btn-sm mb-0 dropdown-toggle" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fas fa-file-export me-1"></i> Export
-                                            </button>
-                                            <ul class="dropdown-menu shadow-lg" aria-labelledby="dropdownExport">
-                                                {{-- <li>
-                                                    <a class="dropdown-item" href="{{ route('master.siswa.export.pdf', request()->all()) }}">
-                                                        <i class="fas fa-file-pdf text-danger me-2"></i> Export ke PDF (Filtered)
-                                                    </a>
-                                                </li> --}}
-                                                <li>
-                                                    {{-- Ganti link CSV menjadi Excel --}}
-                                                    <a class="dropdown-item" href="{{ route('master.siswa.export.excel', request()->all()) }}">
-                                                        <i class="fas fa-file-excel text-success me-2"></i> Export ke Excel (Sesuai Filter)
-                                                    </a>
-                                                </li>
-                                            </ul>
+                                <div class="d-flex flex-column position-relative z-index-1 px-3">
+                                    {{-- BARIS 1: Judul dan Action Utama --}}
+                                    <div class="d-flex justify-content-between align-items-center w-100">
+                                        <div>
+                                            <h6 class="text-white text-capitalize mb-0">
+                                                <i class="fas fa-users me-2"></i> Master Data Siswa
+                                            </h6>
+                                            <p class="text-white text-xs opacity-8 mb-0 ms-4 ps-1">
+                                                Manajemen data induk siswa, import, dan export data
+                                            </p>
                                         </div>
+                                        
+                                        {{-- KELOMPOK TOMBOL AKSI: EXPORT, IMPORT, TAMBAH --}}
+                                        <div class="pe-3 d-flex align-items-center">
+                                            
+                                            {{-- Dropdown Export --}}
+                                            <div class="dropdown me-2">
+                                                <button class="btn btn-outline-white btn-sm mb-0 dropdown-toggle" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-file-export me-1"></i> Export
+                                                </button>
+                                                <ul class="dropdown-menu shadow-lg" aria-labelledby="dropdownExport">
+                                                    <li>
+                                                        <a class="dropdown-item" href="{{ route('master.siswa.export.excel', request()->all()) }}">
+                                                            <i class="fas fa-file-excel text-success me-2"></i> Export ke Excel (Sesuai Filter)
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
 
-                                        @can('master.menu')
-                                        {{-- 2. Dropdown Import --}}
-                                        <div class="dropdown me-2">
-                                            <button class="btn btn-outline-white btn-sm mb-0 dropdown-toggle" type="button" id="dropdownImport" data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="fas fa-file-import me-1"></i> Import
-                                            </button>
-                                            <ul class="dropdown-menu shadow-lg" aria-labelledby="dropdownImport">
-                                                <li>
-                                                    <a class="dropdown-item" href="#" onclick="document.getElementById('form_import_xlsx').querySelector('input[type=file]').click(); return false;">
-                                                        <i class="fas fa-file-excel text-success me-2"></i> Import Excel (.xlsx)
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item" href="#" onclick="document.getElementById('form_import_csv').querySelector('input[type=file]').click(); return false;">
-                                                        <i class="fas fa-file-csv text-info me-2"></i> Import CSV (.csv)
-                                                    </a>
-                                                </li>
-                                            </ul>
+                                            @can('master.menu')
+                                            {{-- Dropdown Import --}}
+                                            <div class="dropdown me-2">
+                                                <button class="btn btn-outline-white btn-sm mb-0 dropdown-toggle" type="button" id="dropdownImport" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-file-import me-1"></i> Import
+                                                </button>
+                                                <ul class="dropdown-menu shadow-lg" aria-labelledby="dropdownImport">
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="document.getElementById('form_import_xlsx').querySelector('input[type=file]').click(); return false;">
+                                                            <i class="fas fa-file-excel text-success me-2"></i> Import Excel (.xlsx)
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="#" onclick="document.getElementById('form_import_csv').querySelector('input[type=file]').click(); return false;">
+                                                            <i class="fas fa-file-csv text-info me-2"></i> Import CSV (.csv)
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            
+                                            {{-- Tombol Tambah --}}
+                                            <a href="{{ route('master.siswa.create') }}" class="btn btn-white text-primary btn-sm mb-0 shadow-sm">
+                                                <i class="fas fa-plus me-1"></i> Baru
+                                            </a>
+                                            @endcan
                                         </div>
-                                        
-                                        {{-- 3. Tombol Tambah --}}
-                                        <a href="{{ route('master.siswa.create') }}" class="btn btn-white text-primary btn-sm mb-0 shadow-sm">
-                                            <i class="fas fa-plus me-1"></i> Baru
-                                        </a>
-                                        @endcan
                                     </div>
+
+                                    {{-- BARIS 2: Tombol Pengaturan Massal --}}
+                                    @can('master.menu')
+                                    <div class="d-flex justify-content-end w-100 mt-3 pt-3 border-top" style="border-color: rgba(255,255,255,0.2) !important;">
+                                        <div class="pe-3">
+                                            <button type="button" class="btn btn-sm btn-white text-dark mb-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalMassUpdate">
+                                                <i class="fas fa-cogs me-1 text-primary"></i> Pengaturan Massal (Kelas Awal & Tgl Masuk)
+                                            </button>
+                                        </div>
+                                    </div>
+                                    @endcan
                                 </div>
                             </div>
                         </div>
@@ -213,12 +220,13 @@
                                                 @endif
                                             </td>
                                             <td class="align-middle text-center">
-                                                <a href="{{ route('master.siswa.show', $siswa->id_siswa) }}" class="btn btn-link text-info text-xs mb-0 px-2" title="Lihat Detail">
+                                                {{-- 👇 PERUBAHAN: Menambahkan target="_blank" untuk open new tab 👇 --}}
+                                                <a href="{{ route('master.siswa.show', $siswa->id_siswa) }}" class="btn btn-link text-info text-xs mb-0 px-2" title="Lihat Detail" target="_blank">
                                                     <i class="fas fa-eye text-sm"></i>
                                                 </a>
                                                 
                                                 @can('master.menu')
-                                                <a href="{{ route('master.siswa.edit', $siswa->id_siswa) }}" class="btn btn-link text-primary text-xs mb-0 px-2" title="Edit Data">
+                                                <a href="{{ route('master.siswa.edit', $siswa->id_siswa) }}" class="btn btn-link text-primary text-xs mb-0 px-2" title="Edit Data" target="_blank">
                                                     <i class="fas fa-pencil-alt text-sm"></i>
                                                 </a>
 
@@ -260,8 +268,56 @@
             
             <x-app.footer />
         </div>
-        
     </main>
+
+    {{-- MODAL PENGATURAN MASSAL --}}
+    <div class="modal fade" id="modalMassUpdate" tabindex="-1" aria-labelledby="modalMassUpdateLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-gradient-primary">
+                    <h5 class="modal-title text-white" id="modalMassUpdateLabel"><i class="fas fa-cogs me-2"></i> Pengaturan Massal</h5>
+                    <button type="button" class="btn-close text-white opacity-10" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ route('master.siswa.mass_update') }}" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="alert alert-info text-white text-sm">
+                            <i class="fas fa-info-circle me-1"></i> Perubahan ini hanya akan diterapkan pada siswa yang berstatus <strong>Aktif</strong> di kelas yang dipilih.
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">Target Kelas <span class="text-danger">*</span></label>
+                            <select name="target_kelas" class="form-select border px-3" required>
+                                <option value="" disabled selected>-- Pilih Kelas Target --</option>
+                                @foreach($listKelas as $k)
+                                    <option value="{{ $k->id_kelas }}">{{ $k->nama_kelas }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">Set Kelas Awal <span class="text-danger">*</span></label>
+                            <select name="kelas_awal" class="form-select border px-3" required>
+                                <option value="" disabled selected>-- Pilih Kelas Awal --</option>
+                                @foreach($listKelas as $k)
+                                    <option value="{{ $k->nama_kelas }}">{{ $k->nama_kelas }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">Set Tanggal Masuk <span class="text-danger">*</span></label>
+                            <input type="date" name="tgl_masuk" class="form-control border px-3" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary" onclick="return confirm('Apakah Anda yakin ingin menerapkan perubahan massal ini?')">Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     {{-- FORM IMPORT (HIDDEN) --}}
     <form id="form_import_csv" action="{{ route('master.siswa.import.csv') }}" method="POST" enctype="multipart/form-data" class="d-none">

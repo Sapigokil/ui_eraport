@@ -40,7 +40,7 @@ class InfoSekolahController extends Controller
             'kelurahan' => 'nullable|string|max:100', // DITAMBAHKAN
             'kecamatan' => 'nullable|string|max:100', // DITAMBAHKAN
             'kode_pos' => 'nullable|string|max:10',    // DITAMBAHKAN
-            'website' => 'nullable|url|max:100',      // DITAMBAHKAN (diberi validasi url)
+            'website' => 'nullable|string|max:100',      // DITAMBAHKAN (diberi validasi url)
             // END KOLOM TAMBAHAN
             
             'kota_kab' => 'nullable|string|max:100',

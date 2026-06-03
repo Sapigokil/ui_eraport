@@ -131,21 +131,45 @@
                                         @error('id_ekskul') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                     </div>
                                 </div>
-                                
+
+                                <hr class="my-4">
+
                                 <div class="row">
-                                    <div class="col-md-3 mb-3">
-                                        <label for="rombel" class="form-label">Rombel Dapodik</label>
-                                        <input type="text" name="rombel" class="form-control rounded-pill py-2" value="{{ $getValue('rombel', 'detail') }}">
-                                    </div>
-                                    <div class="col-md-3 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label for="sekolah_asal" class="form-label">Sekolah Asal</label>
                                         <input type="text" name="sekolah_asal" class="form-control rounded-pill py-2" value="{{ $getValue('sekolah_asal', 'detail') }}">
                                     </div>
-                                    <div class="col-md-3 mb-3">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="kelas_awal" class="form-label">Kelas Awal Masuk</label>
+                                        <select name="kelas_awal" id="kelas_awal" class="form-select rounded-pill py-2 @error('kelas_awal') is-invalid @enderror">
+                                            <option value="">Pilih Kelas Awal</option>
+                                            @foreach ($kelasList as $kelas)
+                                                <option value="{{ $kelas->nama_kelas }}" 
+                                                    {{ old('kelas_awal', $siswa->detail->kelas_awal ?? '') == $kelas->nama_kelas ? 'selected' : '' }}>
+                                                    {{ $kelas->nama_kelas }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @error('kelas_awal') 
+                                            <div class="invalid-feedback">{{ $message }}</div> 
+                                        @enderror
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="tgl_masuk" class="form-label">Tanggal Masuk</label>
+                                        <input type="date" name="tgl_masuk" class="form-control rounded-pill py-2" value="{{ $getValue('tgl_masuk', 'detail') }}">
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="rombel" class="form-label">Rombel Dapodik</label>
+                                        <input type="text" name="rombel" class="form-control rounded-pill py-2" value="{{ $getValue('rombel', 'detail') }}">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
                                         <label for="no_seri_ijazah" class="form-label">No. Seri Ijazah</label>
                                         <input type="text" name="no_seri_ijazah" class="form-control rounded-pill py-2" value="{{ $getValue('no_seri_ijazah', 'detail') }}">
                                     </div>
-                                    <div class="col-md-3 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label for="no_peserta_ujian_nasional" class="form-label">No. Peserta UN</label>
                                         <input type="text" name="no_peserta_ujian_nasional" class="form-control rounded-pill py-2" value="{{ $getValue('no_peserta_ujian_nasional', 'detail') }}">
                                     </div>
@@ -257,11 +281,15 @@
                                 
                                 {{-- Baris 4: No. HP, Email --}}
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label for="no_hp" class="form-label">No. HP</label>
+                                    <div class="col-md-4 mb-3">
+                                        <label for="no_hp" class="form-label">No. HP Siswa</label>
                                         <input type="text" name="no_hp" class="form-control rounded-pill py-2" value="{{ $getValue('no_hp', 'detail') }}">
                                     </div>
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
+                                        <label for="no_hp_wali" class="form-label">No. HP Wali</label>
+                                        <input type="text" name="telp_wali" class="form-control rounded-pill py-2" value="{{ $getValue('telp_wali', 'detail') }}">
+                                    </div>
+                                    <div class="col-md-4 mb-3">
                                         <label for="email" class="form-label">Email</label>
                                         <input type="email" name="email" class="form-control rounded-pill py-2" value="{{ $getValue('email', 'detail') }}">
                                     </div>

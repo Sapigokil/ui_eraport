@@ -7,8 +7,10 @@ use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class SiswaExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize
+class SiswaExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSize, WithColumnFormatting
 {
     protected $request;
 
@@ -49,9 +51,9 @@ class SiswaExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSiz
 
     public function headings(): array
     {
-        // Menyajikan HEADER LENGKAP untuk semua data yang ada di tabel
         return [
             'NIPD', 'NISN', 'Nama Siswa', 'JK', 'Tingkat', 'Status', 'Kelas',
+            'Kelas Awal', 'Tanggal Masuk', // Kolom Baru
             'NIK', 'Tempat Lahir', 'Tanggal Lahir', 'Agama', 'Alamat', 
             'RT', 'RW', 'Dusun', 'Kelurahan', 'Kecamatan', 'Kode Pos',
             'Telepon', 'HP', 'Email', 'SKHUN', 'Penerima KPS', 'No KPS',
@@ -62,7 +64,18 @@ class SiswaExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSiz
             'Jml Saudara', 'Jarak Rumah', 
             'Nama Ayah', 'Thn Lahir Ayah', 'Pendidikan Ayah', 'Pekerjaan Ayah', 'Penghasilan Ayah', 'NIK Ayah',
             'Nama Ibu', 'Thn Lahir Ibu', 'Pendidikan Ibu', 'Pekerjaan Ibu', 'Penghasilan Ibu', 'NIK Ibu',
-            'Nama Wali', 'Thn Lahir Wali', 'Pendidikan Wali', 'Pekerjaan Wali', 'Penghasilan Wali', 'NIK Wali'
+            'Nama Wali', 'Thn Lahir Wali', 'Pendidikan Wali', 'Pekerjaan Wali', 'Penghasilan Wali', 'NIK Wali',
+            'Telp Wali' // Kolom Baru
+        ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'A' => NumberFormat::FORMAT_TEXT, // NIPD
+            'B' => NumberFormat::FORMAT_TEXT, // NISN
+            'J' => NumberFormat::FORMAT_TEXT, // NIK (Geser karena ada 2 kolom baru sebelumnya)
+            'AR' => NumberFormat::FORMAT_TEXT, // No KK
         ];
     }
 
@@ -70,8 +83,7 @@ class SiswaExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSiz
     {
         $d = $siswa->detail;
 
-        // 👇 HELPER "HACK" PETIK TUNGGAL 👇
-        // Jika datanya ada, tambahkan petik tunggal di depannya agar Excel tidak merusaknya.
+        // Helper untuk mencegah Scientific Number di Excel
         $forceString = fn($val) => !empty($val) ? "'" . $val : '';
 
         return [
@@ -83,6 +95,10 @@ class SiswaExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSiz
             $siswa->status,
             optional($siswa->kelas)->nama_kelas,
             
+            // KOLOM BARU 1 & 2
+            $d->kelas_awal ?? '',
+            $d->tgl_masuk ?? '',
+
             // DETAIL SISWA
             $forceString($d->nik ?? ''),
             $d->tempat_lahir ?? '',
@@ -148,6 +164,9 @@ class SiswaExport implements FromQuery, WithHeadings, WithMapping, ShouldAutoSiz
             $d->pekerjaan_wali ?? '',
             $d->penghasilan_wali ?? '',
             $forceString($d->nik_wali ?? ''),
+
+            // KOLOM BARU 3
+            $forceString($d->telp_wali ?? ''),
         ];
     }
 }

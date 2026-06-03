@@ -166,7 +166,7 @@
                                     <div class="col-lg-12 mb-3">
                                         {{-- Website --}}
                                         <label class="form-label" for="website">Website</label>
-                                        <input type="url" id="website" class="form-control" name="website" 
+                                        <input type="text" id="website" class="form-control" name="website" 
                                             value="{{ old('website', $infoSekolah->website ?? '') }}">
                                     </div>
                                 </div>

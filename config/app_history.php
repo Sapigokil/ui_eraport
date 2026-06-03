@@ -11,11 +11,18 @@ return [
     |
     */
 
-    'current_version' => '1.0.23',
+    'current_version' => '1.0.24',
     
-    'last_updated' => '2026-05-03',
+    'last_updated' => '2026-06-03',
 
     'changelog' => [
+        [
+            'version' => '1.0.24',
+            'date'    => '2026-06-03',
+            'notes'   => [
+                'Perbaikan Halaman Cetak Cover Rapor untuk menampilkan data yang lebih lengkap dan akurat',
+                ],
+        ],
         [
             'version' => '1.0.23',
             'date'    => '2026-05-03',

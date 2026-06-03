@@ -12,7 +12,7 @@ class DetailSiswa extends Model
     protected $table = 'detail_siswa';
     protected $primaryKey = 'id_detail';
     public $timestamps = false;
-     public $incrementing = true;
+    public $incrementing = true;
 
     protected $fillable = [
         'id_siswa',
@@ -83,9 +83,12 @@ class DetailSiswa extends Model
         'jenjang_pendidikan_wali',
         'penghasilan_wali',
         'nik_wali',
+        'telp_wali',
 
         // Kode kelas (foreign key)
         'id_kelas',
+        'kelas_awal',
+        'tgl_masuk',
     ];
 
     // public function siswa()

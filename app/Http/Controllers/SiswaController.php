@@ -4,25 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Siswa;
 use App\Models\DetailSiswa;
-use App\Models\Kelas; // Diperlukan untuk dropdown
-use App\Models\Ekskul; // Diperlukan untuk dropdown
+use App\Models\Kelas;
+use App\Models\Ekskul;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
-use Carbon\Carbon; // Digunakan untuk format tanggal
+use Carbon\Carbon;
 use Illuminate\Support\Arr;
-use Maatwebsite\Excel\Facades\Excel; // BARU: Facade Maatwebsite/Excel
+use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
-use App\Exports\SiswaExport; // BARU: Export class untuk Excel
-
+use App\Exports\SiswaExport; 
 
 class SiswaController extends Controller
 {
-    // Field fillable untuk Siswa
     protected $siswaFillable = ['nipd', 'nisn', 'nama_siswa', 'jenis_kelamin', 'tingkat', 'id_kelas', 'id_ekskul'];
 
-    // Helper Fungsi untuk Filter (Agar konsisten antara Index, Excel, dan PDF)
     private function applyFilters($query, Request $request)
     {
         $statusFilter = $request->get('status', 'aktif');
@@ -50,38 +47,31 @@ class SiswaController extends Controller
         return $query;
     }
 
-    /**
-     * Tampilkan daftar semua siswa (index).
-     */
     public function index(Request $request)
     {
         $listKelas = Kelas::orderBy('nama_kelas')->get();
         $query = Siswa::with('kelas', 'ekskul');
-        $query = $this->applyFilters($query, $request); // Panggil Helper
+        $query = $this->applyFilters($query, $request);
         
-        $siswas = $query->orderBy('nama_siswa', 'asc')->paginate(20)->withQueryString();
+        $query->orderBy('nama_siswa', 'asc');
+        $siswas = $query->paginate(20)->withQueryString();
+
         return view('siswa.index', compact('siswas', 'listKelas'));
     }
 
-    /**
-     * Tampilkan form untuk membuat siswa baru.
-     */
     public function create()
     {
-        $siswa = new Siswa(); // <--- Didefinisikan
-        $detail = new DetailSiswa(); // <--- Didefinisikan
+        $siswa = new Siswa();
+        $detail = new DetailSiswa(); 
         $kelasList = Kelas::orderBy('nama_kelas')->get();
         $ekskulList = Ekskul::orderBy('nama_ekskul')->get();
         
         return view('siswa.create', compact('siswa', 'detail', 'kelasList', 'ekskulList'));
     }
 
-    /**
-     * Simpan siswa baru ke database (Multi-Model Transaction).
-     */
     public function store(Request $request)
     {
-            $jkMap = [
+        $jkMap = [
             'laki-laki' => 'L',
             'laki laki' => 'L',
             'l'         => 'L',
@@ -94,28 +84,22 @@ class SiswaController extends Controller
         $request->merge([
             'jenis_kelamin' => $jkMap[$jkInput] ?? null
         ]);
-        // 1. Validasi Data
+        
         $request->validate([
-            // Siswa (Wajib)
             'nipd' => 'required|string|max:20|unique:siswa,nipd',
             'nisn' => 'required|string|max:10|unique:siswa,nisn',
             'nama_siswa' => 'required|string|max:255',
             'jenis_kelamin' => 'required|in:L,P',
-            // 'tingkat' => 'required|string|max:10',
             'id_kelas' => 'required|integer|exists:kelas,id_kelas',
             'id_ekskul' => 'nullable|integer|exists:ekskul,id_ekskul',
-
-            // Detail Siswa (Beberapa field penting)
             'nik' => 'nullable|string|max:20|unique:detail_siswa,nik',
             'email' => 'nullable|email|unique:detail_siswa,email',
             'tempat_lahir' => 'nullable|string|max:100',
             'tanggal_lahir' => 'nullable|date',
             'nama_ayah' => 'nullable|string|max:255',
             'nama_ibu' => 'nullable|string|max:255',
-            // ... (Tambahkan validasi untuk field DetailSiswa lainnya)
         ]);
 
-        //Tambahan untul validasi tingkat
         $kelas = Kelas::findOrFail($request->id_kelas);
 
         $request->merge([
@@ -124,16 +108,10 @@ class SiswaController extends Controller
 
         DB::beginTransaction();
         try {
-            // 2. Create Model Siswa
             $siswa = Siswa::create($request->only($this->siswaFillable));
 
-            // 3. Create Model DetailSiswa (Relasi HasOne)
             $detailFields = (new DetailSiswa())->getFillable();
-            
-            // Hapus id_siswa dan id_kelas dari detailFields karena akan di-handle oleh relasi
             $detailData = $request->only(array_diff($detailFields, ['id_siswa', 'id_kelas']));
-
-            // Hubungkan id_kelas juga di detail_siswa (jika diperlukan)
             $detailData['id_kelas'] = $request->id_kelas;
 
             $siswa->detail()->create($detailData);
@@ -148,20 +126,12 @@ class SiswaController extends Controller
         }
     }
 
-    /**
-     * Menampilkan detail data siswa tertentu beserta relasinya.
-     */
     public function show($id)
     {
-        // Eager load relasi detail, kelas, dan ekskul
         $siswa = Siswa::with('detail', 'kelas', 'ekskul')->findOrFail($id);
-
         return view('siswa.show', compact('siswa'));
     }
     
-    /**
-     * Tampilkan form untuk mengedit siswa tertentu.
-     */
     public function edit($id)
     {
         $siswa = Siswa::with('detail', 'kelas', 'ekskul')->findOrFail($id);
@@ -171,13 +141,10 @@ class SiswaController extends Controller
         return view('siswa.edit', compact('siswa', 'kelasList', 'ekskulList'));
     }
 
-    /**
-     * Perbarui data siswa tertentu di database (Multi-Model Transaction).
-     */
     public function update(Request $request, $id)
     {
         $siswa = Siswa::findOrFail($id);
-            $jkMap = [
+        $jkMap = [
             'laki-laki' => 'L',
             'laki laki' => 'L',
             'l'         => 'L',
@@ -191,31 +158,22 @@ class SiswaController extends Controller
             'jenis_kelamin' => $jkMap[$jkInput] ?? null
         ]);
         
-        // 1. Validasi Data
         $request->validate([
-            // Siswa (Ignored for unique check)
             'nipd' => ['required', 'string', 'max:20', Rule::unique('siswa', 'nipd')->ignore($siswa->id_siswa, 'id_siswa')],
             'nisn' => ['required', 'string', 'max:10', Rule::unique('siswa', 'nisn')->ignore($siswa->id_siswa, 'id_siswa')],
             'nama_siswa' => 'required|string|max:255',
             'jenis_kelamin' => 'required|in:L,P',
             'id_kelas' => 'required|integer|exists:kelas,id_kelas',
-            // ... (Validasi lainnya)
-            
-            // Detail Siswa (Ignored for unique check)
             'nik' => ['nullable', 'string', 'max:20', Rule::unique('detail_siswa', 'nik')->ignore($siswa->id_siswa, 'id_siswa')],
             'email' => ['nullable', 'email', Rule::unique('detail_siswa', 'email')->ignore($siswa->id_siswa, 'id_siswa')],
         ]);
         
         DB::beginTransaction();
         try {
-            // 2. Update Model Siswa
             $siswa->update($request->only($this->siswaFillable));
 
-            // 3. Update Model DetailSiswa (updateOrCreate)
             $detailFields = (new DetailSiswa())->getFillable();
             $detailData = $request->only(array_diff($detailFields, ['id_siswa']));
-
-            // Hubungkan id_kelas juga di detail_siswa
             $detailData['id_kelas'] = $request->id_kelas;
 
             $siswa->detail()->updateOrCreate(
@@ -233,25 +191,13 @@ class SiswaController extends Controller
         }
     }
 
-    /**
-     * Hapus siswa tertentu dari database (Multi-Model Transaction).
-     */
     public function destroy($id)
     {
         DB::beginTransaction();
 
         try {
             $siswa = Siswa::findOrFail($id);
-            
-            // 1. Hapus data UlanganHarian terkait (hasMany)
-            //    Panggil delete() pada query builder relasi
-            // $siswa->ulangan()->delete(); (karena tidak dapat delete siswa)
-            
-            // 2. Hapus data DetailSiswa terkait (hasOne)
-            //    Panggil delete() pada query builder relasi, lebih aman daripada menghapus instance.
-            $siswa->detail()->delete(); // <<< PERBAIKAN DI SINI
-
-            // 3. Hapus Model Siswa utama
+            $siswa->detail()->delete(); 
             $siswa->delete();
 
             DB::commit();
@@ -259,51 +205,73 @@ class SiswaController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            // Log error secara detail
             \Log::error("Gagal menghapus Siswa $id: " . $e->getMessage()); 
             return redirect()->back()->with('error', 'Gagal menghapus data siswa: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Pengaturan Massal: Update Kelas Awal & Tanggal Masuk
+     */
+    public function massUpdate(Request $request)
+    {
+        $request->validate([
+            'target_kelas' => 'required|integer|exists:kelas,id_kelas',
+            'kelas_awal'   => 'required|string|max:50',
+            'tgl_masuk'    => 'required|date',
+        ]);
+
+        try {
+            // Ambil semua id_siswa yang ada di kelas target dan berstatus aktif
+            $idSiswas = Siswa::where('id_kelas', $request->target_kelas)
+                             ->where('status', 'aktif')
+                             ->pluck('id_siswa');
+
+            if ($idSiswas->isEmpty()) {
+                return back()->with('error', 'Tidak ada siswa aktif di kelas yang dipilih.');
+            }
+
+            // Update langsung ke tabel detail_siswa
+            DetailSiswa::whereIn('id_siswa', $idSiswas)->update([
+                'kelas_awal' => $request->kelas_awal,
+                'tgl_masuk'  => $request->tgl_masuk,
+            ]);
+
+            return back()->with('success', 'Data massal (Kelas Awal & Tgl Masuk) berhasil diupdate untuk ' . $idSiswas->count() . ' siswa.');
+            
+        } catch (\Exception $e) {
+            \Log::error("Mass Update Siswa Error: " . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan saat mengupdate data massal.');
+        }
+    }
+
     // =========================================================================
-    // IMPORT CSV METHOD (Revisi Lengkap)
+    // IMPORT CSV METHOD
     // =========================================================================
 
     public function importCsv(Request $request)
     {
-        // === START: PENGATURAN BATAS PHP UNTUK TUGAS BERAT ===
         set_time_limit(0); 
         ini_set('memory_limit', '512M'); 
-        // === END: PENGATURAN BATAS PHP ===
         
         $request->validate([
             'file' => 'required|mimes:csv,txt',
         ]);
 
         $file = $request->file('file');
-
-        // $rows = array_map('str_getcsv', file($file->getPathname()));
-
         $rawLines = file($file->getPathname());
 
         $rows = array_map(function ($line) {
             $line = str_replace(['`', '“', '”'], '"', $line);
-
             return str_getcsv($line, ',', '"', '\\');
         }, $rawLines);
-
         
         if (count($rows) < 10) {
             return back()->with('error', 'File CSV tidak valid!');
         }
 
-        // ================================
-        // HEADER CSV DI BARIS KE 5 (index 4)
-        // ================================
-        $headerRow1 = str_getcsv($rows[4][0]); // Baris 5
-        $headerRow2 = str_getcsv($rows[5][0]); // Baris 6
-
-        // Gabungkan dua baris header
+        $headerRow1 = str_getcsv($rows[4][0]); 
+        $headerRow2 = str_getcsv($rows[5][0]); 
         $rawHeader = array_merge($headerRow1, $headerRow2);
 
         $header = array_map(function ($h) {
@@ -312,10 +280,6 @@ class SiswaController extends Controller
             return str_replace([' ', '.', '-', '/', '\\', '(', ')'], '_', $h);
         }, $rawHeader);
 
-
-        // ================================
-        // DATA MULAI DARI BARIS 10 (index 9)
-        // ================================
         $dataStart = 9;
         $count = 0;
 
@@ -324,7 +288,6 @@ class SiswaController extends Controller
             if (!isset($rows[$i][0]) || trim($rows[$i][0]) == '') {
                 continue;
             }
-            // $row = str_getcsv($rows[$i][0]);
 
             $row = str_getcsv($rows[$i][0] ?? '', ',', '"', '\\');
 
@@ -342,20 +305,15 @@ class SiswaController extends Controller
             $mapped = array_combine($header, $row);
             if (!$mapped) continue;
 
-            // ================================
-            // GENERATE KELAS DARI ROMBEL CSV
-            // ================================
-            $rombel = $mapped['rombel_saat_ini'] ?? null;  // contoh: "10 AKL 1"
+            $rombel = $mapped['rombel_saat_ini'] ?? null;  
 
             $idKelas = null;
             $tingkat = null;
 
             if ($rombel) {
-                // Ambil angka tingkat (misal "10")
                 $parts = explode(' ', $rombel);
                 $tingkat = is_numeric($parts[0]) ? intval($parts[0]) : 10;
 
-                // Cek apakah kelas sudah ada di tabel kelas
                 $kelas = Kelas::where('nama_kelas', $rombel)->first();
 
                 if (!$kelas) {
@@ -371,8 +329,7 @@ class SiswaController extends Controller
                 $idKelas = $kelas->id_kelas;
             }
 
-
-            // Data Ayah (kolom 24–29)
+            // Data Ayah
             $mapped['data_ayah_nama']               = $row[24] ?? null;
             $mapped['data_ayah_tahun_lahir']        = $row[25] ?? null;
             $mapped['data_ayah_jenjang_pendidikan'] = $row[26] ?? null;
@@ -380,7 +337,7 @@ class SiswaController extends Controller
             $mapped['data_ayah_penghasilan']        = $row[28] ?? null;
             $mapped['data_ayah_nik']                = $row[29] ?? null;
 
-            // Data Ibu (kolom 30–35)
+            // Data Ibu
             $mapped['data_ibu_nama']                = $row[30] ?? null;
             $mapped['data_ibu_tahun_lahir']         = $row[31] ?? null;
             $mapped['data_ibu_jenjang_pendidikan']  = $row[32] ?? null;
@@ -388,7 +345,7 @@ class SiswaController extends Controller
             $mapped['data_ibu_penghasilan']         = $row[34] ?? null;
             $mapped['data_ibu_nik']                 = $row[35] ?? null;
 
-            // Data Wali (kolom 36–41)
+            // Data Wali
             $mapped['data_wali_nama']               = $row[36] ?? null;
             $mapped['data_wali_tahun_lahir']        = $row[37] ?? null;
             $mapped['data_wali_jenjang_pendidikan'] = $row[38] ?? null;
@@ -396,35 +353,21 @@ class SiswaController extends Controller
             $mapped['data_wali_penghasilan']        = $row[40] ?? null;
             $mapped['data_wali_nik']                = $row[41] ?? null;
 
-            // Fix nama kolom rusak
             $mapped['no_kps'] = $mapped['no__kps'] ?? null;
-
-            // Kolom rusak panjang (jumlah saudara kandung)
             $mapped['jml_saudara_kandung'] = preg_replace('/[^0-9]/', '', ($row[64] ?? ''));
-
-            // Jarak rumah (jika ada)
             $mapped['jarak_rumah'] = $row[65] ?? null;
 
-            // ========================================
-            // PECAH ROMBEL SAAT INI → tingkat + kelas
-            // ========================================
             $rombel = $mapped['rombel_saat_ini'] ?? null;
 
             if ($rombel) {
-                // Ambil angka pertama sebagai tingkat
                 preg_match('/^\d+/', $rombel, $match);
                 $mapped['tingkat'] = $match[0] ?? null;
-
-                // Kelas lengkap tetap sama
                 $mapped['kelas'] = $rombel;
             } else {
                 $mapped['tingkat'] = null;
                 $mapped['kelas'] = null;
             }
 
-            // ================================
-            //  INSERT KE TABLE SISWA
-            // ================================
             $siswa = Siswa::create([
                 'nipd'          => $mapped['nipd'] ?? null,
                 'nisn'          => $mapped['nisn'] ?? null,
@@ -435,20 +378,19 @@ class SiswaController extends Controller
                 'id_ekskul'     => null,
             ]);
 
-            // ================================
-            // UPDATE JUMLAH SISWA DI TABLE KELAS
-            // ================================
             if ($idKelas) {
                 Kelas::where('id_kelas', $idKelas)->increment('jumlah_siswa');
             }
 
-
-            // ================================
-            // INSERT KE TABLE DETAIL SISWA
-            // ================================
+            // Memastikan penamaan kunci $mapped untuk kolom baru sesuai penulisan nama header di Excel
             DetailSiswa::create([
                 'id_siswa' => $siswa->id_siswa,
                 'id_kelas' => $idKelas, 
+                
+                // KOLOM BARU IMPORT
+                'kelas_awal' => $mapped['kelas_awal'] ?? null,
+                'tgl_masuk'  => $mapped['tanggal_masuk'] ?? $mapped['tgl_masuk'] ?? null,
+                'telp_wali'  => $mapped['telp_wali'] ?? $mapped['telepon_wali'] ?? null,
 
                 'tempat_lahir' => $mapped['tempat_lahir'] ?? null,
                 'tanggal_lahir' => $mapped['tanggal_lahir'] ?? null,
@@ -494,8 +436,6 @@ class SiswaController extends Controller
                 'jml_saudara_kandung' => $mapped['jml_saudara_kandung'],
                 'jarak_rumah' => $mapped['jarak_rumah'] ?? null,
 
-
-                // AYAH
                 'nama_ayah' => $mapped['data_ayah_nama'] ?? null,
                 'tahun_lahir_ayah' => $mapped['data_ayah_tahun_lahir'] ?? null,
                 'jenjang_pendidikan_ayah' => $mapped['data_ayah_jenjang_pendidikan'] ?? null,
@@ -503,7 +443,6 @@ class SiswaController extends Controller
                 'penghasilan_ayah' => $mapped['data_ayah_penghasilan'] ?? null,
                 'nik_ayah' => $mapped['data_ayah_nik'] ?? null,
 
-                // IBU
                 'nama_ibu' => $mapped['data_ibu_nama'] ?? null,
                 'tahun_lahir_ibu' => $mapped['data_ibu_tahun_lahir'] ?? null,
                 'jenjang_pendidikan_ibu' => $mapped['data_ibu_jenjang_pendidikan'] ?? null,
@@ -511,7 +450,6 @@ class SiswaController extends Controller
                 'penghasilan_ibu' => $mapped['data_ibu_penghasilan'] ?? null,
                 'nik_ibu' => $mapped['data_ibu_nik'] ?? null,
 
-                // WALI
                 'nama_wali' => $mapped['data_wali_nama'] ?? null,
                 'tahun_lahir_wali' => $mapped['data_wali_tahun_lahir'] ?? null,
                 'jenjang_pendidikan_wali' => $mapped['data_wali_jenjang_pendidikan'] ?? null,
@@ -528,10 +466,8 @@ class SiswaController extends Controller
 
     public function importXlsx(Request $request)
     {
-        // === START: PENGATURAN BATAS PHP UNTUK TUGAS BERAT ===
         set_time_limit(0); 
         ini_set('memory_limit', '512M'); 
-        // === END: PENGATURAN BATAS PHP ===
         
         $request->validate([
             'file' => 'required|mimes:xlsx,xls',
@@ -546,17 +482,13 @@ class SiswaController extends Controller
             return back()->with('error', 'Gagal membaca file Excel Siswa. Pastikan format file benar. Error: ' . $e->getMessage());
         }
 
-        if (count($rows) < 8) { // Menggunakan 8 karena Anda konfirmasi data Siswa mulai Baris 8
+        if (count($rows) < 8) { 
             return back()->with('error', 'File Excel tidak valid atau baris data kurang dari 8!');
         }
         
-        // =================================================================
-        // LOGIKA HEADER (Baris 5 dan 6)
-        // =================================================================
         $headerRow1 = $rows[4] ?? []; 
         $headerRow2 = $rows[5] ?? []; 
         
-        // Asumsi panjang kolom diambil dari baris data
         $maxColumns = count($rows[7]); 
         
         $rawHeader = array_pad(array_merge($headerRow1, $headerRow2), $maxColumns, null);
@@ -567,7 +499,7 @@ class SiswaController extends Controller
         foreach ($rawHeader as $h) {
             $h = strtolower(trim((string)$h)); 
             $h = str_replace(["\r", "\n"], '_', $h);
-            $cleanH = str_replace([' ', '.', '-', '/', '\\', '(', ')', ' '], '_', $h); 
+            $cleanH = str_replace([' ', '.', '-', '/', '\\', '(', ')', ' '], '_', $h); 
             
             if (empty($cleanH)) {
                  $cleanH = 'kolom_kosong_' . (count($header) + 1);
@@ -585,9 +517,6 @@ class SiswaController extends Controller
 
         $headerCount = count($header);
         
-        // ================================
-        // DATA MULAI DARI BARIS 8 (Index 7)
-        // ================================
         $dataStart = 7; 
         $countInsert = 0;
         $countUpdate = 0;
@@ -619,21 +548,15 @@ class SiswaController extends Controller
                      continue;
                 }
                 
-                // =================================================================
-                // 🛑 DATA MAPPING DAN VALIDASI WAJIB
-                // =================================================================
                 $namaSiswa = trim((string)($mapped['nama'] ?? '')); 
-                $nisnSiswa = trim((string)($mapped['nisn'] ?? '')); // KUNCI UTAMA UPSERT
+                $nisnSiswa = trim((string)($mapped['nisn'] ?? ''));
 
-                // Wajib: Nama Siswa harus ada
                 if (empty($namaSiswa) || $namaSiswa === '0') {
                     $skippedRows[] = ['row' => $currentRow, 'reason' => "Nama Siswa kosong atau nilainya '0'"];
                     continue;
                 }
                 
-                // Jika NISN kosong, kita hanya bisa melakukan INSERT baru, kita tidak bisa UPDATE
                 if (empty($nisnSiswa)) {
-                    // Safety check untuk NIPD agar tidak duplikat jika NIPD ada tapi NISN kosong
                     $nipdSiswa = trim((string)($mapped['nipd'] ?? ''));
                     if (!empty($nipdSiswa) && Siswa::where('nipd', $nipdSiswa)->exists()) {
                          $skippedRows[] = ['row' => $currentRow, 'reason' => "NIPD ($nipdSiswa) sudah ada, NISN kosong. Dianggap duplikat."];
@@ -641,9 +564,6 @@ class SiswaController extends Controller
                     }
                 }
 
-                // ========================================
-                // LOGIKA KELAS (Dibutuhkan untuk ID)
-                // ========================================
                 $rombel = $mapped['rombel_saat_ini'] ?? null;
                 $idKelas = null;
                 $tingkat = null;
@@ -652,11 +572,9 @@ class SiswaController extends Controller
                     $parts = explode(' ', $rombel);
                     $tingkat = is_numeric($parts[0]) ? intval($parts[0]) : 10;
 
-                    // Coba cari kelas
                     $kelas = Kelas::where('nama_kelas', $rombel)->first();
 
                     if (!$kelas) {
-                        // Jika tidak ada, buat baru
                         $kelas = Kelas::create([
                             'nama_kelas' => $rombel, 'tingkat' => $tingkat, 'jurusan' => $parts[1] ?? '', 'wali_kelas' => null, 'jumlah_siswa' => 0,
                         ]);
@@ -664,12 +582,11 @@ class SiswaController extends Controller
                     $idKelas = $kelas->id_kelas;
                 }
 
-                // Helper untuk konversi tanggal
                 $parseDate = function($value) {
                     if (empty($value)) return null;
                     try {
                          if (is_numeric($value) && $value > 0) {
-                            return Carbon::instance(Date::excelToDateTimeObject($value))->toDateString();
+                            return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value))->toDateString();
                          }
                          return Carbon::parse($value)->toDateString();
                     } catch (\Exception $e) {
@@ -677,26 +594,26 @@ class SiswaController extends Controller
                     }
                 };
 
-                // Helper untuk konversi angka
                 $cleanNumber = fn($val) => preg_replace('/[^0-9]/', '', (string)($val ?? ''));
                 
-                // =================================================================
-                // 1. SIAPKAN DATA UNTUK MODEL SISWA
-                // =================================================================
                 $siswaData = [
                     'nipd' => trim((string)($mapped['nipd'] ?? null)), 
-                    'nisn' => $nisnSiswa, // Kunci unik
+                    'nisn' => $nisnSiswa, 
                     'nama_siswa' => $namaSiswa,
                     'jenis_kelamin' => $mapped['jk'] ?? null, 
                     'tingkat' => $tingkat, 
                     'id_kelas' => $idKelas, 
-                    'id_ekskul' => null, // Asumsi ekskul tidak di-import
+                    'id_ekskul' => null, 
                 ];
 
-                // 2. SIAPKAN DATA UNTUK MODEL DETAIL SISWA
                 $detailData = [
                     'id_kelas' => $idKelas, 
                     
+                    // KOLOM BARU IMPORT
+                    'kelas_awal' => $mapped['kelas_awal'] ?? null,
+                    'tgl_masuk'  => $parseDate($mapped['tanggal_masuk'] ?? $mapped['tgl_masuk'] ?? null),
+                    'telp_wali'  => $mapped['telp_wali'] ?? $mapped['telepon_wali'] ?? null,
+
                     'tempat_lahir' => $mapped['tempat_lahir'] ?? null, 
                     'tanggal_lahir' => $parseDate($mapped['tanggal_lahir'] ?? null), 
                     'agama' => $mapped['agama'] ?? null,
@@ -741,7 +658,6 @@ class SiswaController extends Controller
                     'jml_saudara_kandung' => $cleanNumber($mapped['jml_saudara_kandung'] ?? $row[64] ?? null),
                     'jarak_rumah' => $mapped['jarak_rumah'] ?? null,
 
-                    // AYAH/IBU/WALI (Mapping dari Index Array, harus sinkron dengan logika CSV/XLSX lama Anda)
                     'nama_ayah' => $row[24] ?? null, 
                     'tahun_lahir_ayah' => $row[25] ?? null, 
                     'jenjang_pendidikan_ayah' => $row[26] ?? null,
@@ -761,20 +677,13 @@ class SiswaController extends Controller
                     'penghasilan_wali' => $row[40] ?? null, 
                     'nik_wali' => $row[41] ?? null,
                 ];
-
-
-                // =================================================================
-                // 🛑 UPSERT LOGIC BERDASARKAN NISN
-                // =================================================================
                 
                 $siswa = null;
                 $action = 'INSERT';
 
                 if (!empty($nisnSiswa)) {
-                    // Kunci pencarian: NISN
                     $searchKey = ['nisn' => $nisnSiswa]; 
                     
-                    // Lakukan updateOrCreate
                     $siswa = Siswa::updateOrCreate($searchKey, $siswaData);
 
                     if ($siswa->wasRecentlyCreated) {
@@ -783,7 +692,6 @@ class SiswaController extends Controller
                         $countUpdate++;
                     }
                 } else {
-                    // NISN kosong, selalu CREATE baru
                     $siswa = Siswa::create($siswaData);
                     $countInsert++;
                 }
@@ -793,13 +701,11 @@ class SiswaController extends Controller
                     continue;
                 }
                 
-                // 4. UPSERT DETAIL SISWA (Selalu update detail yang terhubung dengan Siswa ini)
                 $siswa->detail()->updateOrCreate(
                     ['id_siswa' => $siswa->id_siswa],
                     $detailData
                 );
                 
-                // Update jumlah siswa di kelas
                 if ($idKelas) {
                     Kelas::where('id_kelas', $idKelas)->increment('jumlah_siswa');
                 }
@@ -823,40 +729,25 @@ class SiswaController extends Controller
         }
     }
 
-
-    // =========================================================================
-    // EXPORT PDF & CSV SISWA
-    // =========================================================================
-
-    /**
-     * EXPORT EXCEL (Menggantikan CSV)
-     */
     public function exportExcel(Request $request)
     {
         return Excel::download(new SiswaExport($request), 'data_siswa_lengkap.xlsx');
     }
 
-    /**
-     * EXPORT PDF (Perbaikan Error 500 InfoSekolah Not Found)
-     */
     public function exportPdf(Request $request)
     {
         ini_set('memory_limit', '256M');
 
         $query = Siswa::with(['kelas', 'detail']);
-        $query = $this->applyFilters($query, $request); // Filter harus ikut
+        $query = $this->applyFilters($query, $request);
 
         $siswas = $query->orderBy('nama_siswa', 'asc')->get();
         
-        // 👇 SOLUSI ERROR 500: Memanggil model dengan namespace lengkap 👇
         $namaSekolah = \App\Models\InfoSekolah::value('nama_sekolah') ?? 'E-RAPOR';
 
         $pdf = Pdf::loadView('siswa.exports.data_siswa_pdf', compact('siswas', 'namaSekolah'))
-                  ->setPaper('a4', 'landscape'); // Landscape agar lebih lega
+                  ->setPaper('a4', 'landscape');
 
         return $pdf->download('Data_Siswa_' . date('Ymd') . '.pdf');
     }
-
-
-
 }

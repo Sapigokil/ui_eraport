@@ -37,18 +37,29 @@
             <div class="col-12">
                 <div class="card shadow-sm border">
                     <div class="card-header p-3 bg-white border-bottom">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                             <div>
                                 <h6 class="mb-0 text-dark font-weight-bold"><i class="fas fa-book-open me-2"></i> Daftar Cetak Cover Kelas {{ $kelasAktif->nama_kelas }}</h6>
                                 <span class="text-xs text-secondary">Total: {{ count($siswaList) }} Siswa Aktif</span>
                             </div>
                             
-                            @if(count($siswaList) > 0)
-                            <a href="{{ route('rapornilai.cover.cetak_massal') }}?id_kelas={{ $id_kelas }}" 
-                               class="btn btn-sm btn-outline-primary mb-0" target="_blank">
-                                <i class="fas fa-file-pdf me-2"></i> Cetak Massal (1 Kelas)
-                            </a>
-                            @endif
+                            <div class="d-flex align-items-center gap-2">
+                                {{-- INPUT TANGGAL CETAK TEMPORARY --}}
+                                <div class="input-group input-group-sm input-group-outline bg-white rounded-2" style="width: 160px;" title="Set Tanggal di Cover">
+                                    <input type="date" id="tanggal_cetak" class="form-control px-2 text-xs" value="{{ date('Y-m-d') }}">
+                                </div>
+
+                                @if(count($siswaList) > 0)
+                                <button onclick="cetakMassal(event, '{{ $id_kelas }}')" class="btn btn-sm btn-outline-primary mb-0">
+                                    <i class="fas fa-file-pdf me-2"></i> Cetak Massal
+                                </button>
+                                @endif
+
+                                {{-- TOMBOL PERBAHARUI DATA SISWA --}}
+                                <a href="{{ route('master.siswa.index') }}" target="_blank" class="btn btn-sm btn-warning text-white mb-0">
+                                    <i class="fas fa-user-edit me-1"></i> Perbaharui Data Siswa
+                                </a>
+                            </div>
                         </div>
                     </div>
                     
@@ -74,10 +85,9 @@
                                             <span class="text-xs text-secondary font-weight-bold">{{ $s->nisn ?? '-' }} / {{ $s->nipd ?? '-' }}</span>
                                         </td>
                                         <td class="text-center align-middle">
-                                            <a href="{{ route('rapornilai.cover.cetak_satuan', $s->id_siswa) }}" 
-                                               target="_blank" class="btn btn-xs bg-gradient-primary mb-0 px-3">
+                                            <button onclick="cetakSatuan(event, '{{ $s->id_siswa }}')" class="btn btn-xs bg-gradient-primary mb-0 px-3">
                                                 <i class="fas fa-print me-1"></i> Cetak Cover
-                                            </a>
+                                            </button>
                                         </td>
                                     </tr>
                                     @empty
@@ -108,4 +118,21 @@
     </div>
     <x-app.footer />
 </main>
+
+{{-- JAVASCRIPT UNTUK INJEKSI TANGGAL CETAK --}}
+<script>
+    function cetakMassal(e, idKelas) {
+        e.preventDefault();
+        let tgl = document.getElementById('tanggal_cetak').value;
+        let url = `{{ route('rapornilai.cover.cetak_massal') }}?id_kelas=${idKelas}&tanggal_cetak=${tgl}`;
+        window.open(url, '_blank');
+    }
+
+    function cetakSatuan(e, idSiswa) {
+        e.preventDefault();
+        let tgl = document.getElementById('tanggal_cetak').value;
+        let url = `{{ route('rapornilai.cover.cetak_satuan', ':id') }}`.replace(':id', idSiswa) + `?tanggal_cetak=${tgl}`;
+        window.open(url, '_blank');
+    }
+</script>
 @endsection
