@@ -225,14 +225,19 @@
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">a. Ayah</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->nama_ayah ?? '-')) }}</td></tr>
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">b. Ibu</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->nama_ibu ?? '-')) }}</td></tr>
         <tr><td class="col-no">13.</td><td class="col-label">Alamat Orang Tua</td><td class="col-titik">:</td><td class="col-value">{{ $det->alamat ?? '-' }}</td></tr>
-        <tr><td class="col-no">14.</td><td class="col-label">Nomor Telepon/HP Ortu</td><td class="col-titik">:</td><td class="col-value">{{ $det->telp_wali ?? '-' }}</td></tr>
+        <tr><td class="col-no">14.</td><td class="col-label">Nomor Telepon/HP Ortu</td><td class="col-titik">:</td><td class="col-value">{{ $det->telp_ortu ?? '-' }}</td></tr>
         <tr><td class="col-no">15.</td><td class="col-label">Pekerjaan Orang Tua</td><td class="col-titik"></td><td class="col-value"></td></tr>
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">a. Ayah</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->pekerjaan_ayah ?? '-')) }}</td></tr>
         <tr><td class="col-no"></td><td class="col-label" style="padding-left:15px;">b. Ibu</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->pekerjaan_ibu ?? '-')) }}</td></tr>
-        <tr><td class="col-no">16.</td><td class="col-label">Nama Wali Siswa</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->nama_wali ?? '-')) }}</td></tr>
-        <tr><td class="col-no">17.</td><td class="col-label">Alamat Wali Peserta Didik</td><td class="col-titik">:</td><td class="col-value">-</td></tr>
-        <tr><td class="col-no">18.</td><td class="col-label">Nomor Telepon Wali</td><td class="col-titik">:</td><td class="col-value">-</td></tr>
-        <tr><td class="col-no">19.</td><td class="col-label">Pekerjaan Wali Peserta Didik</td><td class="col-titik">:</td><td class="col-value">{{ ucwords(strtolower($det->pekerjaan_wali ?? '-')) }}</td></tr>
+        @php
+            // Logika pengecekan: True jika jenis_tinggal ada isinya DAN bukan "Bersama Orang Tua"
+            $showWali = (!empty($det->jenis_tinggal) && $det->jenis_tinggal !== 'Bersama Orang Tua');
+        @endphp
+        
+        <tr><td class="col-no">16.</td><td class="col-label">Nama Wali Siswa</td><td class="col-titik">:</td><td class="col-value">{{ $showWali ? ucwords(strtolower($det->nama_wali ?? '-')) : '-' }}</td></tr>
+        <tr><td class="col-no">17.</td><td class="col-label">Alamat Wali Peserta Didik</td><td class="col-titik">:</td><td class="col-value">{{ $showWali ? ucwords(strtolower($det->alamat_wali ?? '-')) : '-' }}</td></tr>
+        <tr><td class="col-no">18.</td><td class="col-label">Nomor Telepon Wali</td><td class="col-titik">:</td><td class="col-value">{{ $showWali ? ($det->telp_wali ?? '-') : '-' }}</td></tr>
+        <tr><td class="col-no">19.</td><td class="col-label">Pekerjaan Wali Peserta Didik</td><td class="col-titik">:</td><td class="col-value">{{ $showWali ? ucwords(strtolower($det->pekerjaan_wali ?? '-')) : '-' }}</td></tr>
     </table>
 
     <div class="clearfix">

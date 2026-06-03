@@ -178,23 +178,57 @@
                                 </div>
                                 <div class="col-md-6">
                                     <dl class="row text-sm mb-0">
-                                        <dt class="col-sm-5 text-secondary">Jenis Tinggal :</dt>
-                                        <dd class="col-sm-7 font-weight-bold">{{ $detail->jenis_tinggal ?? '-' }}</dd>
-                                        
-                                        <dt class="col-sm-5 text-secondary">Alat Transportasi :</dt>
-                                        <dd class="col-sm-7 font-weight-bold">{{ $detail->alat_transportasi ?? '-' }}</dd>
-                                        
                                         <dt class="col-sm-5 text-secondary">Jarak Rumah :</dt>
                                         <dd class="col-sm-7 font-weight-bold">{{ $detail->jarak_rumah ?? '-' }}</dd>
                                         
                                         <dt class="col-sm-5 text-secondary">No. HP Siswa :</dt>
                                         <dd class="col-sm-7 font-weight-bold">{{ $detail->no_hp ?? '-' }}</dd>
-                                        
-                                        <dt class="col-sm-5 text-secondary">No. HP Wali Siswa :</dt>
-                                        <dd class="col-sm-7 font-weight-bold">{{ $detail->telp_wali ?? '-' }}</dd>
-                                        
+                                                                               
                                         <dt class="col-sm-5 text-secondary">Email :</dt>
                                         <dd class="col-sm-7 font-weight-bold">{{ $detail->email ?? '-' }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+                            {{-- Baris: Jenis Tinggal & Transportasi --}}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <dl class="row text-sm mb-0">
+                                        <dt class="col-sm-5 text-secondary mt-2">Jenis Tinggal :</dt>
+                                        <dd class="col-sm-7 font-weight-bold mt-2">{{ $detail->jenis_tinggal ?? '-' }}</dd>
+                                    </dl>
+                                </div>
+                                <div class="col-md-6">
+                                    <dl class="row text-sm mb-0">
+                                        <dt class="col-sm-5 text-secondary mt-2">Alat Transportasi :</dt>
+                                        <dd class="col-sm-7 font-weight-bold mt-2">{{ $detail->alat_transportasi ?? '-' }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            {{-- Baris: Kontak & Alamat Orang Tua --}}
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <dl class="row text-sm mb-0">
+                                        <dt class="col-sm-3 text-secondary mt-2">No. HP Orang Tua :</dt>
+                                        <dd class="col-sm-9 font-weight-bold mt-2">{{ $detail->telp_ortu ?? '-' }}</dd>
+
+                                        <dt class="col-sm-3 text-secondary mt-2">Alamat Orang Tua :</dt>
+                                        <dd class="col-sm-9 font-weight-bold mt-2">{{ $detail->alamat_ortu ?? '-' }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            {{-- Baris: Kontak & Alamat Wali --}}
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <dl class="row text-sm mb-0">
+                                        <dt class="col-sm-3 text-secondary mt-2">No. HP Wali Siswa :</dt>
+                                        <dd class="col-sm-9 font-weight-bold mt-2">{{ $detail->telp_wali ?? '-' }}</dd>
+
+                                        <dt class="col-sm-3 text-secondary mt-2">Alamat Wali Siswa :</dt>
+                                        <dd class="col-sm-9 font-weight-bold mt-2">{{ $detail->alamat_wali ?? '-' }}</dd>
                                     </dl>
                                 </div>
                             </div>
@@ -236,9 +270,6 @@
                                         <dd class="col-sm-7 font-weight-bold">{{ $detail->penghasilan_ibu ?? '-' }}</dd>
                                     </dl>
                                 </div>
-                                <div class="col-md-12">
-                                    <p class="text-sm mb-3"><span class="text-secondary me-1">Alamat Orang Tua:</span> <span class="font-weight-bold">{{ $detail->alamat_ortu ?? '-' }}</span></p>
-                                </div>
                             </div>
 
 
@@ -262,9 +293,6 @@
                                         <dt class="col-sm-5 text-secondary">Penghasilan :</dt>
                                         <dd class="col-sm-7 font-weight-bold">{{ $detail->penghasilan_wali ?? '-' }}</dd>
                                     </dl>
-                                </div>
-                                <div class="col-md-12">
-                                    <p class="text-sm mb-3"><span class="text-secondary me-1">Alamat Wali:</span> <span class="font-weight-bold">{{ $detail->alamat_wali ?? '-' }}</span></p>
                                 </div>
                             </div>
 

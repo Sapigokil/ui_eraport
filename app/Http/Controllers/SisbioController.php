@@ -115,6 +115,11 @@ class SisbioController extends Controller
             'kode_pos'            => 'required|string',
             'jenis_tinggal'       => 'required|string',
             'alat_transportasi'   => 'required|string',
+
+            'telp_wali'           => 'nullable|string',
+            'telp_ortu'           => 'nullable|string',
+            'alamat_ortu'         => 'nullable|string',
+            'alamat_wali'         => 'nullable|string', // Nullable karena dinamis
             
             'nama_ayah'               => 'required|string',
             'nik_ayah'                => 'required|string',

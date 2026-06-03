@@ -216,25 +216,60 @@
                                     <label class="form-label text-xs font-weight-bold">Kecamatan <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" name="kecamatan" value="{{ old('kecamatan', $siswa->detail->kecamatan ?? '') }}" required>
                                 </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label text-xs font-weight-bold">Kode Pos <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" name="kode_pos" value="{{ old('kode_pos', $siswa->detail->kode_pos ?? '') }}" required>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-xs font-weight-bold">Kode Pos (Wilayah) <span class="text-danger">*</span></label>
+                                    <select class="form-control" name="kode_pos" required>
+                                        <option value="">-- Pilih Wilayah --</option>
+                                        <option value="Dalam Kota" {{ old('kode_pos', $siswa->detail->kode_pos ?? '') == 'Dalam Kota' ? 'selected' : '' }}>Dalam Kota</option>
+                                        <option value="Luar Kota" {{ old('kode_pos', $siswa->detail->kode_pos ?? '') == 'Luar Kota' ? 'selected' : '' }}>Luar Kota</option>
+                                    </select>
+                                </div>
+                                
+
+                                <div class="col-md-12 mb-3 mt-2">
+                                    <hr class="horizontal dark">
+                                    <h6 class="text-sm font-weight-bold text-dark mt-2">Status Tinggal</h6>
                                 </div>
 
                                 {{-- Baris 6: Transportasi & Tinggal --}}
-                                <div class="col-md-2 mb-3">
+                                <div class="col-md-6 mb-3">
                                     <label class="form-label text-xs font-weight-bold">Jenis Tinggal <span class="text-danger">*</span></label>
-                                    <select class="form-control" name="jenis_tinggal" required>
+                                    <select class="form-control" name="jenis_tinggal" id="jenis_tinggal" required>
                                         <option value="">-- Pilih --</option>
-                                        @foreach(['Bersama Orang Tua', 'Wali', 'Kos', 'Asrama', 'Panti Asuhan', 'Lainnya'] as $jt)
+                                        @foreach(['Bersama Orang Tua', 'Wali', 'Pesantren', 'Asrama', 'Kost', 'Lainnya'] as $jt)
                                             <option value="{{ $jt }}" {{ old('jenis_tinggal', $siswa->detail->jenis_tinggal ?? '') == $jt ? 'selected' : '' }}>{{ $jt }}</option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-2 mb-3">
+                                <div class="col-md-6 mb-3">
                                     <label class="form-label text-xs font-weight-bold">Transportasi <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" name="alat_transportasi" value="{{ old('alat_transportasi', $siswa->detail->alat_transportasi ?? '') }}" placeholder="Contoh: Sepeda Motor" required>
+                                    <select class="form-control" name="alat_transportasi" required>
+                                        <option value="">-- Pilih --</option>
+                                        @foreach(['Sepeda motor', 'Angkutan umum/bus/pete-pete', 'Mobil/bus antar jemput', 'Mobil pribadi', 'Sepeda', 'Jalan kaki', 'Lainnya']  as $transport)
+                                            <option value="{{ $transport }}" {{ old('alat_transportasi', $siswa->detail->alat_transportasi ?? '') == $transport ? 'selected' : '' }}>{{ $transport }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label text-xs font-weight-bold">No. Handphone Orang Tua <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="telp_ortu" value="{{ old('telp_ortu', $siswa->detail->telp_ortu ?? '') }}">
+                                </div>
+                                {{-- ALAMAT ORANG TUA (Selalu Tampil) --}}
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label text-xs font-weight-bold">Alamat Orang Tua<span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="alamat_ortu" value="{{ old('alamat_ortu', $siswa->detail->alamat_ortu ?? '') }}">
+                                </div>
+
+                                <div class="col-md-6 mb-3" id="wrap_telp_wali">
+                                    <label class="form-label text-xs font-weight-bold">No. Handphone Wali <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="telp_wali" value="{{ old('telp_wali', $siswa->detail->telp_wali ?? '') }}" placeholder="Isi jika tinggal bersama Wali / Pesantren / Asrama / Kost">
+                                </div>
+                                {{-- ALAMAT WALI (Dinamis: Disembunyikan jika pilih 'Bersama Orang Tua') --}}
+                                <div class="col-md-12 mb-3" id="wrap_alamat_wali">
+                                    <label class="form-label text-xs font-weight-bold text-info">Alamat Wali / Pesantren / Kost</label>
+                                    <input type="text" class="form-control" name="alamat_wali" value="{{ old('alamat_wali', $siswa->detail->alamat_wali ?? '') }}" placeholder="Isi jika tidak tinggal bersama orang tua">
+                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -352,57 +387,55 @@
                 {{-- ======================================================== --}}
                 {{-- CARD 4: DATA WALI (OPSIONAL) --}}
                 {{-- ======================================================== --}}
-                <div class="col-lg-12 mb-4">
+                <div class="col-lg-12 mb-4" id="wrap_data_wali">
                     <div class="card shadow-sm border-0">
                         <div class="card-header bg-light border-bottom p-3">
                             <h6 class="mb-0 text-dark font-weight-bold"><i class="fas fa-user-shield me-2"></i> Data Wali Siswa (Opsional)</h6>
                             <p class="text-xs mb-0 text-secondary">Hanya diisi jika Anda tinggal dan dibiayai oleh Wali (Bukan orang tua kandung).</p>
                         </div>
                         <div class="card-body p-4">
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label text-xs font-weight-bold">Nama Wali</label>
-                                    <input type="text" class="form-control" name="nama_wali" value="{{ old('nama_wali', $siswa->detail->nama_wali ?? '') }}">
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label text-xs font-weight-bold">NIK Wali</label>
-                                    <input type="text" class="form-control" name="nik_wali" value="{{ old('nik_wali', $siswa->detail->nik_wali ?? '') }}">
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label text-xs font-weight-bold">Tahun Lahir Wali</label>
-                                    <input type="number" class="form-control" name="tahun_lahir_wali" value="{{ old('tahun_lahir_wali', $siswa->detail->tahun_lahir_wali ?? '') }}">
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label text-xs font-weight-bold">Pendidikan Terakhir Wali</label>
-                                    <select class="form-control" name="jenjang_pendidikan_wali">
-                                        <option value="">-- Pilih Pendidikan --</option>
-                                        @foreach($opsi_pendidikan as $pendidikan)
-                                            <option value="{{ $pendidikan }}" {{ old('jenjang_pendidikan_wali', $siswa->detail->jenjang_pendidikan_wali ?? '') == $pendidikan ? 'selected' : '' }}>{{ $pendidikan }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label text-xs font-weight-bold">Pekerjaan Wali</label>
-                                    <select class="form-control" name="pekerjaan_wali">
-                                        <option value="">-- Pilih Pekerjaan --</option>
-                                        @foreach($opsi_pekerjaan as $grup => $list_pekerjaan)
-                                            <optgroup label="{{ $grup }}">
-                                                @foreach($list_pekerjaan as $pkj)
-                                                    <option value="{{ $pkj }}" {{ old('pekerjaan_wali', $siswa->detail->pekerjaan_wali ?? '') == $pkj ? 'selected' : '' }}>{{ $pkj }}</option>
-                                                @endforeach
-                                            </optgroup>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label text-xs font-weight-bold">Penghasilan Wali Per Bulan</label>
-                                    <select class="form-control" name="penghasilan_wali">
-                                        <option value="">-- Pilih Penghasilan --</option>
-                                        @foreach($opsi_penghasilan as $penghasilan)
-                                            <option value="{{ $penghasilan }}" {{ old('penghasilan_wali', $siswa->detail->penghasilan_wali ?? '') == $penghasilan ? 'selected' : '' }}>{{ $penghasilan }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
+                            <div class="mb-3">
+                                <label class="form-label text-xs font-weight-bold">Nama Wali</label>
+                                <input type="text" class="form-control" name="nama_wali" value="{{ old('nama_wali', $siswa->detail->nama_wali ?? '') }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-xs font-weight-bold">NIK Wali</label>
+                                <input type="text" class="form-control" name="nik_wali" value="{{ old('nik_wali', $siswa->detail->nik_wali ?? '') }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-xs font-weight-bold">Tahun Lahir Wali</label>
+                                <input type="number" class="form-control" name="tahun_lahir_wali" value="{{ old('tahun_lahir_wali', $siswa->detail->tahun_lahir_wali ?? '') }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-xs font-weight-bold">Pendidikan Terakhir Wali</label>
+                                <select class="form-control" name="jenjang_pendidikan_wali">
+                                    <option value="">-- Pilih Pendidikan --</option>
+                                    @foreach($opsi_pendidikan as $pendidikan)
+                                        <option value="{{ $pendidikan }}" {{ old('jenjang_pendidikan_wali', $siswa->detail->jenjang_pendidikan_wali ?? '') == $pendidikan ? 'selected' : '' }}>{{ $pendidikan }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-xs font-weight-bold">Pekerjaan Wali</label>
+                                <select class="form-control" name="pekerjaan_wali">
+                                    <option value="">-- Pilih Pekerjaan --</option>
+                                    @foreach($opsi_pekerjaan as $grup => $list_pekerjaan)
+                                        <optgroup label="{{ $grup }}">
+                                            @foreach($list_pekerjaan as $pkj)
+                                                <option value="{{ $pkj }}" {{ old('pekerjaan_wali', $siswa->detail->pekerjaan_wali ?? '') == $pkj ? 'selected' : '' }}>{{ $pkj }}</option>
+                                            @endforeach
+                                        </optgroup>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-xs font-weight-bold">Penghasilan Wali Per Bulan</label>
+                                <select class="form-control" name="penghasilan_wali">
+                                    <option value="">-- Pilih Penghasilan --</option>
+                                    @foreach($opsi_penghasilan as $penghasilan)
+                                        <option value="{{ $penghasilan }}" {{ old('penghasilan_wali', $siswa->detail->penghasilan_wali ?? '') == $penghasilan ? 'selected' : '' }}>{{ $penghasilan }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -419,6 +452,31 @@
         </form>
 
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const jenisTinggal = document.getElementById('jenis_tinggal');
+            const wrapTelpWali = document.getElementById('wrap_telp_wali');
+            const wrapAlamatWali = document.getElementById('wrap_alamat_wali');
+
+            function toggleWali() {
+                // Jika pilih 'Bersama Orang Tua' atau masih kosong, sembunyikan form Alamat Wali
+                if (jenisTinggal.value === 'Bersama Orang Tua' || jenisTinggal.value === '') {
+                    wrapAlamatWali.style.display = 'none';
+                    wrapTelpWali.style.display = 'none';
+                } else {
+                    // Jika pilih Wali, Kost, Pesantren, dll, tampilkan form Alamat Wali
+                    wrapAlamatWali.style.display = 'block';
+                    wrapTelpWali.style.display = 'block';
+                }
+            }
+
+            // Jalankan saat halaman pertama kali dimuat (untuk load data existing)
+            toggleWali();
+
+            // Jalankan setiap kali user mengubah pilihan dropdown
+            jenisTinggal.addEventListener('change', toggleWali);
+        });
+    </script>
     <x-app.footer />
 </main>
 @endsection

@@ -335,11 +335,24 @@
                                                 </option>
                                             @endforeach
                                         </select>
+                                    </div><div class="col-md-4 mb-3">
+                                        <label for="no_hp_ortu" class="form-label">No. HP Orang Tua</label>
+                                        <input type="text" name="telp_ortu" class="form-control rounded-pill py-2" value="{{ $getValue('telp_ortu', 'detail') }}">
                                     </div>
+                                        <div class="col-md-8 mb-3">
+                                            <label for="alamat_ortu" class="form-label">Alamat Orang Tua</label>
+                                            <textarea name="alamat_ortu" class="form-control rounded-3 py-2 @error('alamat_ortu') is-invalid @enderror">{{ $getValue('alamat_ortu', 'detail') }}</textarea>
+                                            @error('alamat_ortu') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
                                     <div class="col-md-4 mb-3">
-                                        <label for="no_hp_wali" class="form-label">No. HP Wali/Ortu</label>
+                                        <label for="no_hp_wali" class="form-label">No. HP Wali</label>
                                         <input type="text" name="telp_wali" class="form-control rounded-pill py-2" value="{{ $getValue('telp_wali', 'detail') }}">
                                     </div>
+                                        <div class="col-md-8 mb-3">
+                                            <label for="alamat_wali" class="form-label">Alamat Wali</label>
+                                            <textarea name="alamat_wali" class="form-control rounded-3 py-2 @error('alamat_wali') is-invalid @enderror">{{ $getValue('alamat_wali', 'detail') }}</textarea>
+                                            @error('alamat_wali') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        </div>
                                 </div>
 
                                 <hr class="my-4">
@@ -367,15 +380,36 @@
                                 <div class="row mb-4">
                                     <div class="col-md-4 mb-3">
                                         <label for="pekerjaan_ayah" class="form-label">Pekerjaan Ayah</label>
-                                        <input type="text" name="pekerjaan_ayah" class="form-control rounded-pill py-2" value="{{ $getValue('pekerjaan_ayah', 'detail') }}">
+                                        <select name="pekerjaan_ayah" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Pekerjaan --</option>
+                                            @foreach(['Tidak Bekerja', 'Nelayan', 'Petani', 'Peternak', 'PNS/TNI/Polri', 'Karyawan Swasta', 'Pedagang Kecil', 'Pedagang Besar', 'Wiraswasta', 'Wirausaha', 'Buruh', 'Pensiunan', 'Sudah Meninggal','Lainnya'] as $opsi)
+                                                <option value="{{ $opsi }}" {{ $getValue('pekerjaan_ayah', 'detail') == $opsi ? 'selected' : '' }}>
+                                                    {{ $opsi }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label for="jenjang_pendidikan_ayah" class="form-label">Jenjang Pendidikan Ayah</label>
-                                        <input type="text" name="jenjang_pendidikan_ayah" class="form-control rounded-pill py-2" value="{{ $getValue('jenjang_pendidikan_ayah', 'detail') }}">
+                                        <select name="jenjang_pendidikan_ayah" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Jenjang Pendidikan --</option>
+                                            @foreach(['Tidak Sekolah', 'PAUD', 'SD / sederajat', 'Putus SD', 'SMP / sederajat', 'SMA / sederajat', 'D3', 'D4', 'S1', 'S2', 'S3'] as $opsi)
+                                                <option value="{{ $opsi }}" {{ $getValue('jenjang_pendidikan_ayah', 'detail') == $opsi ? 'selected' : '' }}>
+                                                    {{ $opsi }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label for="penghasilan_ayah" class="form-label">Penghasilan Ayah</label>
-                                        <input type="text" name="penghasilan_ayah" class="form-control rounded-pill py-2" value="{{ $getValue('penghasilan_ayah', 'detail') }}">
+                                        <select name="penghasilan_ayah" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Rentang Penghasilan --</option>
+                                            @foreach(['Tidak Berpenghasilan', 'Kurang dari Rp. 500.000', 'Rp. 500,000 - Rp. 999,999', 'Rp. 1,000,000 - Rp. 1,999,999', 'Rp. 2,000,000 - Rp. 4,999,999', 'Rp. 5,000,000 - Rp. 20,000,000', 'Lebih dari Rp. 20,000,000'] as $opsi)
+                                                <option value="{{ $opsi }}" {{ $getValue('penghasilan_ayah', 'detail') == $opsi ? 'selected' : '' }}>
+                                                    {{ $opsi }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                 </div>
 
@@ -398,24 +432,36 @@
                                 <div class="row mb-4">
                                     <div class="col-md-4 mb-3">
                                         <label for="pekerjaan_ibu" class="form-label">Pekerjaan Ibu</label>
-                                        <input type="text" name="pekerjaan_ibu" class="form-control rounded-pill py-2" value="{{ $getValue('pekerjaan_ibu', 'detail') }}">
+                                        <select name="pekerjaan_ibu" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Pekerjaan --</option>
+                                            @foreach(['Tidak Bekerja', 'Nelayan', 'Petani', 'Peternak', 'PNS/TNI/Polri', 'Karyawan Swasta', 'Pedagang Kecil', 'Pedagang Besar', 'Wiraswasta', 'Wirausaha', 'Buruh', 'Pensiunan', 'Sudah Meninggal','Lainnya'] as $opsi)
+                                                <option value="{{ $opsi }}" {{ $getValue('pekerjaan_ibu', 'detail') == $opsi ? 'selected' : '' }}>
+                                                    {{ $opsi }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label for="jenjang_pendidikan_ibu" class="form-label">Jenjang Pendidikan Ibu</label>
-                                        <input type="text" name="jenjang_pendidikan_ibu" class="form-control rounded-pill py-2" value="{{ $getValue('jenjang_pendidikan_ibu', 'detail') }}">
+                                        <select name="jenjang_pendidikan_ibu" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Jenjang Pendidikan --</option>
+                                            @foreach(['Tidak Sekolah', 'PAUD', 'SD / sederajat', 'Putus SD', 'SMP / sederajat', 'SMA / sederajat', 'D3', 'D4', 'S1', 'S2', 'S3'] as $opsi)
+                                                <option value="{{ $opsi }}" {{ $getValue('jenjang_pendidikan_ibu', 'detail') == $opsi ? 'selected' : '' }}>
+                                                    {{ $opsi }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-md-4 mb-3">
                                         <label for="penghasilan_ibu" class="form-label">Penghasilan Ibu</label>
-                                        <input type="text" name="penghasilan_ibu" class="form-control rounded-pill py-2" value="{{ $getValue('penghasilan_ibu', 'detail') }}">
-                                    </div>
-                                </div>
-                                
-                                {{-- Alamat Orang Tua (Selalu Tampil) --}}
-                                <div class="row">
-                                    <div class="col-md-12 mb-3">
-                                        <label for="alamat_ortu" class="form-label">Alamat Orang Tua</label>
-                                        <textarea name="alamat_ortu" class="form-control rounded-3 py-2 @error('alamat_ortu') is-invalid @enderror">{{ $getValue('alamat_ortu', 'detail') }}</textarea>
-                                        @error('alamat_ortu') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                        <select name="penghasilan_ibu" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Rentang Penghasilan --</option>
+                                            @foreach(['Tidak Berpenghasilan', 'Kurang dari Rp. 500.000', 'Rp. 500,000 - Rp. 999,999', 'Rp. 1,000,000 - Rp. 1,999,999', 'Rp. 2,000,000 - Rp. 4,999,999', 'Rp. 5,000,000 - Rp. 20,000,000', 'Lebih dari Rp. 20,000,000'] as $opsi)
+                                                <option value="{{ $opsi }}" {{ $getValue('penghasilan_ibu', 'detail') == $opsi ? 'selected' : '' }}>
+                                                    {{ $opsi }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                 </div>
 
@@ -446,15 +492,36 @@
                                     <div class="row mb-4">
                                         <div class="col-md-4 mb-3">
                                             <label for="pekerjaan_wali" class="form-label">Pekerjaan Wali</label>
-                                            <input type="text" name="pekerjaan_wali" class="form-control rounded-pill py-2" value="{{ $getValue('pekerjaan_wali', 'detail') }}">
+                                            <select name="pekerjaan_wali" class="form-select rounded-pill py-2">
+                                                <option value="">-- Pilih Pekerjaan --</option>
+                                                @foreach(['Tidak Bekerja', 'Nelayan', 'Petani', 'Peternak', 'PNS/TNI/Polri', 'Karyawan Swasta', 'Pedagang Kecil', 'Pedagang Besar', 'Wiraswasta', 'Wirausaha', 'Buruh', 'Pensiunan', 'Sudah Meninggal','Lainnya'] as $opsi)
+                                                    <option value="{{ $opsi }}" {{ $getValue('pekerjaan_wali', 'detail') == $opsi ? 'selected' : '' }}>
+                                                        {{ $opsi }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                         <div class="col-md-4 mb-3">
                                             <label for="jenjang_pendidikan_wali" class="form-label">Jenjang Pendidikan Wali</label>
-                                            <input type="text" name="jenjang_pendidikan_wali" class="form-control rounded-pill py-2" value="{{ $getValue('jenjang_pendidikan_wali', 'detail') }}">
+                                            <select name="jenjang_pendidikan_wali" class="form-select rounded-pill py-2">
+                                                <option value="">-- Pilih Jenjang Pendidikan --</option>
+                                                @foreach(['Tidak Sekolah', 'PAUD', 'SD / sederajat', 'Putus SD', 'SMP / sederajat', 'SMA / sederajat', 'D3', 'D4', 'S1', 'S2', 'S3'] as $opsi)
+                                                    <option value="{{ $opsi }}" {{ $getValue('jenjang_pendidikan_wali', 'detail') == $opsi ? 'selected' : '' }}>
+                                                        {{ $opsi }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                         <div class="col-md-4 mb-3">
                                             <label for="penghasilan_wali" class="form-label">Penghasilan Wali</label>
-                                            <input type="text" name="penghasilan_wali" class="form-control rounded-pill py-2" value="{{ $getValue('penghasilan_wali', 'detail') }}">
+                                            <select name="penghasilan_wali" class="form-select rounded-pill py-2">
+                                            <option value="">-- Pilih Rentang Penghasilan --</option>
+                                            @foreach(['Tidak Berpenghasilan', 'Kurang dari Rp. 500.000', 'Rp. 500,000 - Rp. 999,999', 'Rp. 1,000,000 - Rp. 1,999,999', 'Rp. 2,000,000 - Rp. 4,999,999', 'Rp. 5,000,000 - Rp. 20,000,000', 'Lebih dari Rp. 20,000,000'] as $opsi)
+                                                <option value="{{ $opsi }}" {{ $getValue('penghasilan_wali', 'detail') == $opsi ? 'selected' : '' }}>
+                                                    {{ $opsi }}
+                                                </option>
+                                            @endforeach
+                                        </select>
                                         </div>
                                     </div>
                                     

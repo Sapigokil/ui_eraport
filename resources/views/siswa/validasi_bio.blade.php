@@ -263,18 +263,6 @@
                                 </div>
                                 <div class="col-md-6">
                                     <dl class="row text-sm mb-0">
-                                        <dt class="col-sm-4 text-secondary mt-2">Jenis Tinggal:</dt>
-                                        <dd class="col-sm-8 mt-2">
-                                            <span class="{{ $oldStyle('jenis_tinggal') }}">{{ $detail->jenis_tinggal ?? '-' }}</span>
-                                            {!! $renderDiff('jenis_tinggal') !!}
-                                        </dd>
-                                        
-                                        <dt class="col-sm-4 text-secondary mt-2">Transportasi:</dt>
-                                        <dd class="col-sm-8 mt-2">
-                                            <span class="{{ $oldStyle('alat_transportasi') }}">{{ $detail->alat_transportasi ?? '-' }}</span>
-                                            {!! $renderDiff('alat_transportasi') !!}
-                                        </dd>
-                                        
                                         <dt class="col-sm-4 text-secondary mt-2">No. HP / WA:</dt>
                                         <dd class="col-sm-8 mt-2">
                                             <span class="{{ $oldStyle('no_hp') }}">{{ $detail->no_hp ?? '-' }}</span>
@@ -287,6 +275,75 @@
                                             {!! $renderDiff('email') !!}
                                         </dd>
                                     </dl>
+                                </div>
+                            </div>
+                            <hr class="my-4">
+                            {{-- Baris 1: Jenis Tinggal & Transportasi --}}
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <dl class="row text-sm mb-0">
+                                        <dt class="col-sm-4 text-secondary mt-2">Jenis Tinggal:</dt>
+                                        <dd class="col-sm-8 mt-2">
+                                            <span class="{{ $oldStyle('jenis_tinggal') }}">{{ $detail->jenis_tinggal ?? '-' }}</span>
+                                            {!! $renderDiff('jenis_tinggal') !!}
+                                        </dd>  
+                                    </dl>
+                                </div>
+                                <div class="col-md-6">
+                                    <dl class="row text-sm mb-0">
+                                        <dt class="col-sm-4 text-secondary mt-2">Transportasi:</dt>
+                                        <dd class="col-sm-8 mt-2">
+                                            <span class="{{ $oldStyle('alat_transportasi') }}">{{ $detail->alat_transportasi ?? '-' }}</span>
+                                            {!! $renderDiff('alat_transportasi') !!}
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                            
+                            {{-- Baris 2: Kontak & Alamat Orang Tua --}}
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <dl class="row text-sm mb-0">
+                                        <dt class="col-sm-3 text-secondary mt-2">No. HP Orang Tua:</dt>
+                                        <dd class="col-sm-9 mt-2">
+                                            <span class="{{ $oldStyle('telp_ortu') }}">{{ $detail->telp_ortu ?? '-' }}</span>
+                                            {!! $renderDiff('telp_ortu') !!}
+                                        </dd>
+
+                                        <dt class="col-sm-3 text-secondary mt-2">Alamat Orang Tua:</dt>
+                                        <dd class="col-sm-9 mt-2">
+                                            <span class="{{ $oldStyle('alamat_ortu') }}">{{ $detail->alamat_ortu ?? '-' }}</span>
+                                            <div class="w-75">
+                                                {!! $renderDiff('alamat_ortu') !!}
+                                            </div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            {{-- Baris 3: Kontak & Alamat Wali (Ditambah Catatan) --}}
+                            <div class="row mt-4">
+                                <div class="col-md-12">
+                                    <div class="p-3 rounded" style="background-color: #fcfdfd; border: 1px dashed #ced4da;">
+                                        <p class="text-xs text-danger font-weight-bold mb-2 fst-italic">
+                                            <i class="fas fa-exclamation-circle me-1"></i> Catatan: Data telepon dan alamat wali di bawah ini wajib diisi apabila siswa memilih Jenis Tinggal selain "Bersama Orang Tua".
+                                        </p>
+                                        <dl class="row text-sm mb-0">
+                                            <dt class="col-sm-3 text-secondary mt-2">No. HP Wali:</dt>
+                                            <dd class="col-sm-9 mt-2">
+                                                <span class="{{ $oldStyle('telp_wali') }}">{{ $detail->telp_wali ?? '-' }}</span>
+                                                {!! $renderDiff('telp_wali') !!}
+                                            </dd>
+
+                                            <dt class="col-sm-3 text-secondary mt-2">Alamat Wali:</dt>
+                                            <dd class="col-sm-9 mt-2">
+                                                <span class="{{ $oldStyle('alamat_wali') }}">{{ $detail->alamat_wali ?? '-' }}</span>
+                                                <div class="w-75">
+                                                    {!! $renderDiff('alamat_wali') !!}
+                                                </div>
+                                            </dd>
+                                        </dl>
+                                    </div>
                                 </div>
                             </div>
                             <hr class="my-4">
