@@ -27,6 +27,27 @@ class NilaiAkhirController extends Controller
         return $map[strtoupper(trim($semester))] ?? null;
     }
 
+    /**
+     * Helper untuk menangani keberagaman nama agama di database
+     */
+    private function getAgamaAliases(?string $agama_khusus): array
+    {
+        if (!$agama_khusus) return [];
+
+        $agama = trim(strtolower($agama_khusus));
+
+        $aliases = [
+            'katholik' => ['katholik', 'katolik'],
+            'katolik'  => ['katholik', 'katolik'],
+            'kristen'  => ['kristen', 'protestan', 'kristen protestan'],
+            'konghucu' => ['konghucu', 'kong hucu', 'khonghucu'],
+            'buddha'   => ['buddha', 'budha'],
+            'budha'    => ['buddha', 'budha'],
+        ];
+
+        return $aliases[$agama] ?? [$agama];
+    }
+
     public function generateCapaianAkhir($siswa, $semuaNilai): ?string
     {
         if ($semuaNilai->count() === 0) {
@@ -169,30 +190,31 @@ class NilaiAkhirController extends Controller
                 goto render_view;
             }
 
-            // --- A. FILTER AGAMA (LOGIKA BARU) ---
+            // --- A. FILTER AGAMA (MENGGUNAKAN HELPER TERPUSAT) ---
             $namaMapel   = $selectedMapel->nama_mapel;
+            $syaratAgama = $selectedMapel->agama_khusus ?? null;
             $filterAgama = null;
 
-            if (stripos($namaMapel, 'Islam') !== false) {
-                $filterAgama = ['islam'];
-            } elseif (stripos($namaMapel, 'Kristen') !== false || stripos($namaMapel, 'Protestan') !== false) {
-                $filterAgama = ['kristen', 'protestan'];
-            } elseif (stripos($namaMapel, 'Katholik') !== false || stripos($namaMapel, 'Katolik') !== false) {
-                $filterAgama = ['katholik', 'katolik'];
-            } elseif (stripos($namaMapel, 'Hindu') !== false) {
-                $filterAgama = ['hindu'];
-            } elseif (stripos($namaMapel, 'Buddha') !== false || stripos($namaMapel, 'Budha') !== false) {
-                $filterAgama = ['buddha', 'budha'];
-            } elseif (stripos($namaMapel, 'Konghucu') !== false || stripos($namaMapel, 'Khonghucu') !== false) {
-                $filterAgama = ['konghucu', 'khonghucu', 'khong hu cu'];
+            // Jika admin mengisi kolom agama_khusus, utamakan itu
+            if (!empty($syaratAgama)) {
+                $filterAgama = $this->getAgamaAliases($syaratAgama);
+            } 
+            // Jika tidak, kita deteksi otomatis dari nama mapelnya
+            else {
+                $agamas = ['Islam', 'Kristen', 'Katholik', 'Katolik', 'Hindu', 'Buddha', 'Budha', 'Khonghucu', 'Konghucu'];
+                foreach ($agamas as $rel) {
+                    if (stripos($namaMapel, $rel) !== false) {
+                        $filterAgama = $this->getAgamaAliases($rel);
+                        break;
+                    }
+                }
             }
 
             // --- B. AMBIL SISWA SESUAI FILTER ---
             $querySiswa = Siswa::with('detail')->where('id_kelas', $id_kelas);
 
-            if ($filterAgama !== null) {
+            if ($filterAgama !== null && !empty($filterAgama)) {
                 $querySiswa->whereHas('detail', function ($q) use ($filterAgama) {
-                    // Gunakan RAW untuk case-insensitive matching yang aman
                     $q->whereIn(\Illuminate\Support\Facades\DB::raw('LOWER(agama)'), $filterAgama);
                 });
             }
@@ -210,7 +232,6 @@ class NilaiAkhirController extends Controller
                 ->first();
 
             // --- D. AMBIL NILAI AKHIR (DARI TABEL NILAI_AKHIR) ---
-            // Kita ambil sekaligus pakai whereIn id_siswa agar efisien
             $siswaIds = $siswa->pluck('id_siswa')->toArray();
 
             $nilaiAkhirData = NilaiAkhir::where('id_kelas', $id_kelas)
@@ -225,35 +246,25 @@ class NilaiAkhirController extends Controller
             foreach ($siswa as $s) {
                 $data = $nilaiAkhirData->get($s->id_siswa);
 
-                // Helper kecil untuk format angka: Jika null tampilkan '-', jika ada ubah ke Int
                 $formatInt = fn($val) => ($val !== null && $val !== '') ? (int) $val : '-';
                 
-                // Khusus Rata-rata biarkan ada koma (opsional, jika ingin bulat juga ganti jadi formatInt)
-                $rataSumatif = ($data && $data->rata_sumatif !== null) ? $data->rata_sumatif : '-';
-
-                // Jika data belum ada, set default '-'
                 $rekap[$s->id_siswa] = [
-                    // Sumatif Detail
                     's1' => $data->nilai_s1 ?? '-',
                     's2' => $data->nilai_s2 ?? '-',
                     's3' => $data->nilai_s3 ?? '-',
                     's4' => $data->nilai_s4 ?? '-',
                     's5' => $data->nilai_s5 ?? '-',
                     
-                    // Rata & Bobot Sumatif
                     'rata_sumatif'  => $data->rata_sumatif ?? '-',
                     'bobot_sumatif' => $formatInt($data->bobot_sumatif ?? '-'),
                     
-                    // Project
                     'nilai_project' => $formatInt($data->nilai_project ?? '-'),
-                    'rata_project'  => $data->rata_project ?? '-', // Jika kolom ini ada
+                    'rata_project'  => $data->rata_project ?? '-', 
                     'bobot_project' => $formatInt($data->bobot_project ?? '-'),
                     
-                    // Final
                     'nilai_akhir'   => $formatInt($data->nilai_akhir ?? '-'),
                     'capaian_akhir' => $data->capaian_akhir ?? 'Belum dilakukan finalisasi nilai.',
                 
-                    // [BARU] Tambahkan status data untuk ditampilkan
                     'status_data'   => $data->status_data ?? 'draft',
                 ];
             }

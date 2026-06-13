@@ -240,30 +240,28 @@ class DashboardController extends Controller
         $statusRapor = $this->getStatusRapor($tahunAjaranAktif, $semesterAktif);
 
         // =====================
-        // UPCOMING EVENT (H sampai H+2)
+        // EVENT AKTIF (KHUSUS ADMIN / GURU)
         // =====================
-        $events = Event::whereBetween(
-                'tanggal',
-                [
-                    Carbon::today(),               // hari ini
-                    Carbon::today()->addDays(2)    // H+2
-                ]
-            )
-            ->orderBy('tanggal')
+        // Hanya menampilkan event berstatus 'aktif', target 'semua' atau 'guru', 
+        // dan tanggal_selesai belum terlewati (>= hari ini)
+        $events = Event::where('status', 'aktif')
+            ->whereIn('target', ['semua', 'guru'])
+            ->where('tanggal_selesai', '>=', Carbon::today())
+            ->orderBy('tanggal', 'asc')
             ->get();
 
-        // =====================
-        // NOTIFIKASI (H sampai H+2)
-        // =====================
-        $notifications = Notifikasi::whereBetween(
-                'tanggal',
-                [
-                    Carbon::today(),
-                    Carbon::today()->addDays(2)
-                ]
-            )
-            ->orderBy('tanggal')
-            ->get();
+        // // =====================
+        // // NOTIFIKASI (H sampai H+2)
+        // // =====================
+        // $notifications = Notifikasi::whereBetween(
+        //         'tanggal',
+        //         [
+        //             Carbon::today(),
+        //             Carbon::today()->addDays(2)
+        //         ]
+        //     )
+        //     ->orderBy('tanggal')
+        //     ->get();
 
         return view('dashboard', compact(
             'season',
@@ -279,7 +277,7 @@ class DashboardController extends Controller
             'statistikNilai',
             'statusRapor',
             'events',
-            'notifications',
+            // 'notifications',
             'detailNilaiMerah',
             'semesterAktif',
             'semesterList',  
@@ -440,49 +438,49 @@ class DashboardController extends Controller
         });
     }
 
-    // =====================
-    // SIMPAN EVENT
-    // =====================
-    public function storeEvent(Request $request)
-    {
-        $request->validate([
-            'deskripsi' => 'required|string',
-            'tanggal'   => 'required|date',
-        ]);
+    // // ===================== 
+    // // SIMPAN EVENT
+    // // =====================
+    // public function storeEvent(Request $request)
+    // {
+    //     $request->validate([
+    //         'deskripsi' => 'required|string',
+    //         'tanggal'   => 'required|date',
+    //     ]);
 
-        Event::create([
-            'deskripsi' => $request->deskripsi,
-            'tanggal'   => $request->tanggal,
-        ]);
+    //     Event::create([
+    //         'deskripsi' => $request->deskripsi,
+    //         'tanggal'   => $request->tanggal,
+    //     ]);
 
-        return redirect()->back()->with('success', 'Event berhasil ditambahkan');
-    }
+    //     return redirect()->back()->with('success', 'Event berhasil ditambahkan');
+    // }
 
-    // =====================
-    // HAPUS EVENT
-    // =====================
-    public function destroy($id)
-    {
-        Event::where('id_event', $id)->delete();
+    // // =====================
+    // // HAPUS EVENT
+    // // =====================
+    // public function destroy($id)
+    // {
+    //     Event::where('id_event', $id)->delete();
 
-        return redirect()->back()->with('success', 'Event berhasil dihapus');
-    }
+    //     return redirect()->back()->with('success', 'Event berhasil dihapus');
+    // }
 
-    // =====================
-    // UPDATE EVENT
-    // =====================
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'deskripsi' => 'required|string',
-            'tanggal'   => 'required|date',
-        ]);
+    // // =====================
+    // // UPDATE EVENT
+    // // =====================
+    // public function update(Request $request, $id)
+    // {
+    //     $request->validate([
+    //         'deskripsi' => 'required|string',
+    //         'tanggal'   => 'required|date',
+    //     ]);
 
-        Event::where('id_event', $id)->update([
-            'deskripsi' => $request->deskripsi,
-            'tanggal'   => $request->tanggal,
-        ]);
+    //     Event::where('id_event', $id)->update([
+    //         'deskripsi' => $request->deskripsi,
+    //         'tanggal'   => $request->tanggal,
+    //     ]);
 
-        return redirect()->back()->with('success', 'Event berhasil diperbarui');
-    }
+    //     return redirect()->back()->with('success', 'Event berhasil diperbarui');
+    // }
 }

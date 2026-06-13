@@ -25,6 +25,8 @@ return [
                 'Perbaikan Bug pada halaman input nilai Sumatif dan Project untuk menampilkan data yang lebih akurat',
                 'Penambahan Inputan Naik Kelas dan Tinggal Kelas pada Halaman Walikelas untuk memudahkan pemantauan siswa yang naik kelas',
                 'Menambahkan Input data Kenaikan Kelas pada Ledger Wali Kelas untuk memudahkan pemantauan siswa yang naik kelas',
+                'Perubahan pada halaman Cetak Rapor semester Genap untuk menampilkan data kenaikan kelas siswa yang naik kelas',
+                'Perubahan Event dan tampilannya di Dashboard sehingga mudah terbaca',
                 ],
         ],
         [

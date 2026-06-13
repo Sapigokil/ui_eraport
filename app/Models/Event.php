@@ -8,15 +8,18 @@ class Event extends Model
 {
     protected $table = 'event';
     protected $primaryKey = 'id_event';
-    // public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
+        'judul',
         'deskripsi',
         'tanggal',
+        'tanggal_selesai',
         'kategori',
-        'jadwalkan',
+        'target',
+        'status',
+        'lampiran',
         'created_at',
         'updated_at'
     ];
-
 }

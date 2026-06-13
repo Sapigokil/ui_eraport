@@ -338,9 +338,10 @@
                                 <ul class="nav flex-column">
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.catatan.input') ? 'active' : '' }}" href="{{ route('walikelas.catatan.input') }}">Catatan Walikelas</a></li>
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.monitoring.wali') ? 'active' : '' }}" href="{{ route('walikelas.monitoring.wali') }}">Finalisasi Nilai</a></li>
-                                    <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.cakok.index') ? 'active' : '' }}" href="{{ route('walikelas.cakok.index') }}">Set Template</a></li>
                                     {{-- TAMBAHAN MENU LEDGER WALI --}}
-                                    <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.ledger.index') ? 'active' : '' }}" href="{{ route('walikelas.ledger.index') }}">Ledger Kelas (Live)</a></li>
+                                    <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.ledger.index') ? 'active' : '' }}" href="{{ route('walikelas.ledger.index') }}">Ledger Kelas</a></li>
+                                    
+                                    <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.cakok.index') ? 'active' : '' }}" href="{{ route('walikelas.cakok.index') }}">Set Template</a></li>
                                     
                                 </ul>
                             </div> 
@@ -463,12 +464,14 @@
             {{-- ========================================================= --}}
             @can('setting.menu')
             @php 
-                $isEraporSetActive = request()->routeIs(['settings.erapor.kok.*', 'settings.erapor.bobot.*', 'settings.erapor.event.*']);
-                $isPklSetActive = request()->routeIs(['settings.pkl.index', 'settings.pkl.template', 'settings.pkl.import']);
-                $isSeasonActive = request()->routeIs(['settings.erapor.season.*', 'settings.pkl.season.*', 'settings.bio_season.*']);
+                $isEventActive     = request()->routeIs(['settings.erapor.event.*']);
+                $isEraporSetActive = request()->routeIs(['settings.erapor.kok.*', 'settings.erapor.bobot.*']);
+                $isPklSetActive    = request()->routeIs(['settings.pkl.index', 'settings.pkl.template', 'settings.pkl.import']);
+                $isSeasonActive    = request()->routeIs(['settings.erapor.season.*', 'settings.pkl.season.*', 'settings.bio_season.*']);
                 $isSystemSetActive = request()->routeIs(['settings.system.*']);
                 
-                $isCatPengaturanActive = $isEraporSetActive || $isPklSetActive || $isSeasonActive || $isSystemSetActive;
+                // Tambahkan $isEventActive ke dalam logika trigger collapse Kategori Pengaturan
+                $isCatPengaturanActive = $isEventActive || $isEraporSetActive || $isPklSetActive || $isSeasonActive || $isSystemSetActive;
             @endphp
             <li class="nav-item mt-2">
                 <a class="sidenav-category-toggle" data-bs-toggle="collapse" href="#catPengaturan" role="button" aria-expanded="{{ $isCatPengaturanActive ? 'true' : 'false' }}">
@@ -478,6 +481,23 @@
                 
                 <div class="collapse {{ $isCatPengaturanActive ? 'show' : '' }} category-wrapper" id="catPengaturan" data-bs-parent="#sidenav-collapse-main">
                     <ul class="nav flex-column">
+                        
+                        {{-- 1. MENU EVENT (Dipindah ke atas) --}}
+                        <li class="nav-item">
+                            <a data-bs-toggle="collapse" href="#settingEventMenu" class="nav-link {{ $isEventActive ? 'active' : '' }}" aria-expanded="{{ $isEventActive ? 'true' : 'false' }}">
+                                <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-bullhorn text-sm"></i></div>
+                                <span class="nav-link-text">Event</span>
+                            </a>
+                            <div class="collapse {{ $isEventActive ? 'show' : '' }}" id="settingEventMenu" data-bs-parent="#catPengaturan">
+                                <ul class="nav flex-column">
+                                    <li class="nav-item">
+                                        <a class="nav-link {{ request()->routeIs('settings.erapor.event.index') ? 'active' : '' }}" href="{{ route('settings.erapor.event.index') }}">Event Dashboard</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        {{-- 2. MENU SETTING E-RAPOR --}}
                         <li class="nav-item">
                             <a data-bs-toggle="collapse" href="#settingEraporMenu" class="nav-link {{ $isEraporSetActive ? 'active' : '' }}" aria-expanded="{{ $isEraporSetActive ? 'true' : 'false' }}">
                                 <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-sliders-h text-sm"></i></div>
@@ -487,11 +507,11 @@
                                 <ul class="nav flex-column">
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.kok.index') ? 'active' : '' }}" href="{{ route('settings.erapor.kok.index') }}">Set Kokurikuler</a></li>
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.bobot.index') ? 'active' : '' }}" href="{{ route('settings.erapor.bobot.index') }}">Bobot Nilai</a></li>
-                                    <li class="nav-item"><a class="nav-link {{ request()->routeIs('settings.erapor.event.index') ? 'active' : '' }}" href="{{ route('settings.erapor.event.index') }}">Event Dashboard</a></li>
                                 </ul>
                             </div>
                         </li>
 
+                        {{-- 3. MENU SETTING PKL --}}
                         <li class="nav-item">
                             <a data-bs-toggle="collapse" href="#settingPklMenu" class="nav-link {{ $isPklSetActive ? 'active' : '' }}" aria-expanded="{{ $isPklSetActive ? 'true' : 'false' }}">
                                 <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-briefcase text-sm"></i></div>
@@ -504,6 +524,7 @@
                             </div>
                         </li>
 
+                        {{-- 4. MENU SETTING SEASON --}}
                         <li class="nav-item">
                             <a data-bs-toggle="collapse" href="#settingSeasonMenu" class="nav-link {{ $isSeasonActive ? 'active' : '' }}" aria-expanded="{{ $isSeasonActive ? 'true' : 'false' }}">
                                 <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-calendar-alt text-sm"></i></div>
@@ -518,6 +539,7 @@
                             </div>
                         </li>
 
+                        {{-- 5. MENU SISTEM & MAINTENANCE --}}
                         <li class="nav-item">
                             <a data-bs-toggle="collapse" href="#settingSystemMenu" class="nav-link {{ $isSystemSetActive ? 'active' : '' }}" aria-expanded="{{ $isSystemSetActive ? 'true' : 'false' }}">
                                 <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-users-cog text-sm"></i></div>

@@ -434,7 +434,13 @@
             </td>
         </tr>
     </table>
+    <br>
 
+    @if(isset($statusKenaikanText) && $statusKenaikanText)
+        <div style="border: 1px solid #000; padding: 8px 15px; margin-bottom: 20px; text-align: center; font-family: sans-serif; font-size: 14px; font-weight: bold;">
+            Keterangan Kenaikan Kelas : {{ $statusKenaikanText }}
+        </div>
+    @endif
 
     <table class="table-ttd">
         <tr>
