@@ -11,7 +11,7 @@ use App\Models\Sumatif;
 use App\Models\MataPelajaran;
 use App\Models\Pembelajaran;
 use App\Models\Season;
-use App\Models\Guru; // Tambahan untuk memanggil master Guru
+use App\Models\Guru; 
 use App\Exports\SumatifTemplateExport;
 use App\Imports\SumatifImport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -22,6 +22,26 @@ use App\Http\Controllers\NilaiAkhirController;
 
 class SumatifController extends Controller
 {
+    // === METHOD HELPER BARU: KAMUS ALIAS AGAMA ===
+    private function getAgamaAliases(?string $agama_khusus): array
+    {
+        if (!$agama_khusus) return [];
+
+        // Bersihkan spasi dan ubah ke huruf kecil
+        $agama = trim(strtolower($agama_khusus));
+
+        // Kamus Alias: Key adalah agama dari Mapel, Valuenya adalah array ejaan yang diizinkan
+        $aliases = [
+            'katholik' => ['katholik', 'katolik'],
+            'katolik'  => ['katholik', 'katolik'],
+            'kristen'  => ['kristen', 'protestan', 'kristen protestan'],
+            'konghucu' => ['konghucu', 'kong hucu', 'khonghucu'],
+        ];
+
+        // Jika ada di kamus, return array aliasnya. Jika tidak ada, return ejaan aslinya dalam bentuk array
+        return $aliases[$agama] ?? [$agama];
+    }
+
     // Method Helper (tujuanPembelajaran)
     private function DeskripsiSumatif(int $nilai): string
     {
@@ -235,9 +255,14 @@ class SumatifController extends Controller
                 $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
                 
                 $selectedMapel = MataPelajaran::find($request->id_mapel);
+                
+                // === IMPLEMENTASI KAMUS ALIAS DI SINI ===
                 if ($selectedMapel && $selectedMapel->agama_khusus) {
-                    $siswaQuery->whereHas('detail', function ($q) use ($selectedMapel) {
-                        $q->where('agama', $selectedMapel->agama_khusus);
+                    $agamaList = $this->getAgamaAliases($selectedMapel->agama_khusus);
+                    
+                    $siswaQuery->whereHas('detail', function ($q) use ($agamaList) {
+                        // DB::raw digunakan untuk mengabaikan spasi berlebih dan case-sensitive di database
+                        $q->whereIn(DB::raw('LOWER(TRIM(agama))'), $agamaList);
                     });
                 }
 
@@ -401,10 +426,12 @@ class SumatifController extends Controller
 
         $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
 
+        // === IMPLEMENTASI KAMUS ALIAS DI SINI ===
         if ($mapel && $mapel->agama_khusus) {
-            $agama = trim(strtolower($mapel->agama_khusus));
-            $siswaQuery->whereHas('detail', function ($q) use ($agama) {
-                $q->whereRaw('LOWER(TRIM(agama)) = ?', [$agama]);
+            $agamaList = $this->getAgamaAliases($mapel->agama_khusus);
+            
+            $siswaQuery->whereHas('detail', function ($q) use ($agamaList) {
+                $q->whereIn(DB::raw('LOWER(TRIM(agama))'), $agamaList);
             });
         }
 

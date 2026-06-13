@@ -222,7 +222,10 @@
                 <div class="col-12">
                     @php
                         $isLocked = $isLocked ?? false;
-                        $canSave  = false;
+                        $canSave  = $canSave ?? false;
+                        $totalSiswa = count($dataSiswa);
+                        $totalSiswaMemenuhiTarget = $totalSiswaMemenuhiTarget ?? 0;
+                        $batasMinimalSumatif = $batasMinimalSumatif ?? 3;
 
                         if (!$seasonOpen) {
                             $gateColor = 'danger';
@@ -232,11 +235,15 @@
                             $gateColor = 'warning';
                             $gateIcon = 'fas fa-lock';
                             $statusMessage = 'Data telah dikunci (Status: Final/Cetak). Hubungi Wali Kelas jika ada revisi nilai.';
+                        } elseif ($totalSiswaMemenuhiTarget < $totalSiswa) {
+                            $gateColor = 'danger';
+                            $gateIcon = 'fas fa-times-circle';
+                            $kurang = $totalSiswa - $totalSiswaMemenuhiTarget;
+                            $statusMessage = "Akses Finalisasi ditutup. Terdapat $kurang siswa yang belum memenuhi syarat minimal nilai Sumatif ($batasMinimalSumatif nilai).";
                         } else {
-                            $canSave = true; 
                             $gateColor = 'primary';
                             $gateIcon = 'fas fa-door-open';
-                            $statusMessage = 'Sistem siap melakukan kalkulasi dan simpan snapshot nilai akhir.';
+                            $statusMessage = 'Seluruh siswa telah memenuhi syarat minimal nilai. Sistem siap memfinalisasi data.';
                         }
                     @endphp
 
@@ -251,7 +258,7 @@
                                 </p>
                             </div>
                             <div>
-                                @if($canSave)
+                                @if($canSave && $seasonOpen)
                                     <button type="button" onclick="confirmSimpan()" class="btn btn-primary bg-gradient-primary btn-lg mb-0 shadow-sm w-100">
                                         <i class="fas fa-save me-2"></i> SIMPAN FINALISASI
                                     </button>

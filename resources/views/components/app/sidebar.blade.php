@@ -339,6 +339,9 @@
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.catatan.input') ? 'active' : '' }}" href="{{ route('walikelas.catatan.input') }}">Catatan Walikelas</a></li>
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.monitoring.wali') ? 'active' : '' }}" href="{{ route('walikelas.monitoring.wali') }}">Finalisasi Nilai</a></li>
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.cakok.index') ? 'active' : '' }}" href="{{ route('walikelas.cakok.index') }}">Set Template</a></li>
+                                    {{-- TAMBAHAN MENU LEDGER WALI --}}
+                                    <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.ledger.index') ? 'active' : '' }}" href="{{ route('walikelas.ledger.index') }}">Ledger Kelas (Live)</a></li>
+                                    
                                 </ul>
                             </div> 
                         </li>

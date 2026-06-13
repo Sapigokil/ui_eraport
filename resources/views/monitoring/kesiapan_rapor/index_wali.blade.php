@@ -244,9 +244,10 @@
                                                 <tr>
                                                     <th class="ps-3 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 20%;">Siswa</th>
                                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 20%;">Kokurikuler</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 25%;">Ekstrakurikuler</th>
-                                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 15%;">Absensi</th>
-                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Catatan</th>
+                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 20%;">Ekstrakurikuler</th>
+                                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 10%;">Absensi</th>
+                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 15%;">Catatan</th>
+                                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 5%;">Kenaikan</th>
                                                     <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 10%;">Status</th>
                                                 </tr>
                                             </thead>
@@ -265,6 +266,24 @@
                                                         <span class="badge badge-sm bg-light text-dark border">S: <b class="text-danger">{{ $cat['sakit'] }}</b> | I: <b class="text-warning">{{ $cat['ijin'] }}</b> | A: <b class="text-dark">{{ $cat['alpha'] }}</b></span>
                                                     </td>
                                                     <td class="align-top py-3"><span class="text-xs text-secondary text-wrap d-block" style="max-width: 200px;" data-bs-toggle="tooltip" title="{{ $cat['catatan_full'] }}">{{ $cat['catatan_short'] }}</span></td>
+                                                    <td class="align-top py-3 text-center">
+                                                        {{-- LOGIKA TAMPILAN STATUS KENAIKAN --}}
+                                                        @if(strtoupper($semester) == 'GENAP')
+                                                            @if(isset($cat['status_kenaikan']))
+                                                                @if($cat['status_kenaikan'] == 'naik_kelas')
+                                                                    <span class="badge badge-sm bg-gradient-success"><i class="fas fa-level-up-alt"></i> NAIK</span>
+                                                                @elseif($cat['status_kenaikan'] == 'tinggal_kelas')
+                                                                    <span class="badge badge-sm bg-gradient-danger"><i class="fas fa-level-down-alt"></i> TINGGAL</span>
+                                                                @else
+                                                                    <span class="badge badge-sm bg-secondary opacity-5">-</span>
+                                                                @endif
+                                                            @else
+                                                                <span class="badge badge-sm bg-secondary opacity-5">-</span>
+                                                            @endif
+                                                        @else
+                                                            <span class="text-xs text-secondary">-</span>
+                                                        @endif
+                                                    </td>
                                                     <td class="align-middle text-center align-top py-3">
                                                         @if($cat['status'] == 'cetak') 
                                                             <span class="badge badge-sm bg-dark text-white"><i class="fas fa-lock me-1"></i> TERCETAK</span>

@@ -143,7 +143,7 @@ class MonitoringController extends Controller
                 $detailMapel[] = [
                     'id_mapel' => $p->id_mapel,
                     'mapel'    => $p->mapel->nama_mapel,
-                    'guru'     => $p->guru->nama_guru ?? 'Belum ditentukan', // Lengkapi Key Guru
+                    'guru'     => $p->guru->nama_guru ?? 'Belum ditentukan',
                     'progress' => $countSnapshotNilai,
                     'total'    => $targetSiswaMapel,
                     'status'   => $statusMapel,
@@ -164,18 +164,17 @@ class MonitoringController extends Controller
                 $hasSnapshot = ($snap !== null);
 
                 $detailCatatan[] = [
-                    'nama_siswa'    => $hasSnapshot ? $snap->nama_siswa_snapshot : $s->nama_siswa,
-                    'nisn'          => $hasSnapshot ? $snap->nisn_snapshot : $s->nisn,
-                    // FIX: Sertakan data _short dan _full untuk Kokurikuler
-                    'kokurikuler_short'   => Str::limit($snap->kokurikuler ?? '-', 30),
-                    'kokurikuler_full' => $snap->kokurikuler ?? '-',
-                    'ekskul_html'   => $hasSnapshot ? $this->formatEkskul($snap->data_ekskul) : '-', 
-                    'sakit'         => $snap->sakit ?? 0, 
-                    'ijin'          => $snap->ijin ?? 0, 
-                    'alpha'         => $snap->alpha ?? 0, 
-                    // FIX: Sertakan data _short dan _full untuk Catatan
-                    'catatan_short' => Str::limit($snap->catatan_wali_kelas ?? '-', 30), 
-                    'catatan_full'  => $snap->catatan_wali_kelas ?? '-',
+                    'nama_siswa'        => $hasSnapshot ? $snap->nama_siswa_snapshot : $s->nama_siswa,
+                    'nisn'              => $hasSnapshot ? $snap->nisn_snapshot : $s->nisn,
+                    'kokurikuler_short' => Str::limit($snap->kokurikuler ?? '-', 30),
+                    'kokurikuler_full'  => $snap->kokurikuler ?? '-',
+                    'ekskul_html'       => $hasSnapshot ? $this->formatEkskul($snap->data_ekskul) : '-', 
+                    'sakit'             => $snap->sakit ?? 0, 
+                    'ijin'              => $snap->ijin ?? 0, 
+                    'alpha'             => $snap->alpha ?? 0, 
+                    'catatan_short'     => Str::limit($snap->catatan_wali_kelas ?? '-', 30), 
+                    'catatan_full'      => $snap->catatan_wali_kelas ?? '-',
+                    'status_kenaikan'   => $snap->status_kenaikan ?? null,
                     'status'            => ($hasSnapshot && in_array($snap->status_data, ['final', 'cetak'])) ? 'ada' : 'kosong'
                 ];
 
@@ -185,7 +184,7 @@ class MonitoringController extends Controller
             }
 
             $persenKelas = ($kelasMapelTotalHitung > 0) ? round(($kelasMapelSelesai / $kelasMapelTotalHitung) * 100) : 0;
-            $persenRapor = ($totalSiswaMaster ?? $totalSiswaKelas > 0) ? round(($siswaTersnapshot / $totalSiswaKelas) * 100) : 0;
+            $persenRapor = ($totalSiswaKelas > 0) ? round(($siswaTersnapshot / $totalSiswaKelas) * 100) : 0;
 
             $monitoringData[] = (object) [
                 'kelas'          => $k,
@@ -193,7 +192,7 @@ class MonitoringController extends Controller
                 'jml_mapel'      => $kelasMapelTotalHitung,
                 'mapel_selesai'  => $kelasMapelSelesai,
                 'persen'         => $persenKelas,
-                'persen_catatan' => $persenRapor, // Sesuai permintaan Anda
+                'persen_catatan' => $persenRapor,
                 'detail'         => $detailMapel,
                 'detail_catatan' => $detailCatatan
             ];

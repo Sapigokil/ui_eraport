@@ -11,11 +11,22 @@ return [
     |
     */
 
-    'current_version' => '1.0.24',
+    'current_version' => '1.0.25',
     
     'last_updated' => '2026-06-03',
 
     'changelog' => [
+        [
+            'version' => '1.0.25',
+            'date'    => '2026-06-13',
+            'notes'   => [
+                'Perbaikan Halaman Finalisasi Walikelas untuk menampilkan data yang lebih lengkap dan akurat',
+                'Perbaikan Bug Mapel yang tidak muncul di Ledger Wali Kelas',
+                'Perbaikan Bug pada halaman input nilai Sumatif dan Project untuk menampilkan data yang lebih akurat',
+                'Penambahan Inputan Naik Kelas dan Tinggal Kelas pada Halaman Walikelas untuk memudahkan pemantauan siswa yang naik kelas',
+                'Menambahkan Input data Kenaikan Kelas pada Ledger Wali Kelas untuk memudahkan pemantauan siswa yang naik kelas',
+                ],
+        ],
         [
             'version' => '1.0.24',
             'date'    => '2026-06-03',

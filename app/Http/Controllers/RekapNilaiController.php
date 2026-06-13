@@ -8,8 +8,8 @@ use App\Models\MataPelajaran;
 use App\Models\BobotNilai;
 use App\Models\NilaiAkhir;
 use App\Models\Season;
-use App\Models\Pembelajaran; // Tambahan untuk query Mapel/Kelas
-use App\Models\Guru;         // Tambahan untuk Master Guru
+use App\Models\Pembelajaran; 
+use App\Models\Guru;         
 use App\Helpers\NilaiCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +18,23 @@ use Carbon\Carbon;
 
 class RekapNilaiController extends Controller
 {
+    // === METHOD HELPER BARU: KAMUS ALIAS AGAMA ===
+    private function getAgamaAliases(?string $agama_khusus): array
+    {
+        if (!$agama_khusus) return [];
+
+        $agama = trim(strtolower($agama_khusus));
+
+        $aliases = [
+            'katholik' => ['katholik', 'katolik'],
+            'katolik'  => ['katholik', 'katolik'],
+            'kristen'  => ['kristen', 'protestan', 'kristen protestan'],
+            'konghucu' => ['konghucu', 'kong hucu', 'khonghucu'],
+        ];
+
+        return $aliases[$agama] ?? [$agama];
+    }
+
     /**
      * HALAMAN UTAMA: Tampilkan Tabel Rekap
      */
@@ -121,12 +138,19 @@ class RekapNilaiController extends Controller
         $dataSiswa = [];
         $bobotInfo = null;
 
+        // --- VARIABEL UNTUK GATEKEEPER ---
+        $isLocked = false;
+        $canSave  = false;
+        $totalSiswaMemenuhiTarget = 0;
+        $batasMinimalSumatif = 3; // Default
+        
         if ($id_kelas && $id_mapel) {
             $bobot = \App\Models\BobotNilai::where('tahun_ajaran', $tahun_ajaran)
                 ->where('semester', strtoupper($semesterRaw))
                 ->first();
             
             $bobotInfo = $bobot;
+            $batasMinimalSumatif = $bobotInfo ? (int) $bobotInfo->jumlah_sumatif : 3;
 
             $mapelActive = DB::table('mata_pelajaran')->where('id_mapel', $id_mapel)->first();
             $syaratAgama = $mapelActive->agama_khusus;
@@ -138,7 +162,8 @@ class RekapNilaiController extends Controller
                 ->orderBy('siswa.nama_siswa', 'asc');
 
             if (!empty($syaratAgama)) {
-                $querySiswa->where(DB::raw('LOWER(detail_siswa.agama)'), strtolower(trim($syaratAgama)));
+                $agamaList = $this->getAgamaAliases($syaratAgama);
+                $querySiswa->whereIn(DB::raw('LOWER(TRIM(detail_siswa.agama))'), $agamaList);
             }
 
             $siswa = $querySiswa->get();
@@ -165,6 +190,15 @@ class RekapNilaiController extends Controller
                 $nilaiFinal = $hasil['nilai_akhir'];
                 $deskripsi = $saved ? $saved->capaian_akhir : $this->generateDeskripsi($s->id_siswa, $id_mapel, $semesterInt, $tahun_ajaran);
 
+                // --- HITUNG JUMLAH SUMATIF YANG ADA NILAINYA UNTUK SISWA INI ---
+                $jumlahSumatifSiswa = $sumatifCollection->filter(function ($item) {
+                    return !is_null($item->nilai); // Hanya hitung jika kolom nilai sudah diisi
+                })->count();
+
+                if ($jumlahSumatifSiswa >= $batasMinimalSumatif) {
+                    $totalSiswaMemenuhiTarget++;
+                }
+
                 $dataSiswa[] = (object)[
                     'id_siswa'   => $s->id_siswa,
                     'nama_siswa' => $s->nama_siswa,
@@ -185,6 +219,21 @@ class RekapNilaiController extends Controller
                     'na_rumus'   => $hasil['nilai_akhir']
                 ];
             }
+
+            // --- CEK STATUS LOCKED (Sudah dicetak/final dari sisi Admin/Wali) ---
+            $isLocked = DB::table('nilai_akhir')
+                ->where('id_kelas', $id_kelas)
+                ->where('id_mapel', $id_mapel)
+                ->where('semester', $semesterInt)
+                ->where('tahun_ajaran', $tahun_ajaran)
+                ->where('status_data', '!=', 'draft')
+                ->exists();
+
+            // --- TENTUKAN CAN_SAVE ---
+            // Hanya bisa save jika belum dikunci DAN seluruh siswa (count($dataSiswa)) sudah memenuhi target
+            if (!$isLocked && count($dataSiswa) > 0 && $totalSiswaMemenuhiTarget === count($dataSiswa)) {
+                $canSave = true;
+            }
         }
 
         $tahunAjaranList = [];
@@ -193,22 +242,12 @@ class RekapNilaiController extends Controller
         }
         $semesterList = ['Ganjil', 'Genap'];
 
-        $isLocked = false;
-        if ($id_kelas && $id_mapel) {
-            $isLocked = DB::table('nilai_akhir')
-                ->where('id_kelas', $id_kelas)
-                ->where('id_mapel', $id_mapel)
-                ->where('semester', $semesterInt)
-                ->where('tahun_ajaran', $tahun_ajaran)
-                ->where('status_data', '!=', 'draft')
-                ->exists();
-        }
-
         return view('nilai.rekap_nilai.index', compact(
             'kelas', 'mapelList', 'dataSiswa', 'bobotInfo', 
             'id_kelas', 'id_mapel', 'semesterRaw', 'tahun_ajaran', 
             'semesterList', 'tahunAjaranList', 'seasonOpen', 'seasonMessage', 'seasonDetail',
-            'isLocked', 'isGuru', 'id_guru_filter', 'guruList'
+            'isLocked', 'canSave', 'totalSiswaMemenuhiTarget', 'batasMinimalSumatif',
+            'isGuru', 'id_guru_filter', 'guruList'
         ));
     }
 
@@ -363,10 +402,14 @@ class RekapNilaiController extends Controller
 
         $semuaNilai = $sumatif->merge($project)->filter(function($item) { return !empty(trim((string)$item['tp'])); });
 
-        if ($semuaNilai->isEmpty()) return "Capaian kompetensi belum tersedia.";
+        // 1. Jika data kosong (belum ada nilai sama sekali yang disubmit)
+        if ($semuaNilai->isEmpty()) return "-";
 
         $terendah = $semuaNilai->sortBy('nilai')->first();
         $tertinggi = $semuaNilai->sortByDesc('nilai')->first();
+
+        // 2. Jika nilai tertinggi adalah 0 (berarti semua ujian diisi 0 karena tidak ikut)
+        if ($tertinggi['nilai'] <= 0) return "-";
 
         if ($semuaNilai->count() === 1 || $terendah['nilai'] === $tertinggi['nilai']) {
             $narasi = ($terendah['nilai'] > 84) ? "Menunjukkan penguasaan yang baik dalam hal" : "Perlu penguatan dalam hal";

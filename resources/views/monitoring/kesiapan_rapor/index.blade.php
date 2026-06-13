@@ -225,16 +225,17 @@
                                                                 <tr>
                                                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 20%">Nama Siswa</th>
                                                                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2" style="width: 15%">Kokurikuler</th>
-                                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2" style="width: 25%">Ekstrakurikuler</th>
+                                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2" style="width: 20%">Ekstrakurikuler</th>
                                                                     <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 15%">Absensi (S/I/A)</th>
-                                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Catatan Wali</th>
-                                                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status</th>
+                                                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2" style="width: 15%">Catatan Wali</th>
+                                                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 5%">Kenaikan</th>
+                                                                    <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 10%">Status</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
                                                                 @foreach($data->detail_catatan as $cat)
                                                                 <tr>
-                                                                    <td class="px-3 py-2">
+                                                                    <td class="px-3 py-2 align-top">
                                                                         <h6 class="mb-0 text-sm text-dark">{{ $cat['nama_siswa'] }}</h6>
                                                                         <span class="text-xs text-secondary">{{ $cat['nisn'] }}</span>
                                                                     </td>
@@ -246,7 +247,7 @@
                                                                     <td class="py-2 align-top">
                                                                         <span class="text-xs text-dark d-block text-wrap">{!! $cat['ekskul_html'] !!}</span>
                                                                     </td>
-                                                                    <td class="align-middle text-center py-2">
+                                                                    <td class="align-middle text-center py-2 align-top">
                                                                         <span class="badge badge-sm bg-light text-dark border">
                                                                             S:{{ $cat['sakit'] }} / I:{{ $cat['ijin'] }} / A:{{ $cat['alpha'] }}
                                                                         </span>
@@ -256,11 +257,28 @@
                                                                             {{ $cat['catatan_short'] }}
                                                                         </span>
                                                                     </td>
-                                                                    <td class="align-middle text-center py-2">
-                                                                        @if($cat['status'] == 'ada')
-                                                                            <i class="fas fa-check-circle text-success text-lg"></i>
+                                                                    <td class="align-top py-2 text-center">
+                                                                        @if(strtoupper($semester) == 'GENAP')
+                                                                            @if(isset($cat['status_kenaikan']))
+                                                                                @if($cat['status_kenaikan'] == 'naik_kelas' || $cat['status_kenaikan'] == 'naik')
+                                                                                    <span class="badge badge-sm bg-gradient-success"><i class="fas fa-level-up-alt"></i> NAIK</span>
+                                                                                @elseif($cat['status_kenaikan'] == 'tinggal_kelas' || $cat['status_kenaikan'] == 'tinggal')
+                                                                                    <span class="badge badge-sm bg-gradient-danger"><i class="fas fa-level-down-alt"></i> TINGGAL</span>
+                                                                                @else
+                                                                                    <span class="badge badge-sm bg-secondary opacity-5">-</span>
+                                                                                @endif
+                                                                            @else
+                                                                                <span class="badge badge-sm bg-secondary opacity-5">-</span>
+                                                                            @endif
                                                                         @else
-                                                                            <i class="fas fa-times-circle text-danger text-lg"></i>
+                                                                            <span class="text-xs text-secondary">-</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="align-middle text-center py-2 align-top">
+                                                                        @if($cat['status'] == 'ada')
+                                                                            <i class="fas fa-check-circle text-success text-lg" title="Sudah difinalisasi" data-bs-toggle="tooltip"></i>
+                                                                        @else
+                                                                            <i class="fas fa-times-circle text-danger text-lg" title="Belum difinalisasi" data-bs-toggle="tooltip"></i>
                                                                         @endif
                                                                     </td>
                                                                 </tr>

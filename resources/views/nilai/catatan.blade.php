@@ -265,6 +265,22 @@
                                                             <div class="input-group input-group-outline is-filled mb-4">
                                                                 <textarea name="catatan_wali_kelas" class="form-control text-sm" rows="4" placeholder="Berikan catatan perkembangan akademik dan karakter siswa...">{{ $rapor->catatan_wali_kelas ?? '' }}</textarea>
                                                             </div>
+
+                                                            {{-- IV. STATUS KENAIKAN KELAS (Khusus Genap & Kelas Bawah) --}}
+                                                            @if(strtoupper(request('semester', $defaultSemester)) == 'GENAP' && isset($isKelasBawah) && $isKelasBawah)
+                                                                <h6 class="text-uppercase text-dark text-xs font-weight-bolder opacity-7 mb-2 mt-4">IV. Status Kenaikan Kelas</h6>
+                                                                <div class="row mb-4">
+                                                                    <div class="col-md-12 mb-3 mb-md-0">
+                                                                        <label class="form-label text-xs">Keputusan Kenaikan</label>
+                                                                        <select name="status_kenaikan" id="status_kenaikan" class="form-select border ps-2 text-sm bg-white">
+                                                                            <option value="proses" {{ ($rapor->status_kenaikan ?? 'proses') == 'proses' ? 'selected' : '' }}>-- Belum Ditentukan --</option>
+                                                                            <option value="naik_kelas" {{ ($rapor->status_kenaikan ?? '') == 'naik_kelas' ? 'selected' : '' }}>Naik Kelas</option>
+                                                                            <option value="tinggal_kelas" {{ ($rapor->status_kenaikan ?? '') == 'tinggal_kelas' ? 'selected' : '' }}>Tinggal Kelas</option>
+                                                                        </select>
+                                                                        {{-- <small class="text-xs text-muted mt-1 d-block"><i class="fas fa-info-circle me-1"></i> Penentuan kelas tujuan (jika naik kelas) akan diproses secara terpusat oleh Admin Sekolah.</small> --}}
+                                                                    </div>
+                                                                </div>
+                                                            @endif
                                                         </div>
                                                     </div>
 
@@ -367,7 +383,7 @@
     </div>
 </div>
 
-{{-- OVERLAY LOADING (BARU & ELEGAN) --}}
+{{-- OVERLAY LOADING --}}
 <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; color: white; font-size: 1.5rem; z-index: 999999;">
     <div class="d-flex flex-column align-items-center">
         <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status"></div> 
@@ -385,10 +401,10 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-    // FUNGSI LOADING UNTUK FILTER (Mencegah Salah Persepsi)
+    // FUNGSI LOADING UNTUK FILTER
     function showLoading(source) {
         if (source === 'kelas') {
-            $('#hidden_id_siswa').val(''); // Reset Siswa jika kelas diganti
+            $('#hidden_id_siswa').val(''); 
         }
 
         $('#loadingText').text('Memuat data...');

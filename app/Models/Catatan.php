@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Catatan extends Model
 {
+    use HasFactory;
+
     protected $table = 'catatan';
     protected $primaryKey = 'id_catatan';
     public $timestamps = true;
@@ -23,6 +25,8 @@ class Catatan extends Model
         'ijin',
         'alpha',
         'catatan_wali_kelas',
+        'status_kenaikan', // Tambahan baru
+        'id_kelas_tujuan', // Tambahan baru
         'tahun_ajaran',
         'semester',
     ];
@@ -36,9 +40,4 @@ class Catatan extends Model
     {
         return $this->belongsTo(Kelas::class, 'id_kelas', 'id_kelas');
     }
-
-    // public function ekskul()
-    // {
-    //     return $this->belongsTo(Ekskul::class, 'id_ekskul', 'id_ekskul');
-    // }
 }

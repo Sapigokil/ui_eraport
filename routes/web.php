@@ -348,6 +348,10 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/rekap', [MonitoringWaliController::class, 'index'])->name('monitoring.wali');
         Route::post('/generate-rapor-walikelas', [MonitoringWaliController::class, 'generateRaporWalikelas'])->name('generate.rapor.walikelas');
+    
+        // TAMBAHAN ROUTE LEDGER WALI KELAS
+        Route::get('/ledger', [\App\Http\Controllers\LedgerWaliController::class, 'index'])->name('ledger.index');
+        
     });
 
     // ==========================================================================
