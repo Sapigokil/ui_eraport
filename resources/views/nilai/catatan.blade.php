@@ -29,6 +29,33 @@
     $semesterList = ['Ganjil', 'Genap']; 
 @endphp
 
+<style>
+    /* Menghilangkan panah atas/bawah pada input number di Chrome, Safari, Edge, Opera */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    
+    /* Menghilangkan panah atas/bawah pada input number di Firefox */
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+    
+    /* Memperbaiki tampilan di mobile agar kotak input tidak terlalu sempit */
+    @media (max-width: 576px) {
+        .absen-col {
+            padding-left: 5px !important;
+            padding-right: 5px !important;
+        }
+        .absen-col input {
+            padding-left: 2px !important;
+            padding-right: 2px !important;
+            font-size: 14px;
+        }
+    }
+</style>
+
 @section('content')
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
     <x-app.navbar />
@@ -241,22 +268,40 @@
                                                         <div class="col-md-6 ps-md-4">
                                                             <h6 class="text-uppercase text-dark text-xs font-weight-bolder opacity-7 mb-2">II. Ketidakhadiran (Hari)</h6>
                                                             <div class="row mb-4">
-                                                                <div class="col-4">
-                                                                    <div class="input-group input-group-outline is-filled">
-                                                                        <label class="form-label">Sakit</label>
-                                                                        <input type="number" name="sakit" class="form-control text-center font-weight-bold" value="{{ $rapor->sakit ?? 0 }}" min="0">
+                                                                <div class="col-4 absen-col">
+                                                                    <div class="form-group">
+                                                                        <label class="form-label text-xs font-weight-bold text-uppercase text-secondary mb-1">Sakit</label>
+                                                                        <input type="number" 
+                                                                            name="sakit" 
+                                                                            class="form-control border border-secondary px-2 py-1 text-center font-weight-bold text-dark" 
+                                                                            value="{{ $rapor->sakit ?? 0 }}" 
+                                                                            min="0" 
+                                                                            inputmode="numeric" 
+                                                                            onwheel="this.blur()">
                                                                     </div>
                                                                 </div>
-                                                                <div class="col-4">
-                                                                    <div class="input-group input-group-outline is-filled">
-                                                                        <label class="form-label">Ijin</label>
-                                                                        <input type="number" name="ijin" class="form-control text-center font-weight-bold" value="{{ $rapor->ijin ?? 0 }}" min="0">
+                                                                <div class="col-4 absen-col">
+                                                                    <div class="form-group">
+                                                                        <label class="form-label text-xs font-weight-bold text-uppercase text-secondary mb-1">Ijin</label>
+                                                                        <input type="number" 
+                                                                            name="ijin" 
+                                                                            class="form-control border border-secondary px-2 py-1 text-center font-weight-bold text-dark" 
+                                                                            value="{{ $rapor->ijin ?? 0 }}" 
+                                                                            min="0" 
+                                                                            inputmode="numeric" 
+                                                                            onwheel="this.blur()">
                                                                     </div>
                                                                 </div>
-                                                                <div class="col-4">
-                                                                    <div class="input-group input-group-outline is-filled">
-                                                                        <label class="form-label">Alpha</label>
-                                                                        <input type="number" name="alpha" class="form-control text-center font-weight-bold" value="{{ $rapor->alpha ?? 0 }}" min="0">
+                                                                <div class="col-4 absen-col">
+                                                                    <div class="form-group">
+                                                                        <label class="form-label text-xs font-weight-bold text-uppercase text-secondary mb-1">Alpha</label>
+                                                                        <input type="number" 
+                                                                            name="alpha" 
+                                                                            class="form-control border border-secondary px-2 py-1 text-center font-weight-bold text-dark" 
+                                                                            value="{{ $rapor->alpha ?? 0 }}" 
+                                                                            min="0" 
+                                                                            inputmode="numeric" 
+                                                                            onwheel="this.blur()">
                                                                     </div>
                                                                 </div>
                                                             </div>

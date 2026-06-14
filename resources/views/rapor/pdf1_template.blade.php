@@ -194,6 +194,7 @@
             width: 100%;
             margin-top: 30px; /* Jarak dari tabel TTD di atasnya */
             text-align: center;
+            font-size: 9pt;
         }
         .ttd-kepsek .nama-kepsek {
             font-weight: bold;
