@@ -201,10 +201,15 @@ class MonitoringWaliController extends Controller
                     ])->first();
 
                     if ($existingNilai) {
-                        DB::table('nilai_akhir')->where('id', $existingNilai->id)->update([
-                            'status_data' => 'final',
-                            'updated_at'  => now()
-                        ]);
+                        DB::table('nilai_akhir')
+                            ->where('id_siswa', $siswa->id_siswa)
+                            ->where('id_mapel', $pemb->id_mapel)
+                            ->where('semester', $semesterInt)
+                            ->where('tahun_ajaran', $tahun_ajaran)
+                            ->update([
+                                'status_data' => 'final',
+                                'updated_at'  => now()
+                            ]);
                     } else {
                         $namaMapelSnapshot = $pemb->mapel->nama_mapel;
                         $kodeMapelSnapshot = $pemb->mapel->nama_singkat ?? '-';
