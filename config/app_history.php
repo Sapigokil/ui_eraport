@@ -21,6 +21,7 @@ return [
             'date'    => '2026-07-31',
             'notes'   => [
                 'Perbaikan Halaman Data kelas agar jumlah siswa yang tampil sesuai dengan data yang ada di database',
+                'Perbaikan Halaman Mutasi Keluar',
                 ],
         ],
         [

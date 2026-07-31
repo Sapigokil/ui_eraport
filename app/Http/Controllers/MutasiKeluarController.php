@@ -96,10 +96,11 @@ class MutasiKeluarController extends Controller
         DB::beginTransaction();
         try {
             $siswa = Siswa::findOrFail($request->id_siswa);
+            $id_kelas_lama = $siswa->id_kelas; // Simpan id kelas lama sebelum dinull-kan
             
             RiwayatMutasiKeluar::create([
                 'id_siswa'          => $siswa->id_siswa,
-                'id_kelas_terakhir' => $siswa->id_kelas, 
+                'id_kelas_terakhir' => $id_kelas_lama, 
                 'jenis_mutasi'      => $request->jenis_mutasi,
                 'tgl_mutasi'        => $request->tgl_mutasi,
                 'alasan'            => $request->alasan,
@@ -107,14 +108,25 @@ class MutasiKeluarController extends Controller
                 'user_input'        => Auth::user()->name ?? 'System',
             ]);
 
-            $siswa->update([
+            // 🔥 PERBAIKAN 1: Gunakan DB::table agar mengabaikan $fillable model dan PASTI tersimpan
+            DB::table('siswa')->where('id_siswa', $siswa->id_siswa)->update([
                 'status'   => 'keluar',
-                'id_kelas' => null 
-            ]);
-
-            DetailSiswa::where('id_siswa', $siswa->id_siswa)->update([
                 'id_kelas' => null
             ]);
+
+            // Kosongkan juga dari detail_siswa
+            DB::table('detail_siswa')->where('id_siswa', $siswa->id_siswa)->update([
+                'id_kelas' => null
+            ]);
+
+            // Hitung ulang jumlah siswa di kelas yang ditinggalkan
+            if($id_kelas_lama) {
+                $jumlah = DB::table('siswa')
+                    ->where('id_kelas', $id_kelas_lama)
+                    ->whereRaw('LOWER(status) = ?', ['aktif'])
+                    ->count();
+                DB::table('kelas')->where('id_kelas', $id_kelas_lama)->update(['jumlah_siswa' => $jumlah]);
+            }
 
             DB::commit();
             return redirect()->route('mutasi.keluar.index')->with('success', 'Siswa berhasil diproses mutasi keluar.');
@@ -124,6 +136,7 @@ class MutasiKeluarController extends Controller
             return back()->withInput()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
 
     /**
      * Proses Simpan Perubahan Edit Data Mutasi

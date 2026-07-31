@@ -247,6 +247,7 @@ class MutasiNaikLulusDashController extends Controller
                         DB::table('siswa')->where('id_siswa', $r->id_siswa)->update(['status' => 'lulus']);
                         $countLulus++;
                     } elseif ($r->status == 'tidak_lulus') {
+                        // Jika tidak lulus, kembalikan ke kelas lama (tingkat tetap)
                         DB::table('siswa')->where('id_siswa', $r->id_siswa)->update([
                             'status' => 'aktif',
                             'id_kelas' => $r->id_kelas_lama
@@ -255,8 +256,14 @@ class MutasiNaikLulusDashController extends Controller
                         DB::table('siswa')->where('id_siswa', $r->id_siswa)->update(['status' => 'aktif']);
                         
                         if ($siswa->id_kelas != $r->id_kelas_baru) {
+                            
+                            // 🔥 PERBAIKAN: Ambil informasi Tingkat dari Master Kelas Baru
+                            $kelasBaru = DB::table('kelas')->where('id_kelas', $r->id_kelas_baru)->first();
+                            $tingkatBaru = $kelasBaru ? $kelasBaru->tingkat : $siswa->tingkat; // Gunakan tingkat lama jika gagal ditarik (fallback)
+
                             DB::table('siswa')->where('id_siswa', $r->id_siswa)->update([
-                                'id_kelas' => $r->id_kelas_baru
+                                'id_kelas' => $r->id_kelas_baru,
+                                'tingkat'  => $tingkatBaru // Update tingkat mengikuti kelas yang baru
                             ]);
                             $countPindah++;
                         }
