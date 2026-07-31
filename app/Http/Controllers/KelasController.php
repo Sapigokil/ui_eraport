@@ -51,12 +51,10 @@ class KelasController extends Controller
             }])
             ->findOrFail($id_kelas);
         
-        $anggota = Siswa::select('siswa.*')
-            ->join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
-            ->where('detail_siswa.id_kelas', $id_kelas)
-            // Filter list anggota di halaman show dengan LOWER
-            ->whereRaw('LOWER(siswa.status) = ?', ['aktif']) 
-            ->orderBy('siswa.nama_siswa', 'asc') // Diurutkan berdasarkan abjad
+        // 🔥 PERBAIKAN: Hapus JOIN, ambil langsung dari siswa.id_kelas
+        $anggota = Siswa::where('id_kelas', $id_kelas)
+            ->whereRaw('LOWER(status) = ?', ['aktif']) 
+            ->orderBy('nama_siswa', 'asc') // Diurutkan berdasarkan abjad
             ->get();
 
         return view('kelas.show', compact('kelas', 'anggota'));
@@ -138,15 +136,10 @@ class KelasController extends Controller
     {
         $kelas = Kelas::findOrFail($id_kelas);
 
-        $anggota = Siswa::select(
-                'siswa.nama_siswa',
-                'siswa.nisn',
-                'detail_siswa.id_kelas'
-            )
-            ->join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
-            ->where('detail_siswa.id_kelas', $id_kelas)
-            ->whereRaw('LOWER(siswa.status) = ?', ['aktif']) 
-            ->orderBy('siswa.nama_siswa', 'asc')
+        // 🔥 PERBAIKAN: Hapus JOIN, ambil langsung dari siswa.id_kelas
+        $anggota = Siswa::where('id_kelas', $id_kelas)
+            ->whereRaw('LOWER(status) = ?', ['aktif']) 
+            ->orderBy('nama_siswa', 'asc')
             ->get();
 
         return view('kelas.index', compact('kelas', 'anggota'));
@@ -159,15 +152,19 @@ class KelasController extends Controller
             'id_siswa' => 'required|exists:siswa,id_siswa'
         ]);
 
+        // 1. Update id_kelas di tabel siswa (sebagai sumber kebenaran)
+        Siswa::where('id_siswa', $request->id_siswa)
+             ->update(['id_kelas' => $id_kelas]);
+
+        // 2. Jika Anda masih menggunakan detail_siswa untuk keperluan lain, kita tetap update juga
         DetailSiswa::updateOrCreate(
             ['id_siswa' => $request->id_siswa],
             ['id_kelas' => $id_kelas]
         );
 
-        // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang Aktif
-        $jumlah = Siswa::join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
-            ->where('detail_siswa.id_kelas', $id_kelas)
-            ->whereRaw('LOWER(siswa.status) = ?', ['aktif'])
+        // 3. Update jumlah siswa di tabel kelas 
+        $jumlah = Siswa::where('id_kelas', $id_kelas)
+            ->whereRaw('LOWER(status) = ?', ['aktif'])
             ->count();
             
         Kelas::where('id_kelas', $id_kelas)->update(['jumlah_siswa' => $jumlah]);
@@ -175,28 +172,31 @@ class KelasController extends Controller
         return redirect()->back()->with('success', 'Anggota berhasil ditambahkan.');
     }
 
-    // Hapus anggota tertentu
+    // Hapus anggota tertentu dari kelas
     public function hapusAnggota($id_siswa)
     {
-        $detail = DetailSiswa::where('id_siswa', $id_siswa)->first();
+        $siswa = Siswa::where('id_siswa', $id_siswa)->first();
         
-        if($detail) {
-            $id_kelas_lama = $detail->id_kelas;
+        if($siswa) {
+            $id_kelas_lama = $siswa->id_kelas;
             
-            $detail->update(['id_kelas' => null]);
+            // 1. Kosongkan id_kelas di tabel siswa
+            $siswa->update(['id_kelas' => null]);
+            
+            // 2. Kosongkan juga di detail_siswa
+            DetailSiswa::where('id_siswa', $id_siswa)->update(['id_kelas' => null]);
 
+            // 3. Hitung ulang jumlah siswa pada kelas yang ditinggalkan
             if($id_kelas_lama) {
-                // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang Aktif
-                $jumlah = Siswa::join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
-                    ->where('detail_siswa.id_kelas', $id_kelas_lama)
-                    ->whereRaw('LOWER(siswa.status) = ?', ['aktif'])
+                $jumlah = Siswa::where('id_kelas', $id_kelas_lama)
+                    ->whereRaw('LOWER(status) = ?', ['aktif'])
                     ->count();
                     
                 Kelas::where('id_kelas', $id_kelas_lama)->update(['jumlah_siswa' => $jumlah]);
             }
         }
 
-        return back()->with('success', 'Anggota dihapus dari kelas.');
+        return back()->with('success', 'Anggota berhasil dikeluarkan dari kelas.');
     }
 
     /**
