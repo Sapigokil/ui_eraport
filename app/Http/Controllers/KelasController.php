@@ -18,9 +18,9 @@ class KelasController extends Controller
     {
         $kelas = Kelas::orderBy('tingkat')
             ->orderBy('nama_kelas')
-            // Tambahkan filter status Aktif pada withCount
+            // Tambahkan filter status aktif pada withCount
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'Aktif'); 
+                $query->where('status', 'aktif'); 
             }])
             ->with('guru') // Load relasi guru agar nama wali kelas tampil benar
             ->get();
@@ -35,9 +35,9 @@ class KelasController extends Controller
     {
         $kelas = Kelas::orderBy('tingkat')
             ->orderBy('nama_kelas')
-            // Tambahkan filter status Aktif pada withCount
+            // Tambahkan filter status aktif pada withCount
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'Aktif');
+                $query->where('status', 'aktif');
             }])
             ->get();
 
@@ -47,16 +47,16 @@ class KelasController extends Controller
     public function show($id_kelas)
     {
         $kelas = Kelas::with('guru')
-            // Tambahkan filter status Aktif pada withCount
+            // Tambahkan filter status aktif pada withCount
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'Aktif');
+                $query->where('status', 'aktif');
             }])
             ->findOrFail($id_kelas);
         
         $anggota = Siswa::select('siswa.*')
             ->join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
             ->where('detail_siswa.id_kelas', $id_kelas)
-            ->where('siswa.status', 'Aktif') // Tambahkan filter status Aktif
+            ->where('siswa.status', 'aktif') // Tambahkan filter status aktif
             ->get();
 
         return view('kelas.show', compact('kelas', 'anggota'));
@@ -145,7 +145,7 @@ class KelasController extends Controller
             )
             ->join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
             ->where('detail_siswa.id_kelas', $id_kelas)
-            ->where('siswa.status', 'Aktif') // Tambahkan filter status Aktif
+            ->where('siswa.status', 'aktif') // Tambahkan filter status aktif
             ->get();
 
         return view('kelas.index', compact('kelas', 'anggota'));
@@ -163,10 +163,10 @@ class KelasController extends Controller
             ['id_kelas' => $id_kelas]
         );
 
-        // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang Aktif
+        // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang aktif
         $jumlah = Siswa::join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
             ->where('detail_siswa.id_kelas', $id_kelas)
-            ->where('siswa.status', 'Aktif')
+            ->where('siswa.status', 'aktif')
             ->count();
             
         Kelas::where('id_kelas', $id_kelas)->update(['jumlah_siswa' => $jumlah]);
@@ -185,10 +185,10 @@ class KelasController extends Controller
             $detail->update(['id_kelas' => null]);
 
             if($id_kelas_lama) {
-                // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang Aktif
+                // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang aktif
                 $jumlah = Siswa::join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
                     ->where('detail_siswa.id_kelas', $id_kelas_lama)
-                    ->where('siswa.status', 'Aktif')
+                    ->where('siswa.status', 'aktif')
                     ->count();
                     
                 Kelas::where('id_kelas', $id_kelas_lama)->update(['jumlah_siswa' => $jumlah]);
@@ -205,9 +205,9 @@ class KelasController extends Controller
     {
         $kelas = Kelas::orderBy('tingkat')
             ->orderBy('nama_kelas')
-            // Tambahkan filter status Aktif pada withCount
+            // Tambahkan filter status aktif pada withCount
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'Aktif');
+                $query->where('status', 'aktif');
             }])
             ->with('guru') // Load guru
             ->get();
@@ -227,7 +227,7 @@ class KelasController extends Controller
     {
         $kelas = Kelas::with('guru')
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'Aktif'); // Hitung dinamis untuk CSV
+                $query->where('status', 'aktif'); // Hitung dinamis untuk CSV
             }])
             ->orderBy('tingkat')
             ->orderBy('nama_kelas')
@@ -265,7 +265,7 @@ class KelasController extends Controller
     public function exportKelas($id)
     {
         $kelas = Kelas::with(['siswas' => function ($query) {
-            $query->where('status', 'Aktif'); // Filter data siswa yang diload agar hanya yang aktif
+            $query->where('status', 'aktif'); // Filter data siswa yang diload agar hanya yang aktif
         }, 'guru'])->findOrFail($id);
 
         $pdf = Pdf::loadView('kelas.exports.kelas_single_pdf', compact('kelas'))
