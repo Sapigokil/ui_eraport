@@ -11,11 +11,18 @@ return [
     |
     */
 
-    'current_version' => '1.0.24',
+    'current_version' => '1.0.25',
     
-    'last_updated' => '2026-06-03',
+    'last_updated' => '2026-07-31',
 
     'changelog' => [
+        [
+            'version' => '1.0.25',
+            'date'    => '2026-07-31',
+            'notes'   => [
+                'Perbaikan Halaman Data kelas agar jumlah siswa yang tampil sesuai dengan data yang ada di database',
+                ],
+        ],
         [
             'version' => '1.0.24',
             'date'    => '2026-06-03',
