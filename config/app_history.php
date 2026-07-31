@@ -11,16 +11,29 @@ return [
     |
     */
 
-    'current_version' => '1.0.25',
+    'current_version' => '1.0.26',
     
     'last_updated' => '2026-07-31',
 
     'changelog' => [
         [
-            'version' => '1.0.25',
+            'version' => '1.0.26',
             'date'    => '2026-07-31',
             'notes'   => [
                 'Perbaikan Halaman Data kelas agar jumlah siswa yang tampil sesuai dengan data yang ada di database',
+                ],
+        ],
+        [
+            'version' => '1.0.25',
+            'date'    => '2026-06-13',
+            'notes'   => [
+                'Perbaikan Halaman Finalisasi Walikelas untuk menampilkan data yang lebih lengkap dan akurat',
+                'Perbaikan Bug Mapel yang tidak muncul di Ledger Wali Kelas',
+                'Perbaikan Bug pada halaman input nilai Sumatif dan Project untuk menampilkan data yang lebih akurat',
+                'Penambahan Inputan Naik Kelas dan Tinggal Kelas pada Halaman Walikelas untuk memudahkan pemantauan siswa yang naik kelas',
+                'Menambahkan Input data Kenaikan Kelas pada Ledger Wali Kelas untuk memudahkan pemantauan siswa yang naik kelas',
+                'Perubahan pada halaman Cetak Rapor semester Genap untuk menampilkan data kenaikan kelas siswa yang naik kelas',
+                'Perubahan Event dan tampilannya di Dashboard sehingga mudah terbaca',
                 ],
         ],
         [

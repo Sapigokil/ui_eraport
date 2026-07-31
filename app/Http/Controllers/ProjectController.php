@@ -18,6 +18,26 @@ use Illuminate\Support\Facades\Auth; // Tambahan Auth
 
 class ProjectController extends Controller
 {
+    // === METHOD HELPER BARU: KAMUS ALIAS AGAMA ===
+    private function getAgamaAliases(?string $agama_khusus): array
+    {
+        if (!$agama_khusus) return [];
+
+        // Bersihkan spasi dan ubah ke huruf kecil
+        $agama = trim(strtolower($agama_khusus));
+
+        // Kamus Alias: Key adalah agama dari Mapel, Valuenya adalah array ejaan yang diizinkan
+        $aliases = [
+            'katholik' => ['katholik', 'katolik'],
+            'katolik'  => ['katholik', 'katolik'],
+            'kristen'  => ['kristen', 'protestan', 'kristen protestan'],
+            'konghucu' => ['konghucu', 'kong hucu', 'khonghucu'],
+        ];
+
+        // Jika ada di kamus, return array aliasnya. Jika tidak ada, return ejaan aslinya dalam bentuk array
+        return $aliases[$agama] ?? [$agama];
+    }
+
     private function nilaiBobotProject(int $nilai): float
     {
         return round($nilai * 0.6, 2);
@@ -116,9 +136,13 @@ class ProjectController extends Controller
             $selectedMapel = MataPelajaran::find($request->id_mapel);
             $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
 
+            // === IMPLEMENTASI KAMUS ALIAS DI SINI ===
             if ($selectedMapel && $selectedMapel->agama_khusus) {
-                $siswaQuery->whereHas('detail', function ($q) use ($selectedMapel) {
-                    $q->where('agama', $selectedMapel->agama_khusus);
+                $agamaList = $this->getAgamaAliases($selectedMapel->agama_khusus);
+                
+                $siswaQuery->whereHas('detail', function ($q) use ($agamaList) {
+                    // DB::raw digunakan untuk mengabaikan spasi berlebih dan case-sensitive di database
+                    $q->whereIn(DB::raw('LOWER(TRIM(agama))'), $agamaList);
                 });
             }
 
@@ -243,14 +267,18 @@ class ProjectController extends Controller
             return back()->with('error', 'Mapel sudah tidak aktif atau tidak tersedia.');
         }
 
-        $siswa = Siswa::with('detail')->where('id_kelas', $request->id_kelas)->orderBy('nama_siswa')->get();
+        $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
         
-        if ($mapel->agama_khusus) {
-            $agama = trim(strtolower($mapel->agama_khusus));
-            $siswa = $siswa->filter(function($s) use ($agama) {
-                return strtolower(trim(optional($s->detail)->agama)) === $agama;
+        // === IMPLEMENTASI KAMUS ALIAS DI SINI ===
+        if ($mapel && $mapel->agama_khusus) {
+            $agamaList = $this->getAgamaAliases($mapel->agama_khusus);
+            
+            $siswaQuery->whereHas('detail', function ($q) use ($agamaList) {
+                $q->whereIn(DB::raw('LOWER(TRIM(agama))'), $agamaList);
             });
         }
+
+        $siswa = $siswaQuery->orderBy('nama_siswa')->get();
 
         if ($siswa->isEmpty()) {
             return back()->with('error', 'Tidak ada siswa ditemukan.');

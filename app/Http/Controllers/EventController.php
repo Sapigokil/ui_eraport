@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Event;
-use App\Models\Notifikasi;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class EventController extends Controller
 {
@@ -13,88 +15,102 @@ class EventController extends Controller
      */
     public function index()
     {
-        $events = Event::orderBy('tanggal', 'desc')->get();
-        $notifications = Notifikasi::orderBy('tanggal', 'desc')->get();
+        $today = Carbon::today()->toDateString();
 
-        return view('data.event_index', compact('events', 'notifications'));
+        // 1. Auto-Update: Ubah status menjadi 'draft' (tidak aktif) jika tanggal_selesai sudah terlewati
+        Event::where('status', 'aktif')
+            ->whereNotNull('tanggal_selesai')
+            ->where('tanggal_selesai', '<', $today)
+            ->update(['status' => 'draft']);
+
+        // 2. Sorting: 
+        // - Prioritas 1: Status 'aktif' di atas (1), 'draft' di bawah (2)
+        // - Prioritas 2: Jarak tanggal_selesai paling dekat dengan hari ini (menggunakan absolut selisih hari)
+        $events = Event::orderByRaw("CASE WHEN status = 'aktif' THEN 1 ELSE 2 END ASC")
+            ->orderByRaw("ABS(DATEDIFF(tanggal_selesai, '$today')) ASC")
+            ->get();
+
+        return view('data.event_index', compact('events'));
     }
 
     /**
-     * SIMPAN EVENT / NOTIFIKASI (SATU FORM)
+     * SIMPAN EVENT BARU (Via Modal)
      */
     public function store(Request $request)
     {
         $request->validate([
-            'kategori' => 'required|in:event,notifikasi',
-            'tanggal'  => 'required|date',
+            'judul'           => 'required|string|max:255',
+            'deskripsi'       => 'required|string',
+            'tanggal'         => 'required|date',
+            'tanggal_selesai' => 'required|date|after_or_equal:tanggal',
+            'kategori'        => 'required|in:Acara,Pengumuman',
+            'target'          => 'required|string',
+            'status'          => 'required|in:aktif,draft',
+            'file_lampiran'   => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
-        if ($request->kategori === 'event') {
-            $request->validate([
-                'deskripsi' => 'required|string',
-                'jadwalkan' => 'required|in:1_hari,3_hari,7_hari,15_hari,1_bulan',
-            ]);
-
-            Event::create([
-                'deskripsi' => $request->deskripsi,
-                'tanggal'   => $request->tanggal,
-                'jadwalkan' => $request->jadwalkan,
-            ]);
-
-            return back()->with('success', 'Event berhasil ditambahkan');
+        $lampiranPath = null;
+        if ($request->hasFile('file_lampiran')) {
+            $file = $request->file('file_lampiran');
+            $filename = time() . '_' . Str::slug($request->judul) . '.' . $file->getClientOriginalExtension();
+            $lampiranPath = $file->storeAs('lampiran_event', $filename, 'public');
         }
 
-        // NOTIFIKASI
-        $request->validate([
-        'deskripsi' => 'required|string',
-        'tanggal'   => 'required|date',
-    ]);
+        Event::create([
+            'judul'           => $request->judul,
+            'deskripsi'       => $request->deskripsi,
+            'tanggal'         => $request->tanggal,
+            'tanggal_selesai' => $request->tanggal_selesai,
+            'kategori'        => $request->kategori,
+            'target'          => $request->target,
+            'status'          => $request->status,
+            'lampiran'        => $lampiranPath,
+        ]);
 
-        Notifikasi::create([
-        'deskripsi' => $request->deskripsi,
-        'tanggal'   => $request->tanggal,
-        'kategori'  => 'notifikasi',
-    ]);
-
-        return back()->with('success', 'Notifikasi berhasil ditambahkan');
+        return back()->with('success', 'Data berhasil ditambahkan.');
     }
 
     /**
-     * UPDATE EVENT
+     * UPDATE EVENT (Via Modal)
      */
     public function updateEvent(Request $request, $id)
     {
         $request->validate([
-            'deskripsi' => 'required|string',
-            'tanggal'   => 'required|date',
+            'judul'           => 'required|string|max:255',
+            'deskripsi'       => 'required|string',
+            'tanggal'         => 'required|date',
+            'tanggal_selesai' => 'required|date|after_or_equal:tanggal',
+            'kategori'        => 'required|in:Acara,Pengumuman',
+            'target'          => 'required|string',
+            'status'          => 'required|in:aktif,draft',
+            'file_lampiran'   => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
-        Event::findOrFail($id)->update([
-            'deskripsi' => $request->deskripsi,
-            'tanggal'   => $request->tanggal,
+        $event = Event::findOrFail($id);
+        $lampiranPath = $event->lampiran;
+
+        if ($request->hasFile('file_lampiran')) {
+            if ($lampiranPath && Storage::disk('public')->exists($lampiranPath)) {
+                Storage::disk('public')->delete($lampiranPath);
+            }
+            
+            $file = $request->file('file_lampiran');
+            $filename = time() . '_' . Str::slug($request->judul) . '.' . $file->getClientOriginalExtension();
+            $lampiranPath = $file->storeAs('lampiran_event', $filename, 'public');
+        }
+
+        $event->update([
+            'judul'           => $request->judul,
+            'deskripsi'       => $request->deskripsi,
+            'tanggal'         => $request->tanggal,
+            'tanggal_selesai' => $request->tanggal_selesai,
+            'kategori'        => $request->kategori,
+            'target'          => $request->target,
+            'status'          => $request->status,
+            'lampiran'        => $lampiranPath,
         ]);
 
-        return back()->with('success', 'Event berhasil diperbarui');
-    }
-
-    /**
-     * UPDATE NOTIFIKASI
-     */
-    public function updateNotifikasi(Request $request, $id)
-    {
-        $request->validate([
-            'judul'   => 'required|string',
-            'pesan'   => 'required|string',
-            'tanggal' => 'required|date',
-        ]);
-
-        Notifikasi::findOrFail($id)->update([
-            'judul'   => $request->judul,
-            'pesan'   => $request->pesan,
-            'tanggal' => $request->tanggal,
-        ]);
-
-        return back()->with('success', 'Notifikasi berhasil diperbarui');
+        return back()->with('success', 'Data berhasil diperbarui.');
     }
 
     /**
@@ -102,16 +118,14 @@ class EventController extends Controller
      */
     public function destroyEvent($id)
     {
-        Event::findOrFail($id)->delete();
-        return back()->with('success', 'Event berhasil dihapus');
-    }
-
-    /**
-     * DELETE NOTIFIKASI
-     */
-    public function destroyNotifikasi($id)
-    {
-        Notifikasi::findOrFail($id)->delete();
-        return back()->with('success', 'Notifikasi berhasil dihapus');
+        $event = Event::findOrFail($id);
+        
+        if ($event->lampiran && Storage::disk('public')->exists($event->lampiran)) {
+            Storage::disk('public')->delete($event->lampiran);
+        }
+        
+        $event->delete();
+        
+        return back()->with('success', 'Data berhasil dihapus.');
     }
 }

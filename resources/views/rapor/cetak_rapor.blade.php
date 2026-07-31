@@ -205,6 +205,9 @@
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 5%">No</th>
                                         <th class="ps-3 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7" style="width: 30%">Nama Siswa</th>
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Status Data</th>
+                                        @if(strtoupper($selectedSemester) == 'GENAP')
+                                            <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Kenaikan</th>
+                                        @endif
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Terakhir Update</th>
                                         <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi Satuan</th>
                                     </tr>
@@ -243,6 +246,19 @@
                                                 <span class="badge badge-sm bg-gradient-dark">SUDAH DICETAK</span>
                                             @endif
                                         </td>
+
+                                        {{-- STATUS KENAIKAN --}}
+                                        @if(strtoupper($selectedSemester) == 'GENAP')
+                                            <td class="text-center align-middle">
+                                                @if($s->status_kenaikan == 'naik_kelas')
+                                                    <span class="badge badge-sm bg-gradient-success"><i class="fas fa-level-up-alt"></i> NAIK</span>
+                                                @elseif($s->status_kenaikan == 'tinggal_kelas')
+                                                    <span class="badge badge-sm bg-gradient-danger"><i class="fas fa-level-down-alt"></i> TINGGAL</span>
+                                                @else
+                                                    <span class="text-secondary text-xs">-</span>
+                                                @endif
+                                            </td>
+                                        @endif
 
                                         {{-- TANGGAL UPDATE --}}
                                         <td class="text-center align-middle">
@@ -293,7 +309,7 @@
                                     </tr>
                                     @empty
                                     <tr>
-                                        <td colspan="6" class="text-center py-5 text-secondary">
+                                        <td colspan="100%" class="text-center py-5 text-secondary">
                                             <i class="fas fa-folder-open fa-2x mb-3 opacity-5"></i><br>
                                             Tidak ada data siswa ditemukan untuk periode ini.
                                         </td>

@@ -148,11 +148,28 @@ class CatatanController extends Controller
         $siswaTerpilih = null;
         $templateKokurikuler = '';
         $dataEkskulTersimpan = []; 
+        $isKelasBawah = false;
 
         $semesterInt = $this->mapSemesterToInt($request->semester);
 
-        // 3. Load List Siswa (Untuk Sidebar Monitoring)
+        // 3. Load List Siswa & Konfigurasi Kelas
         if ($request->id_kelas) {
+            
+            // ---> LOGIKA PENENTUAN TINGKAT KELAS <---
+            $semuaKelas = Kelas::all()->map(function($k) {
+                preg_match('/^\d+/', $k->nama_kelas, $matches);
+                $k->tingkat = !empty($matches) ? (int)$matches[0] : 0;
+                return $k;
+            });
+            
+            $maxTingkat = $semuaKelas->max('tingkat');
+            $kelasTerpilih = $semuaKelas->firstWhere('id_kelas', $request->id_kelas);
+
+            if ($kelasTerpilih) {
+                $isKelasBawah = $kelasTerpilih->tingkat < $maxTingkat;
+            }
+
+            // Load Data Siswa
             $siswa = Siswa::where('id_kelas', $request->id_kelas)
                 ->orderBy('nama_siswa');
             
@@ -169,7 +186,6 @@ class CatatanController extends Controller
         if ($request->id_kelas && $request->id_siswa && $request->tahun_ajaran && $semesterInt) {
             
             $siswaTerpilih = Siswa::with('kelas')->find($request->id_siswa);
-            $kelasTerpilih = Kelas::find($request->id_kelas);
             
             // A. Ambil Template Kokurikuler Sesuai Tingkat Kelas
             if ($siswaTerpilih && $siswaTerpilih->kelas) {
@@ -177,7 +193,7 @@ class CatatanController extends Controller
                 $set_kokurikuler = SetKokurikuler::where('tingkat', $siswaTerpilih->kelas->tingkat)
                     ->where('aktif', 1)
                     ->where(function($query) use ($id_guru_login) {
-                        $query->where('id_guru', 0)                 
+                        $query->where('id_guru', 0)                
                               ->orWhere('id_guru', $id_guru_login); 
                     })
                     ->get();
@@ -231,7 +247,8 @@ class CatatanController extends Controller
             'dataEkskulTersimpan',
             'templateKokurikuler', 
             'set_kokurikuler',
-            'isGuru'
+            'isGuru',
+            'isKelasBawah'
         ));
     }
 
@@ -253,6 +270,20 @@ class CatatanController extends Controller
 
         $semesterInt = $this->mapSemesterToInt($request->semester);
         
+        $dataToUpdate = [
+            'kokurikuler'        => $request->kokurikuler,
+            'sakit'              => $request->sakit ?? 0,
+            'ijin'               => $request->ijin ?? 0,
+            'alpha'              => $request->alpha ?? 0,
+            'catatan_wali_kelas' => $request->catatan_wali_kelas,
+            'updated_at'         => now(),
+        ];
+
+        // Jika semester genap, ikut sertakan status kenaikan (tanpa id_kelas_tujuan)
+        if ($semesterInt == 2) {
+            $dataToUpdate['status_kenaikan'] = $request->status_kenaikan ?? 'proses';
+        }
+
         DB::table('catatan')->updateOrInsert(
             [
                 'id_siswa'     => $request->id_siswa,
@@ -260,14 +291,7 @@ class CatatanController extends Controller
                 'tahun_ajaran' => $request->tahun_ajaran,
                 'semester'     => $semesterInt,
             ],
-            [
-                'kokurikuler'        => $request->kokurikuler,
-                'sakit'              => $request->sakit ?? 0,
-                'ijin'               => $request->ijin ?? 0,
-                'alpha'              => $request->alpha ?? 0,
-                'catatan_wali_kelas' => $request->catatan_wali_kelas,
-                'updated_at'         => now(),
-            ]
+            $dataToUpdate
         );
 
         return back()->with('success', 'Data catatan dan absensi berhasil disimpan!');

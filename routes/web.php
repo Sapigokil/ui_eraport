@@ -348,6 +348,11 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/rekap', [MonitoringWaliController::class, 'index'])->name('monitoring.wali');
         Route::post('/generate-rapor-walikelas', [MonitoringWaliController::class, 'generateRaporWalikelas'])->name('generate.rapor.walikelas');
+    
+        // TAMBAHAN ROUTE LEDGER WALI KELAS
+        Route::get('/ledger', [\App\Http\Controllers\LedgerWaliController::class, 'index'])->name('ledger.index');
+        Route::get('/ledger/export-excel', [\App\Http\Controllers\LedgerWaliController::class, 'exportExcel'])->name('ledger.export_excel');
+        Route::get('/ledger/export-pdf', [\App\Http\Controllers\LedgerWaliController::class, 'exportPdf'])->name('ledger.export_pdf');
     });
 
     // ==========================================================================
@@ -522,14 +527,12 @@ Route::middleware(['auth'])->group(function () {
                 Route::delete('/{id}', 'destroy')->name('destroy');
             });
 
+            // 👇 ROUTE EVENT DIPERBARUI 👇
             Route::controller(EventController::class)->prefix('event')->name('event.')->group(function () {
                 Route::get('/', 'index')->name('index');
                 Route::post('/store', 'store')->name('store');
                 Route::put('/{id}', 'updateEvent')->name('update');
-                Route::delete('/{id}', 'destroyEvent')->name('delete');
-                
-                Route::put('/notifikasi/{id}', 'updateNotifikasi')->name('notifikasi.update');
-                Route::delete('/notifikasi/{id}', 'destroyNotifikasi')->name('notifikasi.delete');
+                Route::delete('/{id}', 'destroyEvent')->name('destroy');
             });
         });
 

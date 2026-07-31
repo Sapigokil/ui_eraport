@@ -92,7 +92,7 @@ class RaporController extends Controller
                 ->where('id_kelas', $id_kelas)
                 ->where('tahun_ajaran', $tahun_ajaran)
                 ->where('semester', $semesterInt)
-                ->select('id_siswa', 'status_data', 'updated_at', 'nama_siswa_snapshot', 'nisn_snapshot')
+                ->select('id_siswa', 'status_data', 'updated_at', 'nama_siswa_snapshot', 'nisn_snapshot', 'status_kenaikan')
                 ->get()
                 ->keyBy('id_siswa');
 
@@ -119,13 +119,14 @@ class RaporController extends Controller
                 }
 
                 return (object) [
-                    'id_siswa'   => $id,
-                    'nama_siswa' => $nama,
-                    'nisn'       => $nisn,
-                    'status_rapor' => $statusRapor,
-                    'status_siswa' => $statusSiswa,
-                    'last_update'  => $tanggalGenerate,
-                    'is_ready_print' => in_array($statusRapor, ['final', 'cetak'])
+                    'id_siswa'       => $id,
+                    'nama_siswa'     => $nama,
+                    'nisn'           => $nisn,
+                    'status_rapor'   => $statusRapor,
+                    'status_siswa'   => $statusSiswa,
+                    'last_update'    => $tanggalGenerate,
+                    'is_ready_print' => in_array($statusRapor, ['final', 'cetak']),
+                    'status_kenaikan'=> $snap->status_kenaikan ?? null
                 ];
             });
 
@@ -451,14 +452,12 @@ class RaporController extends Controller
         $tahun_ajaran = $request->tahun_ajaran;
         $semesterInt = $this->getSemesterInt($semesterRaw);
         
-        // 👇 PERBAIKAN: Menangkap parameter tanggal cetak dari JS URL
         $tanggal_cetak = $request->tanggal_cetak ?? date('Y-m-d');
 
         $data = $this->persiapkanDataRapor($id_siswa, $semesterRaw, $tahun_ajaran);
 
         if (!$data) return "<script>alert('Data Rapor belum dikunci/final. Silakan Generate terlebih dahulu.');window.close();</script>";
 
-        // 👇 Inject ke array data PDF
         $data['tanggal_cetak_override'] = $tanggal_cetak;
 
         DB::table('nilai_akhir_rapor')->where('id_siswa', $id_siswa)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->update(['status_data' => 'cetak']);
@@ -520,6 +519,40 @@ class RaporController extends Controller
             'kelas' => (object) ['nama_kelas' => $header->nama_kelas_snapshot]
         ];
 
+        // 👇 PERBAIKAN: Logika Penentuan Teks Kenaikan Kelas (Konversi Romawi)
+        $statusKenaikanText = null;
+        $tingkatSnapshot = (int) preg_replace('/[^0-9]/', '', $header->tingkat ?? '10');
+
+        if (strtoupper($semesterRaw) == 'GENAP' && $tingkatSnapshot > 0) {
+            // Ambil kelas tertinggi untuk membatasi
+            $semuaKelas = Kelas::all()->map(function($k) {
+                preg_match('/^\d+/', $k->nama_kelas, $matches);
+                $k->tingkat = !empty($matches) ? (int)$matches[0] : 0;
+                return $k;
+            });
+            $maxTingkat = $semuaKelas->max('tingkat');
+
+            // Eksekusi hanya jika BUKAN kelas tertinggi (misal kelas 12 tidak ada keterangan ini)
+            if ($tingkatSnapshot < $maxTingkat) {
+                $romawi = [
+                    1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 5 => 'V',
+                    6 => 'VI', 7 => 'VII', 8 => 'VIII', 9 => 'IX', 10 => 'X',
+                    11 => 'XI', 12 => 'XII', 13 => 'XIII'
+                ];
+
+                $status_kenaikan = strtolower(trim($header->status_kenaikan ?? ''));
+
+                if (in_array($status_kenaikan, ['naik_kelas', 'naik'])) {
+                    $tingkatBaru = $tingkatSnapshot + 1;
+                    $romawiBaru = $romawi[$tingkatBaru] ?? $tingkatBaru;
+                    $statusKenaikanText = "Naik ke kelas " . $romawiBaru;
+                } elseif (in_array($status_kenaikan, ['tinggal_kelas', 'tinggal'])) {
+                    $romawiTetap = $romawi[$tingkatSnapshot] ?? $tingkatSnapshot;
+                    $statusKenaikanText = "Tinggal di kelas " . $romawiTetap;
+                }
+            }
+        }
+
         return [
             'siswa'         => $siswaMock,
             'fase'          => $header->fase ?? $header->fase_snapshot ?? '-',
@@ -537,6 +570,7 @@ class RaporController extends Controller
                 'kokurikuler' => $header->kokurikuler ?? '-', 
                 'status_kenaikan' => $header->status_kenaikan
             ],
+            'statusKenaikanText' => $statusKenaikanText, // Di-passing ke view
             'semester'      => $semesterRaw,
             'semesterInt'   => $semesterInt,
             'tahun_ajaran'  => $tahun_ajaran,
@@ -581,7 +615,6 @@ class RaporController extends Controller
         $semesterRaw = $request->semester ?? 'Ganjil';
         $semesterInt = $this->getSemesterInt($semesterRaw);
         
-        // 👇 PERBAIKAN: Menangkap parameter tanggal cetak
         $tanggal_cetak = $request->tanggal_cetak ?? date('Y-m-d');
 
         // Filter Smart Massal berdasarkan Checkbox
@@ -605,7 +638,6 @@ class RaporController extends Controller
             $data = $this->persiapkanDataRapor($siswa->id_siswa, $semesterRaw, $tahun_ajaran);
             if (!$data) continue; 
             
-            // 👇 Inject ke array data PDF
             $data['tanggal_cetak_override'] = $tanggal_cetak;
 
             DB::table('nilai_akhir_rapor')->where('id_siswa', $siswa->id_siswa)->where('semester', $semesterInt)->where('tahun_ajaran', $tahun_ajaran)->update(['status_data' => 'cetak']);
