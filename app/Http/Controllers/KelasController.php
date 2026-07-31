@@ -18,9 +18,9 @@ class KelasController extends Controller
     {
         $kelas = Kelas::orderBy('tingkat')
             ->orderBy('nama_kelas')
-            // Tambahkan filter status aktif pada withCount
+            // Tambahkan filter status aktif dengan LOWER agar kebal Case-Sensitive
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'aktif'); 
+                $query->whereRaw('LOWER(status) = ?', ['aktif']); 
             }])
             ->with('guru') // Load relasi guru agar nama wali kelas tampil benar
             ->get();
@@ -35,9 +35,8 @@ class KelasController extends Controller
     {
         $kelas = Kelas::orderBy('tingkat')
             ->orderBy('nama_kelas')
-            // Tambahkan filter status aktif pada withCount
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'aktif');
+                $query->whereRaw('LOWER(status) = ?', ['aktif']);
             }])
             ->get();
 
@@ -47,16 +46,17 @@ class KelasController extends Controller
     public function show($id_kelas)
     {
         $kelas = Kelas::with('guru')
-            // Tambahkan filter status aktif pada withCount
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'aktif');
+                $query->whereRaw('LOWER(status) = ?', ['aktif']);
             }])
             ->findOrFail($id_kelas);
         
         $anggota = Siswa::select('siswa.*')
             ->join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
             ->where('detail_siswa.id_kelas', $id_kelas)
-            ->where('siswa.status', 'aktif') // Tambahkan filter status aktif
+            // Filter list anggota di halaman show dengan LOWER
+            ->whereRaw('LOWER(siswa.status) = ?', ['aktif']) 
+            ->orderBy('siswa.nama_siswa', 'asc') // Diurutkan berdasarkan abjad
             ->get();
 
         return view('kelas.show', compact('kelas', 'anggota'));
@@ -82,8 +82,8 @@ class KelasController extends Controller
             'nama_kelas'    => 'required|string|max:100',
             'tingkat'       => 'required|integer',
             'jurusan'       => 'required|string',
-            'prog_keahlian' => 'nullable|string', // ✅ PERBAIKAN: Validasi input baru
-            'kons_keahlian' => 'nullable|string', // ✅ PERBAIKAN: Validasi input baru
+            'prog_keahlian' => 'nullable|string', 
+            'kons_keahlian' => 'nullable|string', 
             'id_guru'       => 'required|exists:guru,id_guru', 
         ]);
 
@@ -94,8 +94,8 @@ class KelasController extends Controller
             'nama_kelas'    => $request->nama_kelas,
             'tingkat'       => $request->tingkat,
             'jurusan'       => $request->jurusan,
-            'prog_keahlian' => $request->prog_keahlian, // ✅ PERBAIKAN: Simpan ke DB
-            'kons_keahlian' => $request->kons_keahlian, // ✅ PERBAIKAN: Simpan ke DB
+            'prog_keahlian' => $request->prog_keahlian, 
+            'kons_keahlian' => $request->kons_keahlian, 
             'id_guru'       => $request->id_guru, 
             'wali_kelas'    => $namaWaliKelas,    
         ]);
@@ -112,8 +112,8 @@ class KelasController extends Controller
             'nama_kelas'    => 'required|string|max:100',
             'tingkat'       => 'required|string', 
             'jurusan'       => 'required|string',
-            'prog_keahlian' => 'nullable|string', // ✅ PERBAIKAN: Validasi update baru
-            'kons_keahlian' => 'nullable|string', // ✅ PERBAIKAN: Validasi update baru
+            'prog_keahlian' => 'nullable|string', 
+            'kons_keahlian' => 'nullable|string', 
             'id_guru'       => 'required|exists:guru,id_guru', 
         ]);
 
@@ -145,7 +145,8 @@ class KelasController extends Controller
             )
             ->join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
             ->where('detail_siswa.id_kelas', $id_kelas)
-            ->where('siswa.status', 'aktif') // Tambahkan filter status aktif
+            ->whereRaw('LOWER(siswa.status) = ?', ['aktif']) 
+            ->orderBy('siswa.nama_siswa', 'asc')
             ->get();
 
         return view('kelas.index', compact('kelas', 'anggota'));
@@ -163,10 +164,10 @@ class KelasController extends Controller
             ['id_kelas' => $id_kelas]
         );
 
-        // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang aktif
+        // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang Aktif
         $jumlah = Siswa::join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
             ->where('detail_siswa.id_kelas', $id_kelas)
-            ->where('siswa.status', 'aktif')
+            ->whereRaw('LOWER(siswa.status) = ?', ['aktif'])
             ->count();
             
         Kelas::where('id_kelas', $id_kelas)->update(['jumlah_siswa' => $jumlah]);
@@ -185,10 +186,10 @@ class KelasController extends Controller
             $detail->update(['id_kelas' => null]);
 
             if($id_kelas_lama) {
-                // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang aktif
+                // Perbaiki perhitungan jumlah siswa di tabel kelas agar hanya menghitung yang Aktif
                 $jumlah = Siswa::join('detail_siswa', 'detail_siswa.id_siswa', '=', 'siswa.id_siswa')
                     ->where('detail_siswa.id_kelas', $id_kelas_lama)
-                    ->where('siswa.status', 'aktif')
+                    ->whereRaw('LOWER(siswa.status) = ?', ['aktif'])
                     ->count();
                     
                 Kelas::where('id_kelas', $id_kelas_lama)->update(['jumlah_siswa' => $jumlah]);
@@ -205,9 +206,8 @@ class KelasController extends Controller
     {
         $kelas = Kelas::orderBy('tingkat')
             ->orderBy('nama_kelas')
-            // Tambahkan filter status aktif pada withCount
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'aktif');
+                $query->whereRaw('LOWER(status) = ?', ['aktif']);
             }])
             ->with('guru') // Load guru
             ->get();
@@ -227,7 +227,7 @@ class KelasController extends Controller
     {
         $kelas = Kelas::with('guru')
             ->withCount(['siswas' => function ($query) {
-                $query->where('status', 'aktif'); // Hitung dinamis untuk CSV
+                $query->whereRaw('LOWER(status) = ?', ['aktif']); // Hitung dinamis untuk CSV
             }])
             ->orderBy('tingkat')
             ->orderBy('nama_kelas')
@@ -265,7 +265,7 @@ class KelasController extends Controller
     public function exportKelas($id)
     {
         $kelas = Kelas::with(['siswas' => function ($query) {
-            $query->where('status', 'aktif'); // Filter data siswa yang diload agar hanya yang aktif
+            $query->whereRaw('LOWER(status) = ?', ['aktif']); // Filter data siswa yang diload agar hanya yang aktif
         }, 'guru'])->findOrFail($id);
 
         $pdf = Pdf::loadView('kelas.exports.kelas_single_pdf', compact('kelas'))
