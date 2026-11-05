@@ -466,7 +466,7 @@ class SiswaController extends Controller
 
     public function importXlsx(Request $request)
     {
-        set_time_limit(0); 
+        set_time_limit(300); 
         ini_set('memory_limit', '512M'); 
         
         $request->validate([
@@ -479,30 +479,25 @@ class SiswaController extends Controller
             $rows = Excel::toArray(new \stdClass(), $file)[0]; 
         } catch (\Exception $e) {
             \Log::error("Gagal membaca file Excel Siswa: " . $e->getMessage());
-            return back()->with('error', 'Gagal membaca file Excel Siswa. Pastikan format file benar. Error: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membaca file Excel Siswa. Error: ' . $e->getMessage());
         }
 
-        if (count($rows) < 8) { 
-            return back()->with('error', 'File Excel tidak valid atau baris data kurang dari 8!');
+        if (count($rows) < 2) { 
+            return back()->with('error', 'File Excel kosong atau tidak memiliki data!');
         }
         
-        $headerRow1 = $rows[4] ?? []; 
-        $headerRow2 = $rows[5] ?? []; 
-        
-        $maxColumns = count($rows[7]); 
-        
-        $rawHeader = array_pad(array_merge($headerRow1, $headerRow2), $maxColumns, null);
-        $rawHeader = array_slice($rawHeader, 0, $maxColumns);
+        // 1. OLAH HEADER (Header hanya di Baris 1 / Index 0)
+        $rawHeader = $rows[0] ?? []; 
 
         $header = [];
         $headerKeys = [];
-        foreach ($rawHeader as $h) {
+        foreach ($rawHeader as $idx => $h) {
             $h = strtolower(trim((string)$h)); 
             $h = str_replace(["\r", "\n"], '_', $h);
-            $cleanH = str_replace([' ', '.', '-', '/', '\\', '(', ')', ' '], '_', $h); 
+            $cleanH = str_replace([' ', '.', '-', '/', '\\', '(', ')'], '_', $h); 
             
             if (empty($cleanH)) {
-                 $cleanH = 'kolom_kosong_' . (count($header) + 1);
+                $cleanH = 'kolom_' . ($idx + 1);
             }
             
             $originalCleanH = $cleanH;
@@ -516,104 +511,120 @@ class SiswaController extends Controller
         }
 
         $headerCount = count($header);
-        
-        $dataStart = 7; 
+        $dataStart = 1; // Data mulai dari Baris 2 Excel (Index 1)
         $countInsert = 0;
         $countUpdate = 0;
         $currentRow = 0;
         $skippedRows = []; 
 
-        DB::beginTransaction();
+        // 2. CACHE DATA KELAS & SISWA KE MEMORI (SUPER FAST)
+        $kelasCache = Kelas::pluck('id_kelas', 'nama_kelas')->toArray();
+        $existingNipd = Siswa::whereNotNull('nipd')->pluck('nipd', 'nipd')->toArray();
+        $existingNisnMap = Siswa::whereNotNull('nisn')->pluck('id_siswa', 'nisn')->toArray();
+
+        $parseDate = function($value) {
+            if (empty($value)) return null;
+            try {
+                if (is_numeric($value) && $value > 0) {
+                    return \Carbon\Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value))->toDateString();
+                }
+                return \Carbon\Carbon::parse($value)->toDateString();
+            } catch (\Exception $e) {
+                return null;
+            }
+        };
+
+        $cleanNumber = fn($val) => preg_replace('/[^0-9]/', '', (string)($val ?? ''));
+
+        \DB::beginTransaction();
         
         try {
+            $consecutiveEmptyRows = 0;
+            $affectedKelasIds = [];
+
             for ($i = $dataStart; $i < count($rows); $i++) {
-                $currentRow = $i + 1;
+                $currentRow = $i + 1; // Nomor baris nyata di Excel
                 $row = $rows[$i]; 
+
+                // HENTIKAN OTOMATIS JIKA MENEMUKAN BARIS KOSONG BERTURUT-TURUT
+                $nonEmptyValues = array_filter($row, fn($v) => $v !== null && trim((string)$v) !== '');
+                if (empty($nonEmptyValues)) {
+                    $consecutiveEmptyRows++;
+                    if ($consecutiveEmptyRows >= 3) {
+                        break; // Langsung stop loop jika 3 baris berturut-turut kosong
+                    }
+                    continue;
+                }
+                $consecutiveEmptyRows = 0; 
                 
-                if (empty(array_filter($row))) {
-                    $skippedRows[] = ['row' => $currentRow, 'reason' => 'Baris dianggap kosong'];
+                if (count($row) < $headerCount) {
+                    $row = array_pad($row, $headerCount, null);
+                }
+
+                $mapped = array_combine($header, array_slice($row, 0, $headerCount));
+                if (!$mapped) {
+                    $skippedRows[] = ['row' => $currentRow, 'reason' => 'Gagal memetakan kolom.'];
                     continue;
                 }
                 
-                if (count($row) != $headerCount) {
-                    $row = array_pad($row, $headerCount, null);
-                    if (count($row) > $headerCount) {
-                        $row = array_slice($row, 0, $headerCount);
-                    }
-                }
-                
-                $mapped = array_combine($header, $row);
-                if (!$mapped) {
-                     $skippedRows[] = ['row' => $currentRow, 'reason' => 'Gagal memetakan'];
-                     continue;
-                }
-                
-                $namaSiswa = trim((string)($mapped['nama'] ?? '')); 
+                // SESUAIKAN DENGAN NAMA KOLOM DARI EXCEL DAPODIK
+                $namaSiswa = trim((string)($mapped['nama'] ?? $mapped['nama_siswa'] ?? $mapped['nama_peserta_didik'] ?? '')); 
                 $nisnSiswa = trim((string)($mapped['nisn'] ?? ''));
+                $nipdSiswa = trim((string)($mapped['nipd'] ?? ''));
 
                 if (empty($namaSiswa) || $namaSiswa === '0') {
                     $skippedRows[] = ['row' => $currentRow, 'reason' => "Nama Siswa kosong atau nilainya '0'"];
                     continue;
                 }
                 
-                if (empty($nisnSiswa)) {
-                    $nipdSiswa = trim((string)($mapped['nipd'] ?? ''));
-                    if (!empty($nipdSiswa) && Siswa::where('nipd', $nipdSiswa)->exists()) {
-                         $skippedRows[] = ['row' => $currentRow, 'reason' => "NIPD ($nipdSiswa) sudah ada, NISN kosong. Dianggap duplikat."];
-                         continue;
+                // Check NIPD Duplikat via Cache
+                if (empty($nisnSiswa) && !empty($nipdSiswa)) {
+                    if (isset($existingNipd[$nipdSiswa])) {
+                        $skippedRows[] = ['row' => $currentRow, 'reason' => "NIPD ($nipdSiswa) sudah ada & NISN kosong."];
+                        continue;
                     }
                 }
 
-                $rombel = $mapped['rombel_saat_ini'] ?? null;
+                // OLAH DATA KELAS
+                $rombel = trim((string)($mapped['rombel_saat_ini'] ?? $mapped['rombel'] ?? $mapped['kelas'] ?? ''));
                 $idKelas = null;
                 $tingkat = null;
 
-                if ($rombel) {
+                if (!empty($rombel)) {
                     $parts = explode(' ', $rombel);
                     $tingkat = is_numeric($parts[0]) ? intval($parts[0]) : 10;
 
-                    $kelas = Kelas::where('nama_kelas', $rombel)->first();
-
-                    if (!$kelas) {
-                        $kelas = Kelas::create([
-                            'nama_kelas' => $rombel, 'tingkat' => $tingkat, 'jurusan' => $parts[1] ?? '', 'wali_kelas' => null, 'jumlah_siswa' => 0,
+                    if (!isset($kelasCache[$rombel])) {
+                        $newKelas = Kelas::create([
+                            'nama_kelas' => $rombel, 
+                            'tingkat' => $tingkat, 
+                            'jurusan' => $parts[1] ?? '', 
+                            'wali_kelas' => null, 
+                            'jumlah_siswa' => 0,
                         ]);
+                        $kelasCache[$rombel] = $newKelas->id_kelas;
                     }
-                    $idKelas = $kelas->id_kelas;
+                    $idKelas = $kelasCache[$rombel];
+                    $affectedKelasIds[$idKelas] = true;
                 }
 
-                $parseDate = function($value) {
-                    if (empty($value)) return null;
-                    try {
-                         if (is_numeric($value) && $value > 0) {
-                            return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value))->toDateString();
-                         }
-                         return Carbon::parse($value)->toDateString();
-                    } catch (\Exception $e) {
-                        return null;
-                    }
-                };
-
-                $cleanNumber = fn($val) => preg_replace('/[^0-9]/', '', (string)($val ?? ''));
-                
+                // DATA UTAMA SISWA
                 $siswaData = [
-                    'nipd' => trim((string)($mapped['nipd'] ?? null)), 
-                    'nisn' => $nisnSiswa, 
+                    'nipd' => !empty($nipdSiswa) ? $nipdSiswa : null, 
+                    'nisn' => !empty($nisnSiswa) ? $nisnSiswa : null, 
                     'nama_siswa' => $namaSiswa,
-                    'jenis_kelamin' => $mapped['jk'] ?? null, 
+                    'jenis_kelamin' => $mapped['jk'] ?? $mapped['jenis_kelamin'] ?? null, 
                     'tingkat' => $tingkat, 
                     'id_kelas' => $idKelas, 
                     'id_ekskul' => null, 
                 ];
 
+                // DETAIL SISWA
                 $detailData = [
                     'id_kelas' => $idKelas, 
-                    
-                    // KOLOM BARU IMPORT
                     'kelas_awal' => $mapped['kelas_awal'] ?? null,
                     'tgl_masuk'  => $parseDate($mapped['tanggal_masuk'] ?? $mapped['tgl_masuk'] ?? null),
                     'telp_wali'  => $mapped['telp_wali'] ?? $mapped['telepon_wali'] ?? null,
-
                     'tempat_lahir' => $mapped['tempat_lahir'] ?? null, 
                     'tanggal_lahir' => $parseDate($mapped['tanggal_lahir'] ?? null), 
                     'agama' => $mapped['agama'] ?? null,
@@ -623,7 +634,7 @@ class SiswaController extends Controller
                     'kode_pos' => $mapped['kode_pos'] ?? null, 
                     'telepon' => $mapped['telepon'] ?? null, 
                     'no_hp' => $mapped['hp'] ?? null,
-                    'email' => $mapped['e_mail'] ?? null, 
+                    'email' => $mapped['e_mail'] ?? $mapped['email'] ?? null, 
                     'nik' => $mapped['nik'] ?? null, 
                     'rt' => $mapped['rt'] ?? null, 
                     'rw' => $mapped['rw'] ?? null,
@@ -633,7 +644,7 @@ class SiswaController extends Controller
                     'skhun' => $mapped['skhun'] ?? null, 
                     'penerima_kps' => $mapped['penerima_kps'] ?? null, 
                     'no_kps' => $mapped['no_kps'] ?? null,
-                    'rombel' => $mapped['kelas'] ?? null, 
+                    'rombel' => $rombel, 
                     'no_peserta_ujian_nasional' => $mapped['no_peserta_ujian_nasional'] ?? null,
                     'no_seri_ijazah' => $mapped['no_seri_ijazah'] ?? null, 
                     'penerima_kip' => $mapped['penerima_kip'] ?? null, 
@@ -655,75 +666,76 @@ class SiswaController extends Controller
                     'bb' => $mapped['berat_badan'] ?? null, 
                     'tb' => $mapped['tinggi_badan'] ?? null,
                     'lingkar_kepala' => $mapped['lingkar_kepala'] ?? null, 
-                    'jml_saudara_kandung' => $cleanNumber($mapped['jml_saudara_kandung'] ?? $row[64] ?? null),
+                    'jml_saudara_kandung' => $cleanNumber($mapped['jml_saudara_kandung'] ?? null),
                     'jarak_rumah' => $mapped['jarak_rumah'] ?? null,
 
-                    'nama_ayah' => $row[24] ?? null, 
-                    'tahun_lahir_ayah' => $row[25] ?? null, 
-                    'jenjang_pendidikan_ayah' => $row[26] ?? null,
-                    'pekerjaan_ayah' => $row[27] ?? null, 
-                    'penghasilan_ayah' => $row[28] ?? null, 
-                    'nik_ayah' => $row[29] ?? null,
-                    'nama_ibu' => $row[30] ?? null, 
-                    'tahun_lahir_ibu' => $row[31] ?? null, 
-                    'jenjang_pendidikan_ibu' => $row[32] ?? null,
-                    'pekerjaan_ibu' => $row[33] ?? null, 
-                    'penghasilan_ibu' => $row[34] ?? null, 
-                    'nik_ibu' => $row[35] ?? null,
-                    'nama_wali' => $row[36] ?? null, 
-                    'tahun_lahir_wali' => $row[37] ?? null, 
-                    'jenjang_pendidikan_wali' => $row[38] ?? null,
-                    'pekerjaan_wali' => $row[39] ?? null, 
-                    'penghasilan_wali' => $row[40] ?? null, 
-                    'nik_wali' => $row[41] ?? null,
+                    // DATA ORANG TUA / WALI
+                    'nama_ayah' => $mapped['nama_ayah'] ?? null, 
+                    'tahun_lahir_ayah' => $mapped['tahun_lahir_ayah'] ?? null, 
+                    'jenjang_pendidikan_ayah' => $mapped['pendidikan_ayah'] ?? null,
+                    'pekerjaan_ayah' => $mapped['pekerjaan_ayah'] ?? null, 
+                    'penghasilan_ayah' => $mapped['penghasilan_ayah'] ?? null, 
+                    'nik_ayah' => $mapped['nik_ayah'] ?? null,
+                    'nama_ibu' => $mapped['nama_ibu'] ?? null, 
+                    'tahun_lahir_ibu' => $mapped['tahun_lahir_ibu'] ?? null, 
+                    'jenjang_pendidikan_ibu' => $mapped['pendidikan_ibu'] ?? null,
+                    'pekerjaan_ibu' => $mapped['pekerjaan_ibu'] ?? null, 
+                    'penghasilan_ibu' => $mapped['penghasilan_ibu'] ?? null, 
+                    'nik_ibu' => $mapped['nik_ibu'] ?? null,
+                    'nama_wali' => $mapped['nama_wali'] ?? null, 
+                    'tahun_lahir_wali' => $mapped['tahun_lahir_wali'] ?? null, 
+                    'jenjang_pendidikan_wali' => $mapped['pendidikan_wali'] ?? null,
+                    'pekerjaan_wali' => $mapped['pekerjaan_wali'] ?? null, 
+                    'penghasilan_wali' => $mapped['penghasilan_wali'] ?? null, 
+                    'nik_wali' => $mapped['nik_wali'] ?? null,
                 ];
                 
-                $siswa = null;
-                $action = 'INSERT';
-
-                if (!empty($nisnSiswa)) {
-                    $searchKey = ['nisn' => $nisnSiswa]; 
-                    
-                    $siswa = Siswa::updateOrCreate($searchKey, $siswaData);
-
-                    if ($siswa->wasRecentlyCreated) {
-                        $countInsert++;
-                    } else {
+                // SIMPAN / UPDATE SISWA
+                if (!empty($nisnSiswa) && isset($existingNisnMap[$nisnSiswa])) {
+                    $siswa = Siswa::find($existingNisnMap[$nisnSiswa]);
+                    if ($siswa) {
+                        $siswa->update($siswaData);
                         $countUpdate++;
                     }
                 } else {
                     $siswa = Siswa::create($siswaData);
                     $countInsert++;
+                    if (!empty($nisnSiswa)) {
+                        $existingNisnMap[$nisnSiswa] = $siswa->id_siswa;
+                    }
                 }
 
-                if (!$siswa) {
-                    $skippedRows[] = ['row' => $currentRow, 'reason' => 'Gagal mendapatkan/membuat instance Siswa.'];
-                    continue;
-                }
-                
-                $siswa->detail()->updateOrCreate(
-                    ['id_siswa' => $siswa->id_siswa],
-                    $detailData
-                );
-                
-                if ($idKelas) {
-                    Kelas::where('id_kelas', $idKelas)->increment('jumlah_siswa');
+                if ($siswa) {
+                    if (!empty($nipdSiswa)) {
+                        $existingNipd[$nipdSiswa] = $nipdSiswa;
+                    }
+
+                    $siswa->detail()->updateOrCreate(
+                        ['id_siswa' => $siswa->id_siswa],
+                        $detailData
+                    );
                 }
             }
 
-            DB::commit(); 
+            // UPDATE JUMLAH SISWA KELAS SEKALI SAJA DI AKHIR
+            foreach (array_keys($affectedKelasIds) as $kId) {
+                $totalInKelas = Siswa::where('id_kelas', $kId)->count();
+                Kelas::where('id_kelas', $kId)->update(['jumlah_siswa' => $totalInKelas]);
+            }
+
+            \DB::commit(); 
             
             $totalProcessed = $countInsert + $countUpdate;
             if (count($skippedRows) > 0) {
-                 \Log::warning("Import Siswa: Ditemukan " . count($skippedRows) . " baris yang dilewati. Detail: " . json_encode($skippedRows));
+                \Log::warning("Import Siswa: Ditemukan " . count($skippedRows) . " baris yang dilewati. Detail: " . json_encode($skippedRows));
             }
             
-            $message = "Import Excel Siswa selesai! Total diproses: $totalProcessed (Insert: $countInsert, Update: $countUpdate). Ditemukan " . count($skippedRows) . " baris dilewati. Detail di log.";
+            $message = "Import Excel Siswa selesai! Berhasil diproses: $totalProcessed (Siswa Baru: $countInsert, Update: $countUpdate).";
             return redirect()->route('master.siswa.index')->with('success', $message);
 
         } catch (\Exception $e) {
-            DB::rollBack(); 
-            $errorMessage = "Import Excel Siswa gagal pada Baris ke-$currentRow. Pesan Error: " . $e->getMessage();
+            \DB::rollBack(); 
+            $errorMessage = "Import Excel Siswa gagal pada Baris ke-$currentRow. Error: " . $e->getMessage();
             \Log::error($errorMessage);
             return redirect()->back()->with('error', $errorMessage);
         }

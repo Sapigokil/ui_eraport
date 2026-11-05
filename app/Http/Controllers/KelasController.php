@@ -51,7 +51,7 @@ class KelasController extends Controller
             }])
             ->findOrFail($id_kelas);
         
-        // 🔥 PERBAIKAN: Hapus JOIN, ambil langsung dari siswa.id_kelas
+        // PERBAIKAN: Hapus JOIN, ambil langsung dari siswa.id_kelas
         $anggota = Siswa::where('id_kelas', $id_kelas)
             ->whereRaw('LOWER(status) = ?', ['aktif']) 
             ->orderBy('nama_siswa', 'asc') // Diurutkan berdasarkan abjad
@@ -136,7 +136,7 @@ class KelasController extends Controller
     {
         $kelas = Kelas::findOrFail($id_kelas);
 
-        // 🔥 PERBAIKAN: Hapus JOIN, ambil langsung dari siswa.id_kelas
+        // PERBAIKAN: Hapus JOIN, ambil langsung dari siswa.id_kelas
         $anggota = Siswa::where('id_kelas', $id_kelas)
             ->whereRaw('LOWER(status) = ?', ['aktif']) 
             ->orderBy('nama_siswa', 'asc')
@@ -177,7 +177,7 @@ class KelasController extends Controller
     {
         $siswa = Siswa::where('id_siswa', $id_siswa)->first();
         
-        if($siswa) {
+        if ($siswa) {
             $id_kelas_lama = $siswa->id_kelas;
             
             // 1. Kosongkan id_kelas di tabel siswa
@@ -187,7 +187,7 @@ class KelasController extends Controller
             DetailSiswa::where('id_siswa', $id_siswa)->update(['id_kelas' => null]);
 
             // 3. Hitung ulang jumlah siswa pada kelas yang ditinggalkan
-            if($id_kelas_lama) {
+            if ($id_kelas_lama) {
                 $jumlah = Siswa::where('id_kelas', $id_kelas_lama)
                     ->whereRaw('LOWER(status) = ?', ['aktif'])
                     ->count();
@@ -200,7 +200,7 @@ class KelasController extends Controller
     }
 
     /**
-     * 🔹 Export semua data kelas ke PDF
+     * Export semua data kelas ke PDF
      */
     public function exportPdf()
     {
@@ -221,7 +221,7 @@ class KelasController extends Controller
     }
 
     /**
-     * 🔹 Export semua data kelas ke CSV
+     * Export semua data kelas ke CSV
      */
     public function exportCsv()
     {
@@ -260,7 +260,7 @@ class KelasController extends Controller
     }
 
     /**
-     * 🔹 Export data satu kelas (dengan anggota) ke PDF
+     * Export data satu kelas (dengan anggota) ke PDF
      */
     public function exportKelas($id)
     {
