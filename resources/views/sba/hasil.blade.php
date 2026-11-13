@@ -471,7 +471,9 @@
     function hapusSingleHasil(id) {
         if (confirm('Apakah Anda yakin ingin menghapus hasil pengerjaan peserta ini?')) {
             const form = document.getElementById('formSingleDelete');
-            form.action = `/sba/hasil/${id}`;
+            // Menggunakan helper route() Laravel dan mengganti placeholder ':id'
+            let url = "{{ route('sba.hasil.destroy', ':id') }}";
+            form.action = url.replace(':id', id);
             form.submit();
         }
     }
