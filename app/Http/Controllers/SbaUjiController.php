@@ -204,6 +204,15 @@ class SbaUjiController extends Controller
     {
         $hasilId = session('sba_hasil_id');
         $uji = Uji::where('kode_uji', strtoupper($kode_uji))->firstOrFail();
+
+        // Jika mode Open Book aktif, abaikan seluruh pencatatan pelanggaran
+        if ($uji->open_book) {
+            return response()->json([
+                'status' => 'ignored',
+                'message' => 'Mode Open Book aktif, perpindahan tab diizinkan.'
+            ]);
+        }
+
         $hasil = UjiHasil::find($hasilId);
 
         if (!$hasil || $hasil->status_pengerjaan !== 'berlangsung') {

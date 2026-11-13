@@ -52,10 +52,13 @@
                                             Pengaturan informasi dasar asesmen dan penyusunan butir soal.
                                         </p>
                                     </div>
-                                    <div>
-                                        <a href="{{ route('sba.index') }}" class="btn btn-white text-primary btn-sm mb-0 shadow-sm px-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <a href="{{ route('sba.index') }}" class="btn btn-outline-white btn-sm mb-0 px-3">
                                             <i class="fas fa-arrow-left me-1"></i> Kembali
                                         </a>
+                                        <button type="submit" class="btn btn-white text-primary btn-sm mb-0 shadow-sm px-3 fw-bold">
+                                            <i class="fas fa-save me-1"></i> {{ isset($uji) ? 'Simpan Perubahan' : 'Simpan Asesmen' }}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -134,44 +137,72 @@
                                         </div>
                                     </div>
 
-                                    {{-- PENGATURAN KEAMANAN --}}
+                                    {{-- PENGATURAN KEAMANAN & PERCOBAAN --}}
                                     <div class="row border-top pt-2 mt-1">
-                                        <div class="col-md-6 form-group mb-2">
-                                            <label for="toleransi_pelanggaran" class="form-control-label text-xs mb-1">Toleransi Pelanggaran</label>
-                                            <input type="number" class="form-control form-control-sm border px-2 py-1" id="toleransi_pelanggaran" name="toleransi_pelanggaran" 
-                                                   value="{{ old('toleransi_pelanggaran', $uji->toleransi_pelanggaran ?? 3) }}" min="0" required>
-                                            <small class="text-xxs text-secondary">Batas minimize/pindah tab</small>
-                                        </div>
-                                        <div class="col-md-6 form-group mb-2">
-                                            <label for="maksimal_percobaan" class="form-control-label text-xs mb-1">Maks. Percobaan</label>
-                                            <input type="number" class="form-control form-control-sm border px-2 py-1" id="maksimal_percobaan" name="maksimal_percobaan" 
-                                                   value="{{ old('maksimal_percobaan', $uji->maksimal_percobaan ?? 1) }}" min="1" required>
-                                            <small class="text-xxs text-secondary">Batas partisipasi per user</small>
-                                        </div>
-                                    </div>
+                                        {{-- KOLOM KIRI: Mode Ujian (Open Book / Strict Mode) & Opsi Umum --}}
+                                        <div class="col-md-6">
+                                            <div class="p-2 bg-light border rounded mb-2">
+                                                <div class="form-check form-switch ps-0 mb-1">
+                                                    <input class="form-check-input ms-0" type="checkbox" id="open_book" name="open_book" value="1" 
+                                                        {{ old('open_book', $uji->open_book ?? false) ? 'checked' : '' }}>
+                                                    <label class="form-check-label text-xs ms-2 mb-0 fw-bold text-dark" for="open_book">Mode Open Book</label>
+                                                </div>
+                                                
+                                                {{-- Keterangan Dinamis Sesuai Status Switch --}}
+                                                <small id="text-open-book-desc" class="text-xxs d-block {{ old('open_book', $uji->open_book ?? false) ? 'text-success fw-bold' : 'text-secondary' }}" style="line-height: 1.3;">
+                                                    {{ old('open_book', $uji->open_book ?? false) 
+                                                        ? 'Izinkan peserta berpindah tab / minimize tanpa pelanggaran' 
+                                                        : 'Peserta dilarang berpindah / minimize tab selama uji berlangsung' }}
+                                                </small>
 
-                                    {{-- OPTION SWITCHES --}}
-                                    <div class="row mt-2">
-                                        <div class="col-12 d-flex flex-wrap gap-3">
-                                            <div class="form-check form-switch ps-0">
-                                                <input class="form-check-input ms-0" type="checkbox" id="acak_soal" name="acak_soal" value="1" 
-                                                       {{ old('acak_soal', $uji->acak_soal ?? true) ? 'checked' : '' }}>
-                                                <label class="form-check-label text-xs ms-2 mb-0" for="acak_soal">Acak Soal</label>
+                                                {{-- Wrapper Toleransi Pelanggaran (Sembunyi jika Open Book aktif) --}}
+                                                <div id="wrapper-toleransi" class="form-group mb-0 border-top pt-2 mt-2 {{ old('open_book', $uji->open_book ?? false) ? 'd-none' : '' }}">
+                                                    <label for="toleransi_pelanggaran" class="form-control-label text-xs mb-1">Toleransi Pelanggaran</label>
+                                                    <input type="number" class="form-control form-control-sm border px-2 py-1 bg-white" id="toleransi_pelanggaran" name="toleransi_pelanggaran" 
+                                                        value="{{ old('toleransi_pelanggaran', $uji->toleransi_pelanggaran ?? 3) }}" min="0" required>
+                                                    <small class="text-xxs text-secondary d-block">Batas minimize/pindah tab</small>
+                                                </div>
                                             </div>
-                                            <div class="form-check form-switch ps-0">
-                                                <input class="form-check-input ms-0" type="checkbox" id="tampilkan_nilai" name="tampilkan_nilai" value="1" 
-                                                       {{ old('tampilkan_nilai', $uji->tampilkan_nilai ?? false) ? 'checked' : '' }}>
-                                                <label class="form-check-label text-xs ms-2 mb-0" for="tampilkan_nilai">Tampilkan Nilai</label>
+
+                                            {{-- Opsi Umum Lainnya --}}
+                                            <div class="d-flex flex-column gap-2 mt-2">
+                                                <div class="form-check form-switch ps-0 mb-0">
+                                                    <input class="form-check-input ms-0" type="checkbox" id="acak_soal" name="acak_soal" value="1" 
+                                                        {{ old('acak_soal', $uji->acak_soal ?? true) ? 'checked' : '' }}>
+                                                    <label class="form-check-label text-xs ms-2 mb-0" for="acak_soal">Acak Soal</label>
+                                                </div>
+                                                <div class="form-check form-switch ps-0 mb-0">
+                                                    <input class="form-check-input ms-0" type="checkbox" id="tampilkan_nilai" name="tampilkan_nilai" value="1" 
+                                                        {{ old('tampilkan_nilai', $uji->tampilkan_nilai ?? false) ? 'checked' : '' }}>
+                                                    <label class="form-check-label text-xs ms-2 mb-0" for="tampilkan_nilai">Tampilkan Nilai</label>
+                                                </div>
+                                                <div class="form-check form-switch ps-0 mb-0">
+                                                    <input class="form-check-input ms-0" type="checkbox" id="buka_untuk_umum" name="buka_untuk_umum" value="1" 
+                                                        {{ old('buka_untuk_umum', $uji->buka_untuk_umum ?? false) ? 'checked' : '' }}>
+                                                    <label class="form-check-label text-xs ms-2 mb-0" for="buka_untuk_umum">Buka untuk Umum</label>
+                                                </div>
                                             </div>
-                                            <div class="form-check form-switch ps-0">
-                                                <input class="form-check-input ms-0" type="checkbox" id="buka_untuk_umum" name="buka_untuk_umum" value="1" 
-                                                       {{ old('buka_untuk_umum', $uji->buka_untuk_umum ?? false) ? 'checked' : '' }}>
-                                                <label class="form-check-label text-xs ms-2 mb-0" for="buka_untuk_umum">Buka untuk Umum</label>
-                                            </div>
-                                            <div class="form-check form-switch ps-0">
-                                                <input class="form-check-input ms-0" type="checkbox" id="ulangi_jika_gagal" name="ulangi_jika_gagal" value="1" 
-                                                       {{ old('ulangi_jika_gagal', $uji->ulangi_jika_gagal ?? false) ? 'checked' : '' }}>
-                                                <label class="form-check-label text-xs ms-2 mb-0" for="ulangi_jika_gagal">Ulangi Jika Gagal</label>
+                                        </div>
+
+                                        {{-- KOLOM KANAN: Grup Pengulangan & Maks. Percobaan --}}
+                                        <div class="col-md-6">
+                                            <div class="p-2 bg-light border rounded h-100">
+                                                <div class="form-check form-switch ps-0 mb-1">
+                                                    <input class="form-check-input ms-0" type="checkbox" id="ulangi_jika_gagal" name="ulangi_jika_gagal" value="1" 
+                                                           {{ old('ulangi_jika_gagal', $uji->ulangi_jika_gagal ?? false) ? 'checked' : '' }}>
+                                                    <label class="form-check-label text-xs ms-2 mb-0 fw-bold text-dark" for="ulangi_jika_gagal">Ulangi Jika Gagal</label>
+                                                </div>
+                                                <small class="text-xxs text-secondary d-block mb-2" style="line-height: 1.3;">
+                                                    Izinkan peserta mengulang ujian jika gagal/pelanggaran
+                                                </small>
+
+                                                {{-- Wrapper Input Maks. Percobaan (Tampil hanya saat Ulangi Jika Gagal aktif) --}}
+                                                <div id="wrapper-maks-percobaan" class="form-group mb-0 border-top pt-2 mt-2 {{ old('ulangi_jika_gagal', $uji->ulangi_jika_gagal ?? false) ? '' : 'd-none' }}">
+                                                    <label for="maksimal_percobaan" class="form-control-label text-xs mb-1">Maks. Percobaan</label>
+                                                    <input type="number" class="form-control form-control-sm border px-2 py-1 bg-white" id="maksimal_percobaan" name="maksimal_percobaan" 
+                                                           value="{{ old('maksimal_percobaan', $uji->maksimal_percobaan ?? 1) }}" min="1" required>
+                                                    <small class="text-xxs text-secondary d-block">Total kuota kesempatan ujian</small>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -638,6 +669,50 @@ document.addEventListener('DOMContentLoaded', function() {
             poinEl.classList.add('text-info');
             warningEl.classList.add('d-none');
         }
+    }
+
+    // ========================================================================
+    // TOGGLE OTOMATIS ULANGI JIKA GAGAL & MAKS. PERCOBAAN
+    // ========================================================================
+    const switchUlangi = document.getElementById('ulangi_jika_gagal');
+    const wrapperPercobaan = document.getElementById('wrapper-maks-percobaan');
+    const inputPercobaan = document.getElementById('maksimal_percobaan');
+    const switchOpenBook = document.getElementById('open_book');
+    const wrapperToleransi = document.getElementById('wrapper-toleransi');
+    const descOpenBook = document.getElementById('text-open-book-desc');
+
+    if (switchUlangi && wrapperPercobaan && inputPercobaan) {
+        switchUlangi.addEventListener('change', function() {
+            if (this.checked) {
+                // Tampilkan kolom dan set default ke 2 jika sebelumnya bernilai 1
+                wrapperPercobaan.classList.remove('d-none');
+                if (parseInt(inputPercobaan.value) <= 1 || !inputPercobaan.value) {
+                    inputPercobaan.value = 2;
+                }
+                inputPercobaan.min = 2;
+            } else {
+                // Sembunyikan kolom dan kembalikan nilai ke 1 agar tetap terkirim saat submit
+                wrapperPercobaan.classList.add('d-none');
+                inputPercobaan.min = 1;
+                inputPercobaan.value = 1;
+            }
+        });
+    }
+
+    if (switchOpenBook && wrapperToleransi && descOpenBook) {
+        switchOpenBook.addEventListener('change', function() {
+            if (this.checked) {
+                wrapperToleransi.classList.add('d-none');
+                descOpenBook.innerText = 'Izinkan peserta berpindah tab / minimize tanpa pelanggaran';
+                descOpenBook.classList.remove('text-secondary');
+                descOpenBook.classList.add('text-success', 'fw-bold');
+            } else {
+                wrapperToleransi.classList.remove('d-none');
+                descOpenBook.innerText = 'Peserta dilarang berpindah / minimize tab selama uji berlangsung';
+                descOpenBook.classList.remove('text-success', 'fw-bold');
+                descOpenBook.classList.add('text-secondary');
+            }
+        });
     }
 
     document.getElementById('btn-sesuaikan-poin').addEventListener('click', function() {

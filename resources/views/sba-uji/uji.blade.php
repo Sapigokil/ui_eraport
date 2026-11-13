@@ -215,24 +215,45 @@
                             </div>
                         </div>
 
-                        <h6 class="fw-bold text-danger mb-3">
-                            <i class="fas fa-exclamation-triangle me-2"></i>Peraturan Strict Mode & Keamanan
-                        </h6>
-                        
-                        <div class="alert alert-danger border-0 rounded-3 p-3 mb-4 bg-opacity-10" style="background-color: #fce8e6;">
-                            <ul class="text-dark small ps-3 mb-0" style="line-height: 1.6;">
-                                <li>Asesmen dikerjakan penuh dalam mode <strong>Layar Penuh (Fullscreen)</strong>.</li>
-                                <li>Setiap tindakan <strong>pindah tab, memperkecil layar, atau berpindah soal tanpa fullscreen</strong> dianggap sebagai pelanggaran.</li>
-                                <li>Sisa toleransi pelanggaran Anda: <strong class="text-danger fs-6">{{ $uji->toleransi_pelanggaran }} kali</strong>. Melebihi batas akan membuat sistem mengunci ujian otomatis.</li>
-                            </ul>
-                        </div>
+                        @if($uji->open_book)
+                            <h6 class="fw-bold text-success mb-3">
+                                <i class="fas fa-book-open me-2"></i>Mode Asesmen: Open Book
+                            </h6>
+                            
+                            <div class="alert alert-success border-0 rounded-3 p-3 mb-4 bg-opacity-10" style="background-color: #e6f7ed;">
+                                <ul class="text-dark small ps-3 mb-0" style="line-height: 1.6;">
+                                    <li>Asesmen ini menggunakan <strong>Mode Open Book</strong>.</li>
+                                    <li>Anda diperbolehkan membuka tab lain, catatan, atau referensi materi selama waktu ujian masih berjalan.</li>
+                                    <li>Pastikan menekan tombol <strong>Kumpulkan Ujian</strong> sebelum durasi waktu habis.</li>
+                                </ul>
+                            </div>
 
-                        <div class="form-check mb-4 bg-light p-3 rounded border">
-                            <input class="form-check-input ms-1 border-secondary" type="checkbox" id="checkSetuju" style="transform: scale(1.2); cursor: pointer;">
-                            <label class="form-check-label ms-3 text-sm text-dark fw-bold" for="checkSetuju" style="cursor: pointer;">
-                                Saya memahami aturan dan siap masuk ke layar penuh ujian.
-                            </label>
-                        </div>
+                            <div class="form-check mb-4 bg-light p-3 rounded border">
+                                <input class="form-check-input ms-1 border-secondary" type="checkbox" id="checkSetuju" style="transform: scale(1.2); cursor: pointer;">
+                                <label class="form-check-label ms-3 text-sm text-dark fw-bold" for="checkSetuju" style="cursor: pointer;">
+                                    Saya memahami petunjuk di atas dan siap memulai ujian.
+                                </label>
+                            </div>
+                        @else
+                            <h6 class="fw-bold text-danger mb-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Peraturan Strict Mode & Keamanan
+                            </h6>
+                            
+                            <div class="alert alert-danger border-0 rounded-3 p-3 mb-4 bg-opacity-10" style="background-color: #fce8e6;">
+                                <ul class="text-dark small ps-3 mb-0" style="line-height: 1.6;">
+                                    <li>Asesmen dikerjakan penuh dalam mode <strong>Layar Penuh (Fullscreen)</strong>.</li>
+                                    <li>Setiap tindakan <strong>pindah tab, memperkecil layar, atau berpindah soal tanpa fullscreen</strong> dianggap sebagai pelanggaran.</li>
+                                    <li>Sisa toleransi pelanggaran Anda: <strong class="text-danger fs-6">{{ $uji->toleransi_pelanggaran }} kali</strong>. Melebihi batas akan membuat sistem mengunci ujian otomatis.</li>
+                                </ul>
+                            </div>
+
+                            <div class="form-check mb-4 bg-light p-3 rounded border">
+                                <input class="form-check-input ms-1 border-secondary" type="checkbox" id="checkSetuju" style="transform: scale(1.2); cursor: pointer;">
+                                <label class="form-check-label ms-3 text-sm text-dark fw-bold" for="checkSetuju" style="cursor: pointer;">
+                                    Saya memahami aturan dan siap masuk ke layar penuh ujian.
+                                </label>
+                            </div>
+                        @endif
 
                         <button type="button" id="btnMulaiUji" class="btn btn-secondary w-100 py-3 fw-bold rounded-3 shadow-sm text-white" disabled style="transition: all 0.3s ease;">
                             <i class="fas fa-play-circle me-2"></i> MULAI ASESMEN SEKARANG
@@ -259,14 +280,19 @@
                     </div>
                     <div>
                         <h6 class="mb-0 fw-bold text-white fs-6">{{ $uji->judul }}</h6>
-                        <small class="text-white-50" style="font-size: 0.8rem;">Peserta: <strong>{{ $namaPeserta }}</strong></small>
+                        <small class="text-white-50" style="font-size: 0.8rem;">
+                            Peserta: <strong>{{ $namaPeserta }}</strong>
+                            @if($uji->open_book)
+                                <span class="badge bg-success ms-2">Open Book</span>
+                            @endif
+                        </small>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <div class="bg-white text-dark px-3 py-2 rounded-3 shadow-sm fw-bold border">
                         <i class="fas fa-clock text-danger me-2"></i><span id="timer-countdown">--:--:--</span>
                     </div>
-                    <button type="button" class="btn btn-light btn-sm rounded-circle p-2" id="btnFullscreen" title="Paksa Fullscreen" style="width:38px; height:38px;">
+                    <button type="button" class="btn btn-light btn-sm rounded-circle p-2" id="btnFullscreen" title="Mode Layar Penuh" style="width:38px; height:38px;">
                         <i class="fas fa-expand text-primary"></i>
                     </button>
                 </div>
@@ -482,7 +508,7 @@
                 <div class="modal-body p-4 text-center">
                     <i class="fas fa-times-circle text-danger display-3 mb-3"></i>
                     <h5 class="fw-bold text-dark">Batas Toleransi Terlampaui</h5>
-                    <p class="text-muted small mb-0" id="text-pesan-gagal">Anda telah melewati batas batas toleransi pelanggaran. Ujian dihentikan secara otomatis.</p>
+                    <p class="text-muted small mb-0" id="text-pesan-gagal">Anda telah melewati batas toleransi pelanggaran. Ujian dihentikan secara otomatis.</p>
                 </div>
                 <div class="modal-footer bg-light justify-content-center border-0">
                     <button type="button" class="btn btn-secondary px-4 fw-bold rounded-3" id="btnKeluarPortal">
@@ -501,8 +527,13 @@
             const secPersiapan = document.getElementById('section-persiapan');
             const secUjian = document.getElementById('section-ujian');
             
+            const isOpenBook = {{ $uji->open_book ? 'true' : 'false' }};
             let isUjianDimulai = false;
             let isLockedGagal = false; // Flag pengunci jika diskualifikasi
+
+            function getCsrfToken() {
+                return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+            }
 
             // --- 1. TOGGLE TOMBOL MULAI PERSIAPAN ---
             checkSetuju.addEventListener('change', function() {
@@ -534,7 +565,9 @@
 
             // --- 3. KLIK MULAI UJIAN ---
             btnMulaiUji.addEventListener('click', function() {
-                mintaFullscreen();
+                if (!isOpenBook) {
+                    mintaFullscreen();
+                }
 
                 secPersiapan.classList.add('d-none');
                 secUjian.classList.remove('d-none');
@@ -545,7 +578,7 @@
                 highlightRadioSelection();
             });
 
-            // --- 4. SYSTEM DETEKSI PELANGGARAN STRICT MODE PERBAIKAN ---
+            // --- 4. SYSTEM DETEKSI PELANGGARAN STRICT MODE ---
             let sedangMelapor = false;
             let waktuPelanggaranTerakhir = 0;
             const jedaPelanggaranMs = 2500; // Cooldown anti-cascading
@@ -569,6 +602,9 @@
             }
 
             function laporkanPelanggaran(tipeSpesifik = '') {
+                // Abaikan seluruh pelanggaran jika mode Open Book aktif
+                if (isOpenBook) return;
+
                 const sekarang = new Date().getTime();
 
                 // Jangan laporkan jika ujian belum mulai, sedang gagal/terkunci, sedang melapor, atau masih dalam jeda cooldown
@@ -583,7 +619,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        'X-CSRF-TOKEN': getCsrfToken()
                     },
                     body: JSON.stringify({ tipe: tipeSpesifik })
                 })
@@ -610,32 +646,35 @@
             btnKembaliUjian.addEventListener('click', function() {
                 if (isLockedGagal) return;
                 bsModalPelanggaran.hide();
-                mintaFullscreen();
+                if (!isOpenBook) {
+                    mintaFullscreen();
+                }
             });
 
             btnKeluarPortal.addEventListener('click', function() {
                 window.location.href = "{{ route('sba.portal') }}";
             });
 
-            // Event Listeners Pelanggaran (Mencegah Race Condition Antara Visibility & Blur)
-            document.addEventListener("visibilitychange", function() {
-                if (document.hidden) {
-                    laporkanPelanggaran('pindah_tab');
-                }
-            });
+            // Event Listeners Pelanggaran (Hanya berjalan jika BUKAN mode Open Book)
+            if (!isOpenBook) {
+                document.addEventListener("visibilitychange", function() {
+                    if (document.hidden) {
+                        laporkanPelanggaran('pindah_tab');
+                    }
+                });
 
-            window.addEventListener('blur', function() {
-                // Blur hanya dipicu jika dokumen Halaman masih terbaca visible (artinya window kehilangan fokus tanpa switch tab)
-                if (!document.hidden) {
-                    laporkanPelanggaran('loss_focus');
-                }
-            });
+                window.addEventListener('blur', function() {
+                    if (!document.hidden) {
+                        laporkanPelanggaran('loss_focus');
+                    }
+                });
 
-            document.addEventListener("fullscreenchange", function() {
-                if (!document.fullscreenElement && !document.webkitFullscreenElement && isUjianDimulai && !document.hidden) {
-                    laporkanPelanggaran('keluar_fullscreen');
-                }
-            });
+                document.addEventListener("fullscreenchange", function() {
+                    if (!document.fullscreenElement && !document.webkitFullscreenElement && isUjianDimulai && !document.hidden) {
+                        laporkanPelanggaran('keluar_fullscreen');
+                    }
+                });
+            }
 
             // Mencegat submit manual finalisasi jika user terkena diskualifikasi
             document.getElementById('form-finalisasi')?.addEventListener('submit', function(e) {
@@ -654,8 +693,8 @@
             function switchSoal(targetIndex) {
                 if (isLockedGagal) return;
 
-                // PENGECEKAN KETAT FULLSCREEN SETIAP PERPINDAHAN SOAL
-                if (isUjianDimulai && !document.fullscreenElement && !document.webkitFullscreenElement) {
+                // PENGECEKAN KETAT FULLSCREEN SETIAP PERPINDAHAN SOAL (Kecuali Open Book)
+                if (!isOpenBook && isUjianDimulai && !document.fullscreenElement && !document.webkitFullscreenElement) {
                     laporkanPelanggaran('ganti_soal_non_fullscreen');
                 }
 
@@ -692,7 +731,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        'X-CSRF-TOKEN': getCsrfToken()
                     },
                     body: JSON.stringify({
                         uji_soal_id: soalId,
