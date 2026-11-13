@@ -159,11 +159,12 @@
             {{-- 1. DASHBOARD --}}
             <li class="nav-item">
                 @php $isDashboardActive = request()->routeIs('dashboard') || request()->routeIs('siswa.dashboard'); @endphp 
-                <a class="nav-link {{ $isDashboardActive ? 'active' : '' }}" href="{{ auth()->user()->hasRole('siswa') || auth()->user()->level == 'siswa' ? route('siswa.dashboard') : route('dashboard') }}">
-                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                        <i class="fas fa-chart-line text-sm"></i>
-                    </div>
-                    <span class="nav-link-text">Dashboard</span>
+                <a class="nav-link {{ $isDashboardActive ? 'active' : '' }}" href="{{ auth()->user()?->hasRole('siswa') || auth()->user()?->level == 'siswa' ? route('siswa.dashboard') : route('dashboard') }}">
+                        <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                            <i class="fas fa-chart-line text-sm"></i>
+                        </div>
+                        <span class="nav-link-text">Dashboard</span>
+                    </a>
                 </a>
             </li>
 
@@ -460,6 +461,34 @@
             @endcan
             
             {{-- ========================================================= --}}
+            {{-- ADD-ON: SMART BASED ASSESSMENT (SBA) --}}
+            {{-- ========================================================= --}}
+            @if(Route::has('sba.index'))
+            @php
+                $isSbaActive = request()->routeIs(['sba.*']);
+            @endphp
+            <li class="nav-item mt-2">
+                <a class="sidenav-category-toggle" data-bs-toggle="collapse" href="#catSba" role="button" aria-expanded="{{ $isSbaActive ? 'true' : 'false' }}">
+                    <span class="cat-title text-uppercase text-warning">
+                        <i class="fas fa-star me-1"></i> Ujian SBA
+                    </span>
+                    <i class="fas fa-chevron-down cat-icon"></i>
+                </a>
+                
+                <div class="collapse {{ $isSbaActive ? 'show' : '' }} category-wrapper" id="catSba" data-bs-parent="#sidenav-collapse-main">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('sba.index') ? 'active' : '' }}" href="{{ route('sba.index') }}">
+                                <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-laptop-code text-sm"></i></div>
+                                <span class="nav-link-text">Daftar Ujian</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            @endif
+
+            {{-- ========================================================= --}}
             {{-- 6. PENGATURAN (KATEGORI UTAMA) --}}
             {{-- ========================================================= --}}
             @can('setting.menu')
@@ -662,7 +691,7 @@
             @endcan
 
             {{-- 9. PERSONAL --}}
-            @if(!auth()->user()->hasRole('siswa_erapor') && auth()->user()->level != 'siswa_erapor')
+            @if(auth()->check() && !auth()->user()->hasRole('siswa_erapor') && auth()->user()->level != 'siswa_erapor')
             <li class="nav-item mt-2 border-top border-secondary pt-2 mx-3">
                 <a class="nav-link {{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.index') }}">
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">

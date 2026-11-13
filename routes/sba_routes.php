@@ -1,0 +1,83 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SbaController;
+use App\Http\Controllers\SbaUjiController;
+
+/*
+|--------------------------------------------------------------------------
+| SMART BASED ASSESSMENT (SBA) ADD-ON ROUTES
+|--------------------------------------------------------------------------
+| Modul Add-on Premium untuk Manajemen Bank Soal, Pembuatan Ujian, 
+| CBT Engine, & Analytics Hasil Ujian.
+|
+*/
+
+// ==============================================================================
+// 1. ADMIN & GURU MANAGEMENT ROUTES (Memerlukan Login / Protected)
+// ==============================================================================
+Route::middleware(['auth'])->group(function () {
+    
+    // Group Admin/Guru SBA (URL Prefix: /admin/sba, Route Name Prefix: sba.)
+    Route::prefix('admin/sba')->name('sba.')->group(function () {
+        
+        // ----------------------------------------------------------------------
+        // A. DASHBOARD & UTILITY
+        // ----------------------------------------------------------------------
+        Route::get('/', [SbaController::class, 'index'])->name('index');
+        Route::get('/get-mapel-by-guru/{guru_id}', [SbaController::class, 'getMapelByGuru'])->name('get-mapel-by-guru');
+
+        // ----------------------------------------------------------------------
+        // B. MANAJEMEN UJIAN & BANK SOAL (CRUD)
+        // ----------------------------------------------------------------------
+        Route::get('/create', [SbaController::class, 'create'])->name('create');
+        Route::post('/store', [SbaController::class, 'store'])->name('store');
+        Route::get('/{uji}/edit', [SbaController::class, 'edit'])->name('edit');
+        Route::put('/{uji}/update', [SbaController::class, 'update'])->name('update');
+        Route::delete('/{uji}/destroy', [SbaController::class, 'destroy'])->name('destroy');
+        
+        // Endpoint AJAX Hapus Single Soal + Gambar Media
+        Route::delete('/soal/{soal_id}', [SbaController::class, 'destroySoal'])->name('soal.destroy');
+        
+        // ----------------------------------------------------------------------
+        // C. HASIL UJIAN & REKAP DATA (ANALYTICS & EXPORT)
+        // ----------------------------------------------------------------------
+        Route::get('/{uji_id}/hasil', [SbaController::class, 'hasilIndex'])->name('hasil.index');
+        Route::get('/{uji_id}/hasil/export', [SbaController::class, 'exportHasil'])->name('hasil.export');
+
+        // ----------------------------------------------------------------------
+        // D. DETAIL ASESI & PENILAIAN ESAI
+        // ----------------------------------------------------------------------
+        Route::get('/hasil/{hasil_id}/detail', [SbaController::class, 'hasilDetail'])->name('hasil.detail');
+        Route::post('/hasil/{hasil_id}/simpan-nilai', [SbaController::class, 'simpanPenilaianEsai'])->name('hasil.simpan_nilai');
+        Route::get('/hasil/{hasil_id}/export-pdf', [SbaController::class, 'exportHasilDetailPdf'])->name('hasil.detail.pdf');
+        Route::delete('/hasil/{hasil_id}', [SbaController::class, 'hasilDestroy'])->name('hasil.destroy');
+        
+        // Action Hapus Massal (Bulk Delete)
+        Route::delete('/uji/{uji_id}/hasil/bulk-delete', [SbaController::class, 'bulkDelete'])->name('hasil.bulk_delete');
+
+    });
+
+});
+
+// ==============================================================================
+// 2. PESERTA UJIAN / CBT ENGINE ROUTES (Public & Protected Access)
+// ==============================================================================
+Route::prefix('sba')->group(function () {
+    
+    // A. Portal Masuk Asesmen (Input Token/Pin Uji)
+    Route::get('/', [SbaUjiController::class, 'portal'])->name('sba.portal');
+    Route::post('/process', [SbaUjiController::class, 'processPortal'])->name('sba.portal.process');
+
+    // B. Ruang CBT Engine (Halaman Utama Pengerjaan Ujian)
+    Route::get('/asesmen/{kode_uji}', [SbaUjiController::class, 'halamanUji'])->name('sba.uji.halaman');
+
+    // C. Endpoint AJAX In-Game (Autosave Jawaban & Tracking Pelanggaran Strict Mode)
+    Route::post('/asesmen/{kode_uji}/simpan', [SbaUjiController::class, 'simpanJawaban'])->name('sba.uji.simpan');
+    Route::post('/asesmen/{kode_uji}/pelanggaran', [SbaUjiController::class, 'catatPelanggaran'])->name('sba.uji.pelanggaran');
+
+    // D. Finalisasi Ujian & Output Hasil
+    Route::post('/asesmen/{kode_uji}/selesai', [SbaUjiController::class, 'selesaiUjian'])->name('sba.uji.selesai');
+    Route::get('/asesmen/{kode_uji}/selesai/{hasil_id}', [SbaUjiController::class, 'tampilkanHasil'])->name('sba.uji.selesai.tampil');
+
+});

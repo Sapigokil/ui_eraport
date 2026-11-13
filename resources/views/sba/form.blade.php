@@ -1,0 +1,673 @@
+@extends('layouts.app')
+
+@section('page-title', isset($uji) ? 'Edit Asesmen & Soal SBA' : 'Buat Asesmen & Soal Baru')
+
+@section('content')
+<main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
+    <x-app.navbar />
+
+    <div class="container-fluid py-4 px-4">
+        {{-- ENCTYPE MULTIPART/FORM-DATA PENTING UNTUK UPLOAD GAMBAR --}}
+        <form action="{{ isset($uji) ? route('sba.update', $uji->id) : route('sba.store') }}" 
+              method="POST" 
+              id="form-ujian-sba" 
+              enctype="multipart/form-data">
+            @csrf
+            @if(isset($uji))
+                @method('PUT')
+            @endif
+
+            <div class="row">
+                <div class="col-12">
+                    
+                    {{-- MENAMPILKAN ERROR VALIDASI --}}
+                    @if ($errors->any())
+                        <div class="alert bg-gradient-danger text-white alert-dismissible fade show text-sm py-2 mb-4" role="alert">
+                            <strong class="d-block mb-1">Terjadi Kesalahan!</strong>
+                            <ul class="mb-0 ps-3">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                            <button type="button" class="btn-close text-lg py-2 opacity-10" data-bs-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    @endif
+
+                    <div class="card my-4 shadow-xs border">
+                        {{-- HEADER UTAMA (Gaya Banner) --}}
+                        <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+                            <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 overflow-hidden position-relative">
+                                <div class="position-absolute top-0 end-0 opacity-1 pe-3 pt-3">
+                                    <i class="fas fa-file-signature text-white" style="font-size: 8rem;"></i>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center position-relative z-index-1 px-3">
+                                    <div>
+                                        <h6 class="text-white text-capitalize mb-0">
+                                            <i class="fas fa-edit me-2"></i> {{ isset($uji) ? 'Edit Asesmen & Soal SBA' : 'Buat Asesmen & Soal Baru' }}
+                                        </h6>
+                                        <p class="text-white text-xs opacity-8 mb-0 ms-4 ps-1">
+                                            Pengaturan informasi dasar asesmen dan penyusunan butir soal.
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <a href="{{ route('sba.index') }}" class="btn btn-white text-primary btn-sm mb-0 shadow-sm px-3">
+                                            <i class="fas fa-arrow-left me-1"></i> Kembali
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body px-4 py-3">
+                            {{-- SECTION 1: PENGATURAN ASESMEN --}}
+                            <h6 class="mb-3 text-primary border-bottom pb-2 text-sm"><i class="fas fa-cog me-1"></i> Bagian 1: Pengaturan Asesmen</h6>
+                            
+                            {{-- INFORMASI AUTHOR / PEMBUAT ASESMEN --}}
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <div class="p-2 px-3 bg-light border rounded d-flex align-items-center">
+                                        <i class="fas fa-user-circle text-primary me-2 text-lg"></i>
+                                        <span class="text-xs text-secondary me-2">Pembuat Asesmen (Author):</span>
+                                        <strong class="text-xs text-dark">
+                                            {{ isset($uji) && $uji->author ? $uji->author->name : (auth()->user()->name ?? 'Administrator') }}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                {{-- KOLOM KIRI: Informasi Dasar --}}
+                                <div class="col-md-7 pe-md-4">
+                                    <div class="form-group mb-2">
+                                        <label for="judul" class="form-control-label text-xs mb-1">Judul Asesmen <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm border px-2 py-1" id="judul" name="judul" 
+                                               value="{{ old('judul', $uji->judul ?? '') }}" 
+                                               placeholder="Contoh: Penilaian Tengah Semester - Matematika" required>
+                                    </div>
+
+                                    <div class="form-group mb-2">
+                                        <label for="kode_uji" class="form-control-label text-xs mb-1">Kode Asesmen <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm border px-2 py-1 text-uppercase" id="kode_uji" name="kode_uji" 
+                                               value="{{ old('kode_uji', $uji->kode_uji ?? strtoupper(Str::random(6))) }}" 
+                                               placeholder="Contoh: MAT01" required maxlength="20">
+                                    </div>
+
+                                    <div class="form-group mb-0">
+                                        <label for="deskripsi" class="form-control-label text-xs mb-1">Deskripsi / Petunjuk</label>
+                                        <textarea class="form-control form-control-sm border px-2 py-1" id="deskripsi" name="deskripsi" rows="3" 
+                                                  placeholder="Masukkan petunjuk pengerjaan (opsional)...">{{ old('deskripsi', $uji->deskripsi ?? '') }}</textarea>
+                                    </div>
+                                </div>
+
+                                {{-- KOLOM KANAN: Pengaturan Waktu & Sistem --}}
+                                <div class="col-md-5">
+                                    <div class="row">
+                                        <div class="col-md-6 form-group mb-2">
+                                            <label for="waktu_mulai" class="form-control-label text-xs mb-1">Waktu Mulai</label>
+                                            <input type="datetime-local" class="form-control form-control-sm border px-2 py-1" id="waktu_mulai" name="waktu_mulai" 
+                                                   value="{{ old('waktu_mulai', isset($uji) && $uji->waktu_mulai ? $uji->waktu_mulai->format('Y-m-d\TH:i') : '') }}">
+                                        </div>
+                                        <div class="col-md-6 form-group mb-2">
+                                            <label for="waktu_selesai" class="form-control-label text-xs mb-1">Waktu Selesai</label>
+                                            <input type="datetime-local" class="form-control form-control-sm border px-2 py-1" id="waktu_selesai" name="waktu_selesai" 
+                                                   value="{{ old('waktu_selesai', isset($uji) && $uji->waktu_selesai ? $uji->waktu_selesai->format('Y-m-d\TH:i') : '') }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 form-group mb-2">
+                                            <label for="durasi_menit" class="form-control-label text-xs mb-1">Durasi (Menit)</label>
+                                            <input type="number" class="form-control form-control-sm border px-2 py-1" id="durasi_menit" name="durasi_menit" 
+                                                   value="{{ old('durasi_menit', $uji->durasi_menit ?? '') }}" min="0" placeholder="0 = Tanpa Batas">
+                                            <small class="text-xxs text-secondary">0 = Tanpa batas</small>
+                                        </div>
+                                        <div class="col-md-6 form-group mb-2">
+                                            <label for="status" class="form-control-label text-xs mb-1">Status</label>
+                                            <select class="form-select form-select-sm border px-2 py-1" id="status" name="status">
+                                                <option value="draft" {{ old('status', $uji->status ?? 'draft') == 'draft' ? 'selected' : '' }}>Draft (Sembunyi)</option>
+                                                <option value="published" {{ old('status', $uji->status ?? '') == 'published' ? 'selected' : '' }}>Published (Aktif)</option>
+                                                <option value="closed" {{ old('status', $uji->status ?? '') == 'closed' ? 'selected' : '' }}>Closed (Tutup)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {{-- PENGATURAN KEAMANAN --}}
+                                    <div class="row border-top pt-2 mt-1">
+                                        <div class="col-md-6 form-group mb-2">
+                                            <label for="toleransi_pelanggaran" class="form-control-label text-xs mb-1">Toleransi Pelanggaran</label>
+                                            <input type="number" class="form-control form-control-sm border px-2 py-1" id="toleransi_pelanggaran" name="toleransi_pelanggaran" 
+                                                   value="{{ old('toleransi_pelanggaran', $uji->toleransi_pelanggaran ?? 3) }}" min="0" required>
+                                            <small class="text-xxs text-secondary">Batas minimize/pindah tab</small>
+                                        </div>
+                                        <div class="col-md-6 form-group mb-2">
+                                            <label for="maksimal_percobaan" class="form-control-label text-xs mb-1">Maks. Percobaan</label>
+                                            <input type="number" class="form-control form-control-sm border px-2 py-1" id="maksimal_percobaan" name="maksimal_percobaan" 
+                                                   value="{{ old('maksimal_percobaan', $uji->maksimal_percobaan ?? 1) }}" min="1" required>
+                                            <small class="text-xxs text-secondary">Batas partisipasi per user</small>
+                                        </div>
+                                    </div>
+
+                                    {{-- OPTION SWITCHES --}}
+                                    <div class="row mt-2">
+                                        <div class="col-12 d-flex flex-wrap gap-3">
+                                            <div class="form-check form-switch ps-0">
+                                                <input class="form-check-input ms-0" type="checkbox" id="acak_soal" name="acak_soal" value="1" 
+                                                       {{ old('acak_soal', $uji->acak_soal ?? true) ? 'checked' : '' }}>
+                                                <label class="form-check-label text-xs ms-2 mb-0" for="acak_soal">Acak Soal</label>
+                                            </div>
+                                            <div class="form-check form-switch ps-0">
+                                                <input class="form-check-input ms-0" type="checkbox" id="tampilkan_nilai" name="tampilkan_nilai" value="1" 
+                                                       {{ old('tampilkan_nilai', $uji->tampilkan_nilai ?? false) ? 'checked' : '' }}>
+                                                <label class="form-check-label text-xs ms-2 mb-0" for="tampilkan_nilai">Tampilkan Nilai</label>
+                                            </div>
+                                            <div class="form-check form-switch ps-0">
+                                                <input class="form-check-input ms-0" type="checkbox" id="buka_untuk_umum" name="buka_untuk_umum" value="1" 
+                                                       {{ old('buka_untuk_umum', $uji->buka_untuk_umum ?? false) ? 'checked' : '' }}>
+                                                <label class="form-check-label text-xs ms-2 mb-0" for="buka_untuk_umum">Buka untuk Umum</label>
+                                            </div>
+                                            <div class="form-check form-switch ps-0">
+                                                <input class="form-check-input ms-0" type="checkbox" id="ulangi_jika_gagal" name="ulangi_jika_gagal" value="1" 
+                                                       {{ old('ulangi_jika_gagal', $uji->ulangi_jika_gagal ?? false) ? 'checked' : '' }}>
+                                                <label class="form-check-label text-xs ms-2 mb-0" for="ulangi_jika_gagal">Ulangi Jika Gagal</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- INFORMASI TOTAL DAN AUTO ADJUST --}}
+                            <div class="row mb-3 mt-2">
+                                <div class="col-12">
+                                    <div class="p-3 bg-gray-50 border rounded d-flex flex-column flex-md-row justify-content-between align-items-center shadow-sm">
+                                        <div class="mb-2 mb-md-0">
+                                            <span class="text-sm fw-bold text-dark"><i class="fas fa-chart-pie me-1"></i> Rekap Soal:</span>
+                                            <span class="ms-3 text-sm text-secondary">Total Soal: <strong id="summary-total-soal" class="text-primary text-lg">0</strong></span>
+                                            <span class="ms-3 text-sm text-secondary">Total Poin: <strong id="summary-total-poin" class="text-info text-lg">0</strong> <span id="poin-warning" class="text-danger text-xs d-none">(Melebihi 100!)</span></span>
+                                        </div>
+                                        <button type="button" class="btn btn-sm bg-gradient-info mb-0 shadow-sm" id="btn-sesuaikan-poin" title="Bagikan bobot poin secara merata dengan total 100">
+                                            <i class="fas fa-magic me-1"></i> Sesuaikan Poin (Otomatis)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- SECTION 2: PENYUSUNAN SOAL --}}
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mt-4 mb-3">
+                                <h6 class="mb-0 text-info text-sm"><i class="fas fa-list-ol me-1"></i> Bagian 2: Daftar Soal</h6>
+                                <span class="text-xs text-secondary"><i class="fas fa-info-circle"></i> Tahan & geser icon grid atau gunakan tombol panah untuk memindah posisi.</span>
+                            </div>
+                            
+                            <div class="bg-gray-50 rounded p-2 border" id="soal-container" style="min-height: 200px;">
+                                {{-- Container untuk list soal dinamis --}}
+                            </div>
+                            
+                            <div class="text-center mt-3 mb-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm mb-0 px-4 shadow-sm" onclick="addSoal(null, 'end')">
+                                    <i class="fas fa-plus me-1"></i> Tambah Soal Baru di Akhir
+                                </button>
+                            </div>
+
+                        </div>
+
+                        {{-- TOMBOL SUBMIT UTAMA --}}
+                        <div class="card-footer bg-light border-top text-end py-3 px-4">
+                            <a href="{{ route('sba.index') }}" class="btn btn-outline-secondary btn-sm mb-0 me-2">Batal</a>
+                            <button type="submit" class="btn bg-gradient-primary btn-sm mb-0 shadow-sm">
+                                <i class="fas fa-save me-1"></i> {{ isset($uji) ? 'Simpan Perubahan' : 'Simpan Asesmen' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <x-app.footer />
+</main>
+
+{{-- TEMPLATE SOAL (Hidden) --}}
+<template id="soal-template">
+    <div class="soal-item card mb-3 shadow-none border border-light" draggable="false" style="transition: transform 0.2s, border-color 0.2s;">
+        <input type="hidden" class="soal-id" value="">
+        
+        <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+            <div class="cursor-pointer drag-handle px-1 text-secondary d-flex align-items-center" title="Tahan dan geser untuk memindahkan urutan" style="cursor: grab;">
+                <i class="fas fa-grip-vertical me-2"></i>
+                <span class="text-sm font-weight-bold text-dark mb-0">Soal #<span class="soal-number">1</span></span>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <button type="button" class="btn btn-outline-secondary btn-sm mb-0 px-2 py-1 btn-move-up text-xs shadow-sm me-1" title="Geser ke Atas">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm mb-0 px-2 py-1 btn-move-down text-xs shadow-sm me-2" title="Geser ke Bawah">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm mb-0 px-2 py-1 btn-remove-soal text-xs shadow-sm" title="Hapus Soal Ini">
+                    <i class="fas fa-trash-alt me-1"></i> Hapus
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-start">
+                <div class="col-md-3">
+                    <div class="form-group mb-2">
+                        <label class="form-control-label text-xs mb-1">Tipe Soal</label>
+                        <select class="form-select form-select-sm border px-2 py-1 soal-tipe" required>
+                            <option value="pg">Pilihan Ganda</option>
+                            <option value="pg_kompleks">PG Kompleks (Banyak Jawaban)</option>
+                            <option value="esai">Uraian / Isian</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="form-control-label text-xs mb-1">Bobot (Poin)</label>
+                        <input type="number" class="form-control form-control-sm border px-2 py-1 soal-bobot" value="10" min="1" required>
+                    </div>
+                </div>
+                
+                <div class="col-md-9">
+                    <div class="form-group mb-2">
+                        <label class="form-control-label text-xs mb-1">Pertanyaan <span class="text-danger">*</span></label>
+                        <textarea class="form-control form-control-sm border px-2 py-1 soal-pertanyaan" rows="4" placeholder="Ketikkan teks pertanyaan di sini..." required style="resize: vertical; min-height: 90px; max-height: 250px;"></textarea>
+                    </div>
+
+                    {{-- SLOT INPUT GAMBAR SOAL & PREVIEW --}}
+                    <div class="form-group mb-0 border-top pt-2 mt-2">
+                        <label class="form-control-label text-xs mb-1 text-dark">
+                            <i class="fas fa-image me-1 text-primary"></i> Lampiran Gambar Soal (Opsional)
+                        </label>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="file" class="form-control form-control-sm border px-2 py-1 soal-media" accept="image/*">
+                            <input type="hidden" class="soal-remove-media" value="0">
+                        </div>
+                        <small class="text-xxs text-secondary d-block mt-1">*Format: JPG, JPEG, PNG, WEBP (Maksimal 2MB)</small>
+
+                        {{-- PREVIEW CONTAINER --}}
+                        <div class="media-preview-container mt-2 position-relative d-none" style="max-width: 250px;">
+                            <img src="" class="img-thumbnail rounded media-preview-img shadow-xs" style="max-height: 140px; width: auto;" alt="Preview Soal">
+                            <button type="button" class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 px-2 py-1 btn-delete-media" title="Hapus Gambar Ini">
+                                <i class="fas fa-times me-1"></i> Hapus Gambar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Container Opsi Jawaban --}}
+            <div class="opsi-wrapper border-top pt-3 mt-3">
+                <label class="form-control-label text-xs mb-2 text-primary d-block">
+                    <i class="fas fa-check-circle me-1"></i> Pilihan Jawaban & Kunci 
+                    <span class="text-secondary fw-normal ms-1">(Klik bulatan "KUNCI" untuk menandai jawaban yang benar)</span>
+                </label>
+                
+                <div class="opsi-container row gx-2">
+                    @foreach(['A', 'B', 'C', 'D', 'E'] as $index => $huruf)
+                    <div class="col-md-12 mb-2 opsi-item d-flex align-items-stretch">
+                        
+                        <div class="bg-light border border-secondary rounded-start d-flex flex-column align-items-center justify-content-center px-2 py-1" style="min-width: 60px;">
+                            <small class="text-xxs font-weight-bolder text-secondary mb-1" style="line-height: 1;">KUNCI</small>
+                            <input type="radio" class="form-check-input kunci-radio border-secondary m-0 bg-white" value="{{ $index }}" style="width: 1.25rem; height: 1.25rem; cursor:pointer;" title="Jadikan Jawaban Benar">
+                            <input type="checkbox" class="form-check-input kunci-checkbox border-secondary m-0 bg-white d-none" value="{{ $index }}" style="width: 1.25rem; height: 1.25rem; cursor:pointer;" title="Jadikan Jawaban Benar">
+                        </div>
+                        
+                        <div class="bg-secondary text-white border-top border-bottom border-secondary d-flex align-items-center px-3 font-weight-bold">
+                            {{ $huruf }}
+                        </div>
+
+                        <textarea class="form-control form-control-sm border border-secondary rounded-0 rounded-end px-2 py-1 opsi-teks flex-grow-1" rows="1" placeholder="Masukkan teks untuk opsi {{ $huruf }}..." style="resize:vertical;"></textarea>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer bg-light py-1 text-center border-top">
+            <button type="button" class="btn btn-sm btn-link text-primary mb-0 shadow-none btn-insert-soal text-xs py-1">
+                <i class="fas fa-plus-circle me-1"></i> Sisipkan Soal Baru di Bawah Ini
+            </button>
+        </div>
+    </div>
+</template>
+
+<style>
+    .soal-item.dragging {
+        opacity: 0.5;
+        border: 2px dashed #0b57d0 !important;
+        transform: scale(0.99);
+    }
+    .soal-item.drag-over {
+        border-top: 3px solid #0b57d0 !important;
+        margin-top: 0.5rem;
+    }
+    .kunci-radio:checked, .kunci-checkbox:checked {
+        background-color: #17ad37;
+        border-color: #17ad37;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    /* ========================================================================
+     * MANAJEMEN SOAL DINAMIS, DRAG-AND-DROP & UPLOAD MEDIA
+     * ======================================================================== */
+    const container = document.getElementById('soal-container');
+    const template = document.getElementById('soal-template');
+    let draggedItem = null;
+
+    const existingSoals = @json(isset($uji) ? $uji->soals : []);
+    
+    if (existingSoals.length > 0) {
+        existingSoals.forEach(soal => addSoal(null, 'end', soal));
+    } else {
+        addSoal(); 
+    }
+
+    function addSoal(referenceElement = null, position = 'after', data = null) {
+        const clone = template.content.cloneNode(true);
+        const soalItem = clone.querySelector('.soal-item');
+        
+        setupSoalEvents(soalItem);
+
+        if (data) {
+            if(data.id) {
+                soalItem.querySelector('.soal-id').value = data.id;
+            }
+            soalItem.querySelector('.soal-tipe').value = data.tipe;
+            soalItem.querySelector('.soal-bobot').value = data.bobot_nilai || 10;
+            soalItem.querySelector('.soal-pertanyaan').value = data.pertanyaan;
+            
+            // Tampilkan Gambar Lama dari Server jika Ada
+            if (data.media) {
+                const previewContainer = soalItem.querySelector('.media-preview-container');
+                const previewImg = soalItem.querySelector('.media-preview-img');
+                previewImg.src = `{{ asset('storage') }}/${data.media}`;
+                previewContainer.classList.remove('d-none');
+            }
+
+            if (['pg', 'pg_kompleks'].includes(data.tipe)) {
+                const opsiTexts = soalItem.querySelectorAll('.opsi-teks');
+                const kunciRadios = soalItem.querySelectorAll('.kunci-radio');
+                const kunciCheckboxes = soalItem.querySelectorAll('.kunci-checkbox');
+                
+                let opsiData = data.opsi_jawaban || [];
+                let kunciData = data.kunci_jawaban || [];
+                
+                opsiTexts.forEach((ta, i) => { if (opsiData[i]) ta.value = opsiData[i]; });
+                
+                if (data.tipe === 'pg') {
+                    kunciRadios.forEach((r, i) => {
+                        if (kunciData.includes(String(i)) || kunciData.includes(i)) r.checked = true;
+                    });
+                } else {
+                    kunciCheckboxes.forEach((c, i) => {
+                        if (kunciData.includes(String(i)) || kunciData.includes(i)) c.checked = true;
+                    });
+                }
+            }
+        }
+
+        toggleOpsiVisibility(soalItem);
+
+        if (referenceElement) {
+            if (position === 'after') referenceElement.after(soalItem);
+            else referenceElement.before(soalItem);
+        } else {
+            container.appendChild(soalItem);
+        }
+        
+        updateSoalNames();
+        
+        if(!data && referenceElement) {
+            soalItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        updateSummary();
+    }
+
+    window.addSoal = addSoal;
+
+    function setupSoalEvents(item) {
+        // EVENT HAPUS BUTIR SOAL
+        item.querySelector('.btn-remove-soal').addEventListener('click', function() {
+            if (document.querySelectorAll('.soal-item').length > 1) {
+                const soalId = item.querySelector('.soal-id').value;
+                if(soalId) {
+                    // Opsional hapus via AJAX jika butir soal sudah tersimpan di database
+                    fetch(`{{ url('admin/sba/soal') }}/${soalId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+                item.remove();
+                updateSoalNames();
+                updateSummary();
+            } else {
+                console.log('Minimal harus ada 1 soal dalam asesmen.');
+            }
+        });
+
+        // EVENT MEDIA PREVIEW & HAPUS GAMBAR
+        const fileInput = item.querySelector('.soal-media');
+        const previewContainer = item.querySelector('.media-preview-container');
+        const previewImg = item.querySelector('.media-preview-img');
+        const removeMediaInput = item.querySelector('.soal-remove-media');
+        const btnDeleteMedia = item.querySelector('.btn-delete-media');
+
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewContainer.classList.remove('d-none');
+                    removeMediaInput.value = "0";
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        btnDeleteMedia.addEventListener('click', function() {
+            fileInput.value = "";
+            previewImg.src = "";
+            previewContainer.classList.add('d-none');
+            removeMediaInput.value = "1";
+        });
+
+        // EVENT POSITION SWAP
+        item.querySelector('.btn-move-up').addEventListener('click', function() {
+            const prev = item.previousElementSibling;
+            if (prev && prev.classList.contains('soal-item')) {
+                container.insertBefore(item, prev);
+                updateSoalNames();
+                item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+
+        item.querySelector('.btn-move-down').addEventListener('click', function() {
+            const next = item.nextElementSibling;
+            if (next && next.classList.contains('soal-item')) {
+                container.insertBefore(next, item);
+                updateSoalNames();
+                item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+
+        item.querySelector('.btn-insert-soal').addEventListener('click', function() {
+            addSoal(item, 'after');
+        });
+
+        item.querySelector('.soal-tipe').addEventListener('change', function() {
+            toggleOpsiVisibility(item);
+        });
+
+        item.querySelector('.soal-bobot').addEventListener('input', updateSummary);
+
+        // DRAG & DROP EVENTS
+        const handle = item.querySelector('.drag-handle');
+        handle.addEventListener('mousedown', () => item.setAttribute('draggable', 'true'));
+        handle.addEventListener('mouseup', () => item.setAttribute('draggable', 'false'));
+        handle.addEventListener('mouseleave', () => item.setAttribute('draggable', 'false'));
+
+        item.addEventListener('dragstart', function(e) {
+            draggedItem = item;
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => item.classList.add('dragging'), 0);
+        });
+
+        item.addEventListener('dragend', function() {
+            draggedItem.classList.remove('dragging');
+            draggedItem = null;
+            item.setAttribute('draggable', 'false');
+            document.querySelectorAll('.soal-item').forEach(el => el.classList.remove('drag-over'));
+            updateSoalNames(); 
+        });
+
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if(draggedItem !== item) {
+                item.classList.add('drag-over');
+            }
+            const afterElement = getDragAfterElement(container, e.clientY);
+            if (afterElement == null) {
+                container.appendChild(draggedItem);
+            } else {
+                container.insertBefore(draggedItem, afterElement);
+            }
+        });
+
+        item.addEventListener('dragleave', function() {
+            item.classList.remove('drag-over');
+        });
+    }
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.soal-item:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function toggleOpsiVisibility(item) {
+        const tipe = item.querySelector('.soal-tipe').value;
+        const opsiWrapper = item.querySelector('.opsi-wrapper');
+        const radios = item.querySelectorAll('.kunci-radio');
+        const checkboxes = item.querySelectorAll('.kunci-checkbox');
+        const opsiTexts = item.querySelectorAll('.opsi-teks');
+
+        if (tipe === 'esai') {
+            opsiWrapper.classList.add('d-none');
+            opsiTexts.forEach(el => el.removeAttribute('required'));
+            radios.forEach(el => el.removeAttribute('required'));
+            checkboxes.forEach(el => el.removeAttribute('required'));
+        } else {
+            opsiWrapper.classList.remove('d-none');
+            opsiTexts.forEach((el, index) => {
+                if(index < 2) el.setAttribute('required', 'true');
+            });
+
+            if (tipe === 'pg') {
+                radios.forEach(el => { el.classList.remove('d-none'); el.setAttribute('required', 'true'); });
+                checkboxes.forEach(el => { el.classList.add('d-none'); el.removeAttribute('required'); });
+                checkboxes.forEach(el => el.checked = false); 
+            } else if (tipe === 'pg_kompleks') {
+                checkboxes.forEach(el => { el.classList.remove('d-none'); }); 
+                radios.forEach(el => { el.classList.add('d-none'); el.removeAttribute('required'); });
+                radios.forEach(el => el.checked = false);
+            }
+        }
+        updateSoalNames();
+    }
+
+    function updateSoalNames() {
+        document.querySelectorAll('.soal-item').forEach((item, index) => {
+            item.querySelector('.soal-number').innerText = index + 1;
+            
+            const soalIdEl = item.querySelector('.soal-id');
+            if(soalIdEl) soalIdEl.name = `soals[${index}][id]`;
+
+            item.querySelector('.soal-tipe').name = `soals[${index}][tipe]`;
+            item.querySelector('.soal-bobot').name = `soals[${index}][bobot_nilai]`;
+            item.querySelector('.soal-pertanyaan').name = `soals[${index}][pertanyaan]`;
+            
+            // Penamaan Atribut Media & Remove Media
+            item.querySelector('.soal-media').name = `soals[${index}][media]`;
+            item.querySelector('.soal-remove-media').name = `soals[${index}][remove_media]`;
+            
+            item.querySelectorAll('.opsi-teks').forEach(el => el.name = `soals[${index}][opsi_jawaban][]`);
+            item.querySelectorAll('.kunci-radio').forEach(el => el.name = `soals[${index}][kunci_jawaban][]`);
+            item.querySelectorAll('.kunci-checkbox').forEach(el => el.name = `soals[${index}][kunci_jawaban][]`);
+        });
+    }
+
+    function updateSummary() {
+        const bobotInputs = document.querySelectorAll('.soal-bobot');
+        let totalPoin = 0;
+        bobotInputs.forEach(input => {
+            totalPoin += parseInt(input.value) || 0;
+        });
+        document.getElementById('summary-total-soal').innerText = bobotInputs.length;
+        
+        const poinEl = document.getElementById('summary-total-poin');
+        const warningEl = document.getElementById('poin-warning');
+        
+        poinEl.innerText = totalPoin;
+        
+        if (totalPoin > 100) {
+            poinEl.classList.remove('text-info', 'text-success');
+            poinEl.classList.add('text-danger');
+            warningEl.classList.remove('d-none');
+        } else if (totalPoin === 100) {
+            poinEl.classList.remove('text-info', 'text-danger');
+            poinEl.classList.add('text-success');
+            warningEl.classList.add('d-none');
+        } else {
+            poinEl.classList.remove('text-success', 'text-danger');
+            poinEl.classList.add('text-info');
+            warningEl.classList.add('d-none');
+        }
+    }
+
+    document.getElementById('btn-sesuaikan-poin').addEventListener('click', function() {
+        const bobotInputs = document.querySelectorAll('.soal-bobot');
+        const n = bobotInputs.length;
+        if (n === 0) return;
+        
+        const basePoin = Math.floor(100 / n);
+        const remainder = 100 % n;
+        
+        bobotInputs.forEach((input, index) => {
+            if (index === n - 1) {
+                input.value = basePoin + remainder;
+            } else {
+                input.value = basePoin;
+            }
+        });
+        
+        updateSummary();
+        
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-check me-1"></i> Berhasil Disesuaikan';
+        this.classList.replace('bg-gradient-info', 'bg-gradient-success');
+        setTimeout(() => {
+            this.innerHTML = originalText;
+            this.classList.replace('bg-gradient-success', 'bg-gradient-info');
+        }, 2000);
+    });
+
+    updateSummary();
+});
+</script>
+@endsection
