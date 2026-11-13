@@ -105,7 +105,7 @@ class SbaUjiController extends Controller
             'sba_kode_uji' => $kodeUji
         ]);
 
-        // LANGSUNG DIALAHKAN KE HALAMAN UJIAN (1 VIEW)
+        // LANGSUNG DIALIHKAN KE HALAMAN UJIAN (1 VIEW)
         return redirect()->route('sba.uji.halaman', ['kode_uji' => $kodeUji]);
     }
 
@@ -118,9 +118,10 @@ class SbaUjiController extends Controller
         $kodeUji = strtoupper(trim($kode_uji));
         $uji = Uji::with('soals')->where('kode_uji', $kodeUji)->firstOrFail();
 
-        // Keamanan Lapis 1: Cek Sesi Portal
-        if (!session()->has('sba_mode') || session('sba_kode_uji') !== $kodeUji) {
-            return redirect()->route('sba.portal')->with('error', 'Akses ditolak! Silakan masuk melalui portal.');
+        // Cek apakah peserta belum masuk portal ATAU kode ujian di sesi berbeda dengan URL yang diakses
+        if ((!session()->has('sba_peserta_id') && !session()->has('sba_peserta_nama')) || session('sba_kode_uji') !== $kodeUji) {
+            return redirect()->route('sba.portal', ['kode' => $kodeUji])
+                ->with('warning', 'Silakan masukkan data diri untuk memulai ujian.');
         }
 
         $asesiId = session('sba_peserta_id');

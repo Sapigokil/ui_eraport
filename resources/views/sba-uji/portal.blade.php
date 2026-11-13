@@ -36,7 +36,6 @@
             overflow: hidden;
         }
         .portal-header {
-            /* Diubah menjadi gradasi Ungu */
             background: linear-gradient(135deg, #6f42c1 0%, #512da8 100%);
             padding: 25px 20px;
             text-align: center;
@@ -54,19 +53,16 @@
             border-color: #dee2e6;
         }
         .input-group:focus-within {
-            /* Efek shadow focus ungu transparan */
             box-shadow: 0 0 0 0.25rem rgba(111, 66, 193, 0.25);
             border-radius: 0.375rem;
         }
         .btn-primary-custom {
-            /* Warna tombol utama ungu */
             background-color: #6f42c1;
             border-color: #6f42c1;
             font-weight: bold;
             padding: 12px;
         }
         .btn-primary-custom:hover {
-            /* Warna tombol saat di-hover (ungu lebih gelap) */
             background-color: #59359a;
             border-color: #59359a;
         }
@@ -75,9 +71,13 @@
             font-size: 1.5rem; 
             font-weight: bold;
             text-align: center;
-            /* Border input kode ujian ungu */
             border: 2px solid #6f42c1;
             padding: 15px;
+        }
+        .kode-input[readonly] {
+            background-color: #f3efff;
+            color: #512da8;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -100,6 +100,12 @@
                     </div>
                 @endif
 
+                @if(session('warning'))
+                    <div class="alert alert-warning text-center py-2 shadow-sm text-sm" role="alert">
+                        <i class="fas fa-info-circle me-1"></i> {{ session('warning') }}
+                    </div>
+                @endif
+
                 <!-- Form action mengarah ke route sba.portal.process -->
                 <form action="{{ route('sba.portal.process') }}" method="POST">
                     @csrf
@@ -110,13 +116,13 @@
                             <span class="input-group-text text-secondary border-secondary-subtle">
                                 <i id="iconIdentitas" class="fas fa-id-badge"></i>
                             </span>
-                            <input type="text" id="inputIdentitas" name="nisn" class="form-control border-secondary-subtle" placeholder="Masukkan NISN Anda" required>
+                            <input type="text" id="inputIdentitas" name="nisn" value="{{ old('nisn', old('nama_lengkap')) }}" class="form-control border-secondary-subtle" placeholder="Masukkan NISN Anda" required>
                         </div>
                     </div>
 
                     <!-- Checkbox Jalur Umum -->
                     <div class="form-check form-switch mb-4">
-                        <input class="form-check-input" type="checkbox" id="checkPublic" name="is_public" value="1" style="cursor: pointer;">
+                        <input class="form-check-input" type="checkbox" id="checkPublic" name="is_public" value="1" style="cursor: pointer;" {{ old('is_public') ? 'checked' : '' }}>
                         <label class="form-check-label text-muted small ms-1" for="checkPublic" style="cursor: pointer;">
                             Bukan siswa? Gunakan akun public
                         </label>
@@ -125,7 +131,14 @@
                     <!-- INPUT KODE UJIAN -->
                     <div class="mb-4 text-center">
                         <label class="form-label fw-bold text-dark small mb-2">Kode Asesmen</label>
-                        <input type="text" name="kode_uji" class="form-control kode-input text-uppercase shadow-sm" placeholder="KODE" required>
+                        <input type="text" 
+                               id="inputKodeUji"
+                               name="kode_uji" 
+                               class="form-control kode-input text-uppercase shadow-sm" 
+                               placeholder="KODE" 
+                               value="{{ old('kode_uji', request('kode')) }}"
+                               {{ request()->filled('kode') ? 'readonly' : '' }}
+                               required>
                     </div>
 
                     <button type="submit" class="btn btn-primary-custom text-white w-100 shadow-sm rounded-3 mb-2">
@@ -142,23 +155,35 @@
             const labelIdentitas = document.getElementById('labelIdentitas');
             const inputIdentitas = document.getElementById('inputIdentitas');
             const iconIdentitas = document.getElementById('iconIdentitas');
+            const inputKodeUji = document.getElementById('inputKodeUji');
 
-            if(checkPublic) {
+            function updateIdentitasMode(isPublic) {
+                if (isPublic) {
+                    labelIdentitas.innerText = 'Nama Lengkap';
+                    inputIdentitas.name = 'nama_lengkap';
+                    inputIdentitas.placeholder = 'Masukkan Nama Lengkap Anda';
+                    iconIdentitas.className = 'fas fa-user';
+                } else {
+                    labelIdentitas.innerText = 'Nomor Induk Siswa Nasional (NISN)';
+                    inputIdentitas.name = 'nisn';
+                    inputIdentitas.placeholder = 'Masukkan NISN Anda';
+                    iconIdentitas.className = 'fas fa-id-badge';
+                }
+            }
+
+            if (checkPublic) {
+                // Jalankan saat load jika ada old('is_public') dari validasi gagal
+                updateIdentitasMode(checkPublic.checked);
+
                 checkPublic.addEventListener('change', function() {
-                    if(this.checked) {
-                        labelIdentitas.innerText = 'Nama Lengkap';
-                        inputIdentitas.name = 'nama_lengkap';
-                        inputIdentitas.placeholder = 'Masukkan Nama Lengkap Anda';
-                        inputIdentitas.type = 'text';
-                        iconIdentitas.className = 'fas fa-user';
-                    } else {
-                        labelIdentitas.innerText = 'Nomor Induk Siswa Nasional (NISN)';
-                        inputIdentitas.name = 'nisn';
-                        inputIdentitas.placeholder = 'Masukkan NISN Anda';
-                        inputIdentitas.type = 'text';
-                        iconIdentitas.className = 'fas fa-id-badge';
-                    }
+                    updateIdentitasMode(this.checked);
+                    inputIdentitas.focus();
                 });
+            }
+
+            // Auto-focus langsung ke input NISN jika kode asesmen sudah terisi otomatis dari URL
+            if (inputKodeUji && inputKodeUji.value.trim() !== '' && inputIdentitas) {
+                inputIdentitas.focus();
             }
         });
     </script>
