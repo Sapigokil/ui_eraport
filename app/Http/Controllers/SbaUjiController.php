@@ -93,7 +93,7 @@ class SbaUjiController extends Controller
 
             $pernahGagal = $riwayat->where('status_pengerjaan', 'gagal_pelanggaran')->first();
             if ($pernahGagal && !$uji->ulangi_jika_gagal) {
-                return back()->with('error', 'Anda pernah didiskualifikasi karena pelanggaran dan tidak diizinkan mengulang ujian ini.');
+                return back()->with('error', 'Anda pernah didiskualifikasi karena pelanggaran dan silahkan menghubungi pengawas uji.');
             }
         }
 
@@ -156,10 +156,15 @@ class SbaUjiController extends Controller
         // Simpan ID Hasil ke sesi
         session(['sba_hasil_id' => $hasil->id]);
 
+        // Ambil jawaban yang sudah tersimpan sebelumnya (untuk sesi lanjutan / refresh)
+        $jawabanTersimpan = UjiJawaban::where('uji_hasil_id', $hasil->id)
+            ->get()
+            ->keyBy('uji_soal_id');
+
         // Acak Soal jika diaktifkan
         $soals = $uji->acak_soal ? $uji->soals->shuffle() : $uji->soals;
 
-        return view('sba-uji.uji', compact('uji', 'namaPeserta', 'hasil', 'soals'));
+        return view('sba-uji.uji', compact('uji', 'namaPeserta', 'hasil', 'soals', 'jawabanTersimpan'));
     }
 
     // ======================================================================
@@ -197,13 +202,53 @@ class SbaUjiController extends Controller
         return response()->json(['status' => 'success', 'message' => 'Jawaban tersimpan']);
     }
 
+    /**
+     * Helper Private: Hitung Skor Otomatis PG & PG Kompleks dari Jawaban yang Sudah Masuk
+     */
+    private function hitungSkorOtomatis(Uji $uji, UjiHasil $hasil)
+    {
+        $hasil->loadMissing('jawabans');
+        $totalSkorOtomatis = 0;
+        $mapSoal = $uji->soals->keyBy('id');
+
+        foreach ($hasil->jawabans as $jawabanSiswa) {
+            $soal = $mapSoal->get($jawabanSiswa->uji_soal_id);
+            if (!$soal) continue;
+
+            if (in_array($soal->tipe, ['pg', 'pg_kompleks'])) {
+                $kunciArray = $soal->kunci_jawaban ?? [];
+                $jawabanSiswaRaw = $jawabanSiswa->jawaban;
+                $skorItem = 0;
+
+                if ($soal->tipe === 'pg_kompleks') {
+                    $jawabanSiswaArray = json_decode($jawabanSiswaRaw, true) ?? [];
+                    sort($kunciArray);
+                    sort($jawabanSiswaArray);
+
+                    if ($kunciArray == $jawabanSiswaArray) {
+                        $skorItem = $soal->bobot_nilai;
+                    }
+                } else {
+                    if (in_array($jawabanSiswaRaw, $kunciArray)) {
+                        $skorItem = $soal->bobot_nilai;
+                    }
+                }
+
+                $totalSkorOtomatis += $skorItem;
+                $jawabanSiswa->update(['skor_didapat' => $skorItem]);
+            }
+        }
+
+        return $totalSkorOtomatis;
+    }
+
     // ======================================================================
-    // 4. AJAX: CATAT PELANGGARAN
+    // 4. AJAX: CATAT PELANGGARAN (Tetap Hitung Skor yang Sudah Dikerjakan)
     // ======================================================================
     public function catatPelanggaran(Request $request, $kode_uji)
     {
         $hasilId = session('sba_hasil_id');
-        $uji = Uji::where('kode_uji', strtoupper($kode_uji))->firstOrFail();
+        $uji = Uji::with('soals')->where('kode_uji', strtoupper($kode_uji))->firstOrFail();
 
         // Jika mode Open Book aktif, abaikan seluruh pencatatan pelanggaran
         if ($uji->open_book) {
@@ -226,16 +271,21 @@ class SbaUjiController extends Controller
         $hasil->update(['catatan_pelanggaran' => $catatan]);
 
         if ($pelanggaranSekarang >= $uji->toleransi_pelanggaran) {
+            // Tetap hitung skor dari jawaban yang sudah masuk sebelum terkunci
+            $skorTerkumpul = $this->hitungSkorOtomatis($uji, $hasil);
+
             $hasil->update([
                 'status_pengerjaan' => 'gagal_pelanggaran',
-                'waktu_selesai' => now()
+                'waktu_selesai'     => now(),
+                'skor_otomatis'     => $skorTerkumpul,
+                'total_skor'        => $skorTerkumpul,
             ]);
             
             session()->forget(['sba_hasil_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
 
             return response()->json([
                 'status' => 'gagal',
-                'message' => 'Anda telah melewati batas toleransi pelanggaran. Ujian dinyatakan GAGAL.'
+                'message' => 'Anda telah melewati batas toleransi pelanggaran. Ujian dihentikan otomatis.'
             ]);
         }
 
@@ -259,41 +309,12 @@ class SbaUjiController extends Controller
             return redirect()->route('sba.portal')->with('error', 'Ujian sudah diselesaikan sebelumnya.');
         }
 
-        $totalSkorOtomatis = 0;
-        $mapSoal = $uji->soals->keyBy('id');
-
-        foreach ($hasil->jawabans as $jawabanSiswa) {
-            $soal = $mapSoal->get($jawabanSiswa->uji_soal_id);
-            if (!$soal) continue;
-
-            if (in_array($soal->tipe, ['pg', 'pg_kompleks'])) {
-                $kunciArray = $soal->kunci_jawaban ?? [];
-                $jawabanSiswaRaw = $jawabanSiswa->jawaban;
-
-                if ($soal->tipe === 'pg_kompleks') {
-                    $jawabanSiswaArray = json_decode($jawabanSiswaRaw, true) ?? [];
-                    sort($kunciArray);
-                    sort($jawabanSiswaArray);
-                    
-                    if ($kunciArray == $jawabanSiswaArray) {
-                        $skorItem = $soal->bobot_nilai;
-                        $totalSkorOtomatis += $skorItem;
-                        $jawabanSiswa->update(['skor_didapat' => $skorItem]);
-                    }
-                } else {
-                    if (in_array($jawabanSiswaRaw, $kunciArray)) {
-                        $skorItem = $soal->bobot_nilai;
-                        $totalSkorOtomatis += $skorItem;
-                        $jawabanSiswa->update(['skor_didapat' => $skorItem]);
-                    }
-                }
-            }
-        }
+        $totalSkorOtomatis = $this->hitungSkorOtomatis($uji, $hasil);
 
         $hasil->update([
-            'waktu_selesai' => now(),
-            'skor_otomatis' => $totalSkorOtomatis,
-            'total_skor' => $totalSkorOtomatis,
+            'waktu_selesai'     => now(),
+            'skor_otomatis'     => $totalSkorOtomatis,
+            'total_skor'        => $totalSkorOtomatis,
             'status_pengerjaan' => 'selesai'
         ]);
 
@@ -309,4 +330,6 @@ class SbaUjiController extends Controller
 
         return view('sba-uji.selesai', compact('uji', 'hasil'));
     }
+
+    
 }

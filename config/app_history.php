@@ -11,11 +11,19 @@ return [
     |
     */
 
-    'current_version' => '1.0.26',
+    'current_version' => '1.0.27',
     
-    'last_updated' => '2026-07-31',
+    'last_updated' => '2026-11-14',
 
     'changelog' => [
+        [
+            'version' => '1.0.27',
+            'date'    => '2026-11-14',
+            'notes'   => [
+                'Penambahan Modul Smart Based Assessment (SBA) untuk manajemen bank soal, pembuatan ujian, CBT engine, dan analytics hasil ujian.',
+                'Penyesuaian modul SBA dengan sistem utama untuk integrasi data guru, siswa, dan kelas.',
+                ],
+        ],
         [
             'version' => '1.0.26',
             'date'    => '2026-07-31',

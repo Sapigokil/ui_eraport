@@ -215,6 +215,17 @@
                             </div>
                         </div>
 
+                        @if(isset($jawabanTersimpan) && $jawabanTersimpan->count() > 0)
+                            <div class="alert alert-info border-0 rounded-3 p-3 mb-4 bg-opacity-10" style="background-color: #e3f2fd;">
+                                <div class="d-flex align-items-center text-primary small">
+                                    <i class="fas fa-history fs-5 me-3"></i>
+                                    <div>
+                                        <strong>Melanjutkan Sesi Sebelumnya:</strong> Sebanyak <strong>{{ $jawabanTersimpan->count() }} jawaban</strong> Anda telah dipulihkan otomatis. Sisa waktu mengikuti waktu mulai awal.
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
                         @if($uji->open_book)
                             <h6 class="fw-bold text-success mb-3">
                                 <i class="fas fa-book-open me-2"></i>Mode Asesmen: Open Book
@@ -231,7 +242,7 @@
                             <div class="form-check mb-4 bg-light p-3 rounded border">
                                 <input class="form-check-input ms-1 border-secondary" type="checkbox" id="checkSetuju" style="transform: scale(1.2); cursor: pointer;">
                                 <label class="form-check-label ms-3 text-sm text-dark fw-bold" for="checkSetuju" style="cursor: pointer;">
-                                    Saya memahami petunjuk di atas dan siap memulai ujian.
+                                    Saya memahami petunjuk di atas dan siap memulai/melanjutkan ujian.
                                 </label>
                             </div>
                         @else
@@ -256,7 +267,7 @@
                         @endif
 
                         <button type="button" id="btnMulaiUji" class="btn btn-secondary w-100 py-3 fw-bold rounded-3 shadow-sm text-white" disabled style="transition: all 0.3s ease;">
-                            <i class="fas fa-play-circle me-2"></i> MULAI ASESMEN SEKARANG
+                            <i class="fas fa-play-circle me-2"></i> {{ (isset($jawabanTersimpan) && $jawabanTersimpan->count() > 0) ? 'LANJUTKAN ASESMEN SEKARANG' : 'MULAI ASESMEN SEKARANG' }}
                         </button>
                     </div>
                 </div>
@@ -308,6 +319,13 @@
                     <form id="form-pengerjaan">
                         @csrf
                         @foreach($soals as $index => $soal)
+                            @php
+                                $savedItem = isset($jawabanTersimpan) ? $jawabanTersimpan->get($soal->id) : null;
+                                $savedVal = $savedItem ? $savedItem->jawaban : null;
+                                $isSavedRagu = $savedItem ? (bool) $savedItem->ragu_ragu : false;
+                                $savedArr = ($soal->tipe === 'pg_kompleks' && $savedVal) ? (json_decode($savedVal, true) ?? []) : [];
+                            @endphp
+
                             <div class="card card-custom soal-item-pane mb-4 {{ $index === 0 ? '' : 'd-none' }}" data-index="{{ $index }}" data-soal-id="{{ $soal->id }}">
                                 
                                 <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
@@ -331,13 +349,16 @@
                                         {!! nl2br(e($soal->pertanyaan)) !!}
                                     </div>
 
-                                    {{-- 3. OPSI JAWABAN --}}
+                                    {{-- 3. OPSI JAWABAN (DENGAN PEMULIHAN JAWABAN TERSIMPAN) --}}
                                     <div class="options-container">
                                         @if($soal->tipe === 'pg')
                                             @foreach($soal->opsi_jawaban as $optIndex => $opsiTeks)
                                                 @if(!empty(trim($opsiTeks)))
-                                                    <div class="option-card d-flex align-items-center">
-                                                        <input class="form-check-input d-none radio-jawaban" type="radio" name="jawaban_{{ $soal->id }}" value="{{ $optIndex }}" id="opt_{{ $soal->id }}_{{ $optIndex }}" data-soal-id="{{ $soal->id }}">
+                                                    @php
+                                                        $isChecked = ($savedVal !== null && (string) $savedVal === (string) $optIndex);
+                                                    @endphp
+                                                    <div class="option-card d-flex align-items-center {{ $isChecked ? 'selected-option' : '' }}">
+                                                        <input class="form-check-input d-none radio-jawaban" type="radio" name="jawaban_{{ $soal->id }}" value="{{ $optIndex }}" id="opt_{{ $soal->id }}_{{ $optIndex }}" data-soal-id="{{ $soal->id }}" {{ $isChecked ? 'checked' : '' }}>
                                                         <label class="w-100 d-flex align-items-center m-0 cursor-pointer text-dark" for="opt_{{ $soal->id }}_{{ $optIndex }}">
                                                             <div class="option-badge">{{ chr(65 + $optIndex) }}</div>
                                                             <div class="flex-grow-1">{{ $opsiTeks }}</div>
@@ -352,8 +373,11 @@
                                             </div>
                                             @foreach($soal->opsi_jawaban as $optIndex => $opsiTeks)
                                                 @if(!empty(trim($opsiTeks)))
-                                                    <div class="option-card d-flex align-items-center">
-                                                        <input class="form-check-input me-3 checkbox-jawaban" type="checkbox" name="jawaban_{{ $soal->id }}[]" value="{{ $optIndex }}" id="opt_{{ $soal->id }}_{{ $optIndex }}" data-soal-id="{{ $soal->id }}" style="transform: scale(1.2);">
+                                                    @php
+                                                        $isChecked = in_array((string) $optIndex, array_map('strval', $savedArr));
+                                                    @endphp
+                                                    <div class="option-card d-flex align-items-center {{ $isChecked ? 'selected-option' : '' }}">
+                                                        <input class="form-check-input me-3 checkbox-jawaban" type="checkbox" name="jawaban_{{ $soal->id }}[]" value="{{ $optIndex }}" id="opt_{{ $soal->id }}_{{ $optIndex }}" data-soal-id="{{ $soal->id }}" style="transform: scale(1.2);" {{ $isChecked ? 'checked' : '' }}>
                                                         <label class="w-100 d-flex align-items-center m-0 cursor-pointer text-dark" for="opt_{{ $soal->id }}_{{ $optIndex }}">
                                                             <div class="option-badge">{{ chr(65 + $optIndex) }}</div>
                                                             <div class="flex-grow-1">{{ $opsiTeks }}</div>
@@ -365,7 +389,7 @@
                                         @elseif($soal->tipe === 'esai')
                                             <div class="form-group">
                                                 <label class="form-label text-muted small fw-bold">Tuliskan Jawaban Uraian Anda:</label>
-                                                <textarea class="form-control text-area-esai border p-3 rounded-3" rows="6" placeholder="Ketik jawaban esai secara rinci di sini..." data-soal-id="{{ $soal->id }}"></textarea>
+                                                <textarea class="form-control text-area-esai border p-3 rounded-3" rows="6" placeholder="Ketik jawaban esai secara rinci di sini..." data-soal-id="{{ $soal->id }}">{{ $savedVal ?? '' }}</textarea>
                                             </div>
                                         @endif
                                     </div>
@@ -377,7 +401,7 @@
                                     </button>
                                     
                                     <div class="form-check d-flex align-items-center m-0">
-                                        <input class="form-check-input me-2 check-ragu" type="checkbox" id="ragu_{{ $soal->id }}" data-soal-id="{{ $soal->id }}" style="transform: scale(1.2); cursor: pointer;">
+                                        <input class="form-check-input me-2 check-ragu" type="checkbox" id="ragu_{{ $soal->id }}" data-soal-id="{{ $soal->id }}" style="transform: scale(1.2); cursor: pointer;" {{ $isSavedRagu ? 'checked' : '' }}>
                                         <label class="form-check-label text-xs fw-bold text-warning cursor-pointer" for="ragu_{{ $soal->id }}">
                                             Ragu-Ragu
                                         </label>

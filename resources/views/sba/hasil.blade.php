@@ -36,6 +36,30 @@
             padding: 5px 12px;
             border-radius: 8px;
         }
+        .skor-badge-sementara {
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 8px;
+            background-color: #fff4e5;
+            color: #b45309;
+            border: 1px solid #f59e0b;
+        }
+        .badge-perlu-dinilai {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #f59e0b;
+            font-weight: 700;
+        }
+        .row-perlu-dinilai {
+            background-color: #fffdf7 !important;
+            border-left: 4px solid #fb8c00 !important;
+        }
+        .banner-perlu-dinilai {
+            background-color: #fffaf0;
+            border: 1px solid #fde68a;
+            border-left: 4px solid #fb8c00 !important;
+        }
 
         /* Perbaikan Tampilan Checkbox Tabel Hasil */
         .check-item-hasil, 
@@ -44,18 +68,18 @@
             appearance: checkbox !important;
             width: 18px !important;
             height: 18px !important;
-            border: 2px solid #8392ab !important; /* Border abu-abu tegas */
-            background-color: #ffffff !important; /* Background putih agar kontras */
+            border: 2px solid #8392ab !important;
+            background-color: #ffffff !important;
             border-radius: 4px !important;
             cursor: pointer !important;
             opacity: 1 !important;
             visibility: visible !important;
-            accent-color: #5e72e4 !important; /* Warna centang sesuai tema primary */
+            accent-color: #5e72e4 !important;
         }
 
         .check-item-hasil:hover, 
         #checkAllHasil:hover {
-            border-color: #5e72e4 !important; /* Efek hover border biru */
+            border-color: #5e72e4 !important;
         }
 
         .check-item-hasil:checked, 
@@ -131,6 +155,27 @@
                             </div>
                         @endif
 
+                        {{-- BANNER PENGINGAT PENILAIAN MANUAL (ESAI / PG TANPA KUNCI) --}}
+                        @if($butuhPenilaianManual && $jumlahPerluDinilai > 0)
+                            <div class="p-3 mb-3 rounded banner-perlu-dinilai d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 shadow-xs">
+                                <div class="text-xs text-dark">
+                                    <i class="fas fa-exclamation-triangle text-warning me-2 fs-6"></i>
+                                    <strong>Perhatian Penilaian:</strong> Asesmen ini memiliki soal <strong>Esai</strong> atau <strong>PG/PGK tanpa kunci jawaban</strong>. Terdapat <span class="badge badge-perlu-dinilai">{{ $jumlahPerluDinilai }} peserta</span> yang skornya masih bersifat sementara dan menunggu penilaian manual guru.
+                                </div>
+                                <div class="flex-shrink-0">
+                                    @if(request('status_pengerjaan') === 'selesai')
+                                        <a href="{{ route('sba.hasil.index', $uji->id) }}" class="btn btn-xs btn-outline-secondary bg-white mb-0">
+                                            <i class="fas fa-list me-1"></i> Tampilkan Semua Peserta
+                                        </a>
+                                    @else
+                                        <a href="{{ route('sba.hasil.index', ['uji_id' => $uji->id, 'status_pengerjaan' => 'selesai']) }}" class="btn btn-xs bg-gradient-warning text-white fw-bold mb-0 shadow-xs">
+                                            <i class="fas fa-filter me-1"></i> Filter Hanya yang Perlu Dinilai ({{ $jumlahPerluDinilai }})
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+
                         {{-- PANEL FILTER AUTO-SUBMIT ONCHANGE & TOMBOL RESET --}}
                         <form id="filterForm" action="{{ route('sba.hasil.index', $uji->id) }}" method="GET" class="row g-2 mb-3 align-items-center">
                             <input type="hidden" name="sort_by" value="{{ request('sort_by', 'total_skor') }}">
@@ -140,8 +185,11 @@
                             <div class="col-md-2">
                                 <select name="status_pengerjaan" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
                                     <option value="">-- Semua Status --</option>
-                                    <option value="selesai" {{ request('status_pengerjaan') == 'selesai' ? 'selected' : '' }}>Selesai</option>
                                     <option value="berlangsung" {{ request('status_pengerjaan') == 'berlangsung' ? 'selected' : '' }}>Berlangsung</option>
+                                    <option value="selesai" {{ request('status_pengerjaan') == 'selesai' ? 'selected' : '' }}>
+                                        {{ $butuhPenilaianManual ? 'Selesai (Perlu Dinilai)' : 'Selesai' }}
+                                    </option>
+                                    <option value="final" {{ request('status_pengerjaan') == 'final' ? 'selected' : '' }}>Final</option>
                                     <option value="gagal_pelanggaran" {{ request('status_pengerjaan') == 'gagal_pelanggaran' ? 'selected' : '' }}>Diskualifikasi</option>
                                 </select>
                             </div>
@@ -237,35 +285,38 @@
                                             
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-2" width="4%">No</th>
                                             
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="12%">
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="11%">
                                                 <a href="{{ getSortUrlHasil('asesi_id') }}" class="sort-header">
                                                     Asesi ID {!! getSortIconHasil('asesi_id') !!}
                                                 </a>
                                             </th>
                                             
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="24%">Nama Peserta</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="20%">Nama Peserta</th>
                                             
                                             {{-- KOLOM DURASI PENGERJAAN --}}
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="18%">Waktu & Durasi</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="16%">Waktu & Durasi</th>
 
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="13%">
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="14%">
                                                 <a href="{{ getSortUrlHasil('total_skor') }}" class="sort-header justify-content-center">
                                                     Skor Akhir {!! getSortIconHasil('total_skor') !!}
                                                 </a>
                                             </th>
                                             
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="14%">
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="15%">
                                                 <a href="{{ getSortUrlHasil('status_pengerjaan') }}" class="sort-header justify-content-center">
                                                     Status / Ke {!! getSortIconHasil('status_pengerjaan') !!}
                                                 </a>
                                             </th>
                                             
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="12%">Aksi</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="17%">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @forelse($hasils as $index => $hasil)
-                                        <tr>
+                                        @php
+                                            $perluDinilai = $butuhPenilaianManual && ($hasil->status_pengerjaan === 'selesai');
+                                        @endphp
+                                        <tr class="{{ $perluDinilai ? 'row-perlu-dinilai' : '' }}">
                                             {{-- CHECKBOX PER BARIS --}}
                                             <td class="text-center align-middle">
                                                 <input class="form-check-input border-secondary check-item-hasil" type="checkbox" name="ids[]" value="{{ $hasil->id }}" style="transform: scale(1.1); cursor: pointer;">
@@ -314,30 +365,52 @@
 
                                             {{-- SKOR AKHIR --}}
                                             <td class="align-middle text-center">
-                                                @if($hasil->status_pengerjaan === 'selesai')
-                                                    <span class="skor-badge bg-gradient-success text-white shadow-xs">
-                                                        {{ number_format($hasil->total_skor, 0) }} Poin
-                                                    </span>
-                                                @elseif($hasil->status_pengerjaan === 'gagal_pelanggaran')
-                                                    <span class="skor-badge bg-gradient-danger text-white">
-                                                        0 (Gagal)
-                                                    </span>
-                                                @else
-                                                    <span class="skor-badge bg-light text-dark border">
-                                                        --
-                                                    </span>
-                                                @endif
+                                                <div class="d-flex flex-column align-items-center gap-1">
+                                                    @if($hasil->status_pengerjaan === 'final')
+                                                        <span class="skor-badge bg-gradient-primary text-white shadow-xs">
+                                                            {{ number_format($hasil->total_skor, 0) }} Poin
+                                                        </span>
+                                                    @elseif($hasil->status_pengerjaan === 'selesai')
+                                                        @if($perluDinilai)
+                                                            <span class="skor-badge-sementara shadow-xs" title="Skor sementara (belum termasuk penilaian manual)">
+                                                                {{ number_format($hasil->total_skor, 0) }} Poin*
+                                                            </span>
+                                                            <span class="text-xxs fw-bold" style="color: #b45309;">
+                                                                <i class="fas fa-hourglass-half me-1"></i> Skor Sementara
+                                                            </span>
+                                                        @else
+                                                            <span class="skor-badge bg-gradient-success text-white shadow-xs">
+                                                                {{ number_format($hasil->total_skor, 0) }} Poin
+                                                            </span>
+                                                        @endif
+                                                    @elseif($hasil->status_pengerjaan === 'gagal_pelanggaran')
+                                                        <span class="skor-badge bg-gradient-danger text-white shadow-xs">
+                                                            {{ number_format($hasil->total_skor, 0) }} Poin
+                                                        </span>
+                                                    @else
+                                                        <span class="skor-badge bg-light text-dark border">
+                                                            --
+                                                        </span>
+                                                    @endif
+                                                </div>
                                             </td>
 
                                             {{-- STATUS / PERCOBAAN KE --}}
                                             <td class="align-middle text-center text-sm">
-                                                <div class="d-flex flex-column align-items-center">
-                                                    @if($hasil->status_pengerjaan === 'selesai')
-                                                        <span class="badge badge-sm bg-gradient-success mb-1">Selesai</span>
+                                                <div class="d-flex flex-column align-items-center gap-1">
+                                                    @if($hasil->status_pengerjaan === 'final')
+                                                        <span class="badge badge-sm bg-gradient-primary">Final</span>
+                                                    @elseif($hasil->status_pengerjaan === 'selesai')
+                                                        <span class="badge badge-sm bg-gradient-success">Selesai</span>
+                                                        @if($perluDinilai)
+                                                            <span class="badge badge-perlu-dinilai text-xxs" title="Klik Nilai untuk memberikan skor esai / PG tanpa kunci">
+                                                                <i class="fas fa-pen-alt me-1"></i> Perlu Dinilai
+                                                            </span>
+                                                        @endif
                                                     @elseif($hasil->status_pengerjaan === 'gagal_pelanggaran')
-                                                        <span class="badge badge-sm bg-gradient-danger mb-1">Diskualifikasi</span>
+                                                        <span class="badge badge-sm bg-gradient-danger">Diskualifikasi</span>
                                                     @else
-                                                        <span class="badge badge-sm bg-gradient-info mb-1">Berlangsung</span>
+                                                        <span class="badge badge-sm bg-gradient-info">Berlangsung</span>
                                                     @endif
 
                                                     <span class="text-xxs text-secondary">
@@ -348,9 +421,25 @@
 
                                             {{-- AKSI --}}
                                             <td class="text-center align-middle">
-                                                <div class="d-flex justify-content-center align-items-center">
-                                                    <a href="{{ route('sba.hasil.detail', $hasil->id) }}" class="btn btn-outline-info btn-sm mb-0 px-2 shadow-sm me-1" title="Detail Jawaban">
-                                                        <i class="fas fa-eye"></i> Detail
+                                                <div class="d-flex justify-content-center align-items-center gap-1">
+                                                    {{-- TOMBOL FINALISASI PAKSA (Khusus status berlangsung yang ditinggal tutup browser) --}}
+                                                    @if($hasil->status_pengerjaan === 'berlangsung')
+                                                        <button type="button" class="btn btn-outline-success btn-sm mb-0 px-2 shadow-sm" title="Finalisasi Paksa & Hitung Skor" onclick="finalisasiPaksaPeserta({{ $hasil->id }})">
+                                                            <i class="fas fa-check-double"></i> Finalisasi
+                                                        </button>
+                                                    @endif
+
+                                                    {{-- TOMBOL UNLOCK / LANJUTKAN (Khusus status gagal_pelanggaran) --}}
+                                                    @if($hasil->status_pengerjaan === 'gagal_pelanggaran')
+                                                        <button type="button" class="btn btn-outline-warning btn-sm mb-0 px-2 shadow-sm" title="Buka Kunci / Izinkan Melanjutkan" onclick="unlockSesiPeserta({{ $hasil->id }})">
+                                                            <i class="fas fa-unlock"></i> Lanjutkan
+                                                        </button>
+                                                    @endif
+
+                                                    <a href="{{ route('sba.hasil.detail', $hasil->id) }}" 
+                                                       class="btn {{ $perluDinilai ? 'bg-gradient-primary text-white fw-bold' : 'btn-outline-info' }} btn-sm mb-0 px-2 shadow-sm" 
+                                                       title="{{ $perluDinilai ? 'Beri Nilai & Finalisasi Jawaban' : 'Detail Jawaban & Penilaian' }}">
+                                                        <i class="fas {{ $perluDinilai ? 'fa-edit' : 'fa-eye' }}"></i> {{ $perluDinilai ? 'Nilai' : 'Detail' }}
                                                     </a>
 
                                                     <button type="button" class="btn btn-outline-danger btn-sm mb-0 px-2 shadow-sm" title="Hapus Hasil" onclick="hapusSingleHasil({{ $hasil->id }})">
@@ -396,6 +485,16 @@
                             @method('DELETE')
                         </form>
 
+                        {{-- FORM TERPISAH KHUSUS UNLOCK SESI PESERTA --}}
+                        <form id="formUnlockSesi" action="" method="POST" class="d-none">
+                            @csrf
+                        </form>
+
+                        {{-- FORM TERPISAH KHUSUS FINALISASI PAKSA --}}
+                        <form id="formFinalisasiPaksa" action="" method="POST" class="d-none">
+                            @csrf
+                        </form>
+
                         {{-- PAGINATION --}}
                         @if($hasils instanceof \Illuminate\Pagination\LengthAwarePaginator && $hasils->hasPages())
                             <div class="d-flex justify-content-end align-items-center mt-3">
@@ -413,7 +512,7 @@
     <x-app.footer />
 </main>
 
-{{-- SCRIPT JAVASCRIPT UNTUK CHECKBOX & BULK DELETE --}}
+{{-- SCRIPT JAVASCRIPT UNTUK CHECKBOX, BULK DELETE, UNLOCK, & FINALISASI --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const checkAll = document.getElementById('checkAllHasil');
@@ -471,8 +570,27 @@
     function hapusSingleHasil(id) {
         if (confirm('Apakah Anda yakin ingin menghapus hasil pengerjaan peserta ini?')) {
             const form = document.getElementById('formSingleDelete');
-            // Menggunakan helper route() Laravel dan mengganti placeholder ':id'
             let url = "{{ route('sba.hasil.destroy', ':id') }}";
+            form.action = url.replace(':id', id);
+            form.submit();
+        }
+    }
+
+    // Fungsi unlock sesi peserta via JS
+    function unlockSesiPeserta(id) {
+        if (confirm('Buka kunci (Unlock) sesi peserta ini agar dapat melanjutkan ujian dari sisa waktu yang tersisa?')) {
+            const form = document.getElementById('formUnlockSesi');
+            let url = "{{ route('sba.hasil.unlock', ':id') }}";
+            form.action = url.replace(':id', id);
+            form.submit();
+        }
+    }
+
+    // Fungsi finalisasi paksa peserta yang stuck berlangsung via JS
+    function finalisasiPaksaPeserta(id) {
+        if (confirm('Finalisasi paksa sesi peserta ini? Sistem akan menghitung skor dari jawaban yang sudah masuk dan mengakhiri sesi ujian.')) {
+            const form = document.getElementById('formFinalisasiPaksa');
+            let url = "{{ route('sba.hasil.finalisasi', ':id') }}";
             form.action = url.replace(':id', id);
             form.submit();
         }

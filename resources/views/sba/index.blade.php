@@ -20,6 +20,10 @@
             background-image: linear-gradient(310deg, #17ad37 0%, #98ec2d 100%) !important;
             color: #fff !important;
         }
+        .bg-gradient-warning {
+            background-image: linear-gradient(310deg, #f53939 0%, #fbcf33 100%) !important;
+            color: #fff !important;
+        }
         .sort-header {
             color: #6c757d;
             text-decoration: none;
@@ -179,35 +183,38 @@
                                             </a>
                                         </th>
                                         
-                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="30%">
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="26%">
                                             <a href="{{ getSortUrl('judul') }}" class="sort-header">
                                                 Judul / Deskripsi {!! getSortIcon('judul') !!}
                                             </a>
                                         </th>
                                         
-                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="16%">
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="15%">
                                             <a href="{{ getSortUrl('user_id') }}" class="sort-header">
                                                 Author {!! getSortIcon('user_id') !!}
                                             </a>
                                         </th>
                                         
-                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="17%">
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="16%">
                                             <a href="{{ getSortUrl('waktu_mulai') }}" class="sort-header">
                                                 Waktu / Durasi {!! getSortIcon('waktu_mulai') !!}
                                             </a>
                                         </th>
                                         
-                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="10%">
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="12%">
                                             <a href="{{ getSortUrl('status') }}" class="sort-header justify-content-center">
                                                 Status / Hasil {!! getSortIcon('status') !!}
                                             </a>
                                         </th>
                                         
-                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="8%">Aksi</th>
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="12%">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($ujis as $index => $uji)
+                                    @php
+                                        $jumlahPerluDinilai = $uji->butuhPenilaianManual() ? ($uji->hasils_selesai_count ?? 0) : 0;
+                                    @endphp
                                     <tr>
                                         {{-- NO --}}
                                         <td class="text-start ps-3 text-sm align-middle">
@@ -259,21 +266,30 @@
                                             </span>
                                         </td>
 
-                                        {{-- 5. STATUS / JUMLAH HASIL JAWABAN --}}
+                                        {{-- 5. STATUS / JUMLAH HASIL JAWABAN & PENANDA PERLU DINILAI --}}
                                         <td class="align-middle text-center text-sm">
-                                            <div class="d-flex flex-column align-items-center">
+                                            <div class="d-flex flex-column align-items-center gap-1">
                                                 @if($uji->status == 'published')
-                                                    <span class="badge badge-sm bg-gradient-success mb-1">Published</span>
+                                                    <span class="badge badge-sm bg-gradient-success">Published</span>
                                                 @elseif($uji->status == 'closed')
-                                                    <span class="badge badge-sm bg-gradient-danger mb-1">Closed</span>
+                                                    <span class="badge badge-sm bg-gradient-danger">Closed</span>
                                                 @else
-                                                    <span class="badge badge-sm bg-gradient-secondary mb-1">Draft</span>
+                                                    <span class="badge badge-sm bg-gradient-secondary">Draft</span>
                                                 @endif
 
                                                 {{-- LINK KLIKABLE MENUJU HALAMAN HASIL ASESI --}}
                                                 <a href="{{ route('sba.hasil.index', $uji->id) }}" class="badge bg-light text-dark border text-xxs font-weight-bold px-2 py-1 text-decoration-none shadow-xs" title="Klik untuk lihat daftar peserta & skor">
                                                     <i class="fas fa-users me-1 text-primary"></i> {{ $uji->hasils_count ?? $uji->hasils()->count() }} Hasil <i class="fas fa-chevron-right text-xxs ms-1 opacity-5"></i>
                                                 </a>
+
+                                                {{-- PENANDA ANTREAN PENILAIAN MANUAL (ESAI / PG TANPA KUNCI) --}}
+                                                @if($jumlahPerluDinilai > 0)
+                                                    <a href="{{ route('sba.hasil.index', ['uji_id' => $uji->id, 'status_pengerjaan' => 'selesai']) }}" 
+                                                       class="badge bg-warning text-dark text-xxs font-weight-bold px-2 py-1 text-decoration-none shadow-xs" 
+                                                       title="Terdapat soal esai atau PG tanpa kunci yang menunggu penilaian guru">
+                                                        <i class="fas fa-exclamation-circle me-1"></i> {{ $jumlahPerluDinilai }} Perlu Dinilai
+                                                    </a>
+                                                @endif
                                             </div>
                                         </td>
 
@@ -286,6 +302,16 @@
                                                         title="Salin Link Ujian">
                                                     <i class="fas fa-link"></i>
                                                 </button>
+
+                                                {{-- Tombol Duplikat Ujian & Soal --}}
+                                                <form action="{{ route('sba.duplicate', $uji->id) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm mb-0 px-2 shadow-sm me-1" 
+                                                            title="Duplikat Ujian & Soal (Kode Baru)" 
+                                                            onclick="return confirm('Duplikat ujian \'{{ addslashes($uji->judul) }}\' beserta seluruh soal dan kunci jawabannya?')">
+                                                        <i class="fas fa-copy"></i>
+                                                    </button>
+                                                </form>
 
                                                 {{-- Tombol Edit --}}
                                                 <a href="{{ route('sba.edit', $uji->id) }}" class="btn btn-outline-warning btn-sm mb-0 px-2 shadow-sm me-1" title="Edit Pengaturan & Soal">

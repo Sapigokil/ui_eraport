@@ -35,6 +35,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{uji}/edit', [SbaController::class, 'edit'])->name('edit');
         Route::put('/{uji}/update', [SbaController::class, 'update'])->name('update');
         Route::delete('/{uji}/destroy', [SbaController::class, 'destroy'])->name('destroy');
+        Route::post('/{id}/duplicate', [SbaController::class, 'duplicate'])->name('duplicate');
+        Route::get('/template-soal', [SbaController::class, 'downloadTemplateSoal'])->name('soal.template');
+        Route::post('/import-soal-preview', [SbaController::class, 'importSoalPreview'])->name('soal.import_preview');
+
         
         // Endpoint AJAX Hapus Single Soal + Gambar Media
         Route::delete('/soal/{soal_id}', [SbaController::class, 'destroySoal'])->name('soal.destroy');
@@ -53,6 +57,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/hasil/{hasil_id}/export-pdf', [SbaController::class, 'exportHasilDetailPdf'])->name('hasil.detail.pdf');
         Route::delete('/hasil/{hasil_id}', [SbaController::class, 'hasilDestroy'])->name('hasil.destroy');
         
+        // TAMBAHKAN BARIS INI (Unlock Sesi Gagal Pelanggaran):
+        Route::post('/hasil/{hasil_id}/unlock', [SbaController::class, 'unlockSesi'])->name('hasil.unlock');
+        Route::post('/hasil/{hasil_id}/finalisasi', [SbaController::class, 'finalisasiPaksa'])->name('hasil.finalisasi');
+
         // Action Hapus Massal (Bulk Delete)
         Route::delete('/uji/{uji_id}/hasil/bulk-delete', [SbaController::class, 'bulkDelete'])->name('hasil.bulk_delete');
 

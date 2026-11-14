@@ -54,9 +54,38 @@ class Uji extends Model
         return $this->hasMany(UjiHasil::class, 'uji_id');
     }
 
+    // Relasi hasil peserta yang berstatus 'selesai' (belum difinalisasi penguji)
+    public function hasilsSelesai()
+    {
+        return $this->hasMany(UjiHasil::class, 'uji_id')->where('status_pengerjaan', 'selesai');
+    }
+
     // Relasi ke Pembuat Asesmen (Author)
     public function author()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Cek apakah asesmen memiliki soal esai atau soal PG/PGK yang belum memiliki kunci jawaban
+     */
+    public function butuhPenilaianManual(): bool
+    {
+        $soals = $this->relationLoaded('soals') ? $this->soals : $this->soals()->get();
+
+        foreach ($soals as $soal) {
+            if ($soal->tipe === 'esai') {
+                return true;
+            }
+
+            if (in_array($soal->tipe, ['pg', 'pg_kompleks'])) {
+                $kunci = is_array($soal->kunci_jawaban) ? array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== '') : [];
+                if (empty($kunci)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 }

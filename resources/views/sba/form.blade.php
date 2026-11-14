@@ -35,6 +35,14 @@
                         </div>
                     @endif
 
+                    {{-- ALERT NOTIFIKASI HASIL IMPORT EXCEL KE VIEW --}}
+                    <div id="alert-import-success" class="alert bg-gradient-success text-white alert-dismissible fade show text-sm py-2 mb-4 d-none" role="alert">
+                        <span id="alert-import-success-text"></span>
+                        <button type="button" class="btn-close text-lg py-2 opacity-10" onclick="this.parentElement.classList.add('d-none')" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
                     <div class="card my-4 shadow-xs border">
                         {{-- HEADER UTAMA (Gaya Banner) --}}
                         <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
@@ -214,13 +222,18 @@
                                 <div class="col-12">
                                     <div class="p-3 bg-gray-50 border rounded d-flex flex-column flex-md-row justify-content-between align-items-center shadow-sm">
                                         <div class="mb-2 mb-md-0">
-                                            <span class="text-sm fw-bold text-dark"><i class="fas fa-chart-pie me-1"></i> Rekap Soal:</span>
+                                            <span class="text-sm fw-bold text-dark"><i class="fas fa-chart-pie me-1 text-primary"></i> Rekap Soal:</span>
                                             <span class="ms-3 text-sm text-secondary">Total Soal: <strong id="summary-total-soal" class="text-primary text-lg">0</strong></span>
                                             <span class="ms-3 text-sm text-secondary">Total Poin: <strong id="summary-total-poin" class="text-info text-lg">0</strong> <span id="poin-warning" class="text-danger text-xs d-none">(Melebihi 100!)</span></span>
                                         </div>
-                                        <button type="button" class="btn btn-sm bg-gradient-info mb-0 shadow-sm" id="btn-sesuaikan-poin" title="Bagikan bobot poin secara merata dengan total 100">
-                                            <i class="fas fa-magic me-1"></i> Sesuaikan Poin (Otomatis)
-                                        </button>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-primary mb-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportSoalExcel">
+                                                <i class="fas fa-file-excel me-1"></i> Import Soal Excel
+                                            </button>
+                                            <button type="button" class="btn btn-sm bg-gradient-info mb-0 shadow-sm" id="btn-sesuaikan-poin" title="Bagikan bobot poin secara merata dengan total 100">
+                                                <i class="fas fa-magic me-1"></i> Sesuaikan Poin (Otomatis)
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -257,6 +270,87 @@
     </div>
     <x-app.footer />
 </main>
+
+{{-- MODAL IMPORT SOAL EXCEL (SELARAS DENGAN TEMA SBA) --}}
+<div class="modal fade" id="modalImportSoalExcel" tabindex="-1" aria-labelledby="modalImportSoalExcelLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            {{-- Header Gradient Primary Selaras Banner Utama --}}
+            <div class="modal-header bg-gradient-primary border-0 py-3 px-4">
+                <h6 class="modal-title fw-bold text-white mb-0" id="modalImportSoalExcelLabel">
+                    <i class="fas fa-file-excel me-2"></i> Import Soal dari Excel
+                </h6>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body p-4 bg-white text-start">
+                {{-- AREA ERROR VALIDASI AJAX --}}
+                <div id="import-excel-error-box" class="alert bg-gradient-danger text-white small py-2 px-3 mb-4 rounded-3 border-0 d-none">
+                    <strong class="d-block mb-1" id="import-excel-error-title"></strong>
+                    <ul class="mb-0 ps-3" id="import-excel-error-list"></ul>
+                </div>
+
+                {{-- 1. BAGIAN PERTAMA: UNDUH FORMAT TEMPLATE --}}
+                <div class="mb-4 p-3 bg-light rounded border">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-gradient-primary me-2">1</span>
+                        <h6 class="fw-bold text-dark mb-0" style="font-size: 0.85rem;">Unduh Format Template</h6>
+                    </div>
+                    <p class="text-secondary text-xs mb-2" style="line-height: 1.5;">
+                        Gunakan file template resmi dengan urutan kolom baku:<br>
+                        <code class="text-primary fw-bold">no, tipe_soal, pertanyaan, opsi_a..e, kunci_jawaban, bobot_nilai</code>
+                    </p>
+                    <a href="{{ route('sba.soal.template') }}" class="btn btn-sm bg-gradient-info text-white fw-bold w-100 mb-0 shadow-xs">
+                        <i class="fas fa-download me-1"></i> Download Template Excel (.xlsx)
+                    </a>
+                </div>
+
+                {{-- 2. BAGIAN KEDUA: UNGGAH FILE TEMPLATE (AJAX TO VIEW) --}}
+                <div>
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-gradient-primary me-2">2</span>
+                        <h6 class="fw-bold text-dark mb-0" style="font-size: 0.85rem;">Unggah File Template</h6>
+                    </div>
+
+                    <div class="p-2 px-3 mb-3 rounded border-start border-4 border-info bg-light text-dark text-xs">
+                        <i class="fas fa-info-circle text-info me-1"></i>
+                        Hasil import akan dimuat ke form terlebih dahulu (bersifat sementara) agar dapat Anda tinjau sebelum menekan tombol <strong>Simpan Asesmen</strong>.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-secondary text-uppercase mb-1" style="font-size: 0.7rem; font-weight: 700;">Mode Penempatan Soal di Form</label>
+                        <div class="d-flex flex-column gap-2 p-2 px-3 bg-light rounded border">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="import_mode" id="modeReplace" value="replace" checked>
+                                <label class="form-check-label text-xs fw-bold text-dark cursor-pointer mb-0" for="modeReplace">
+                                    Ganti / Timpa semua soal yang ada di form saat ini
+                                </label>
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="radio" name="import_mode" id="modeAppend" value="append">
+                                <label class="form-check-label text-xs fw-bold text-dark cursor-pointer mb-0" for="modeAppend">
+                                    Tambahkan di urutan bawah soal yang sudah ada
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label for="input_excel_soal" class="form-label text-secondary text-uppercase mb-1" style="font-size: 0.7rem; font-weight: 700;">Pilih File Excel (.xlsx / .xls / .csv)</label>
+                        <input type="file" id="input_excel_soal" class="form-control form-control-sm border px-2 py-1" accept=".xlsx, .xls, .csv">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer border-top bg-light py-2 px-4 gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-3 mb-0" data-bs-dismiss="modal">Batal</button>
+                <button type="button" id="btn-proses-import-excel" class="btn btn-sm bg-gradient-primary text-white px-4 fw-bold shadow-sm mb-0">
+                    <i class="fas fa-cloud-upload-alt me-1"></i> Muat Soal ke Form
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {{-- TEMPLATE SOAL (Hidden) --}}
 <template id="soal-template">
@@ -672,6 +766,102 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ========================================================================
+    // AJAX IMPORT EXCEL TO VIEW (TEMPORARY DI FORM)
+    // ========================================================================
+    const btnProsesImport = document.getElementById('btn-proses-import-excel');
+    const inputExcelSoal = document.getElementById('input_excel_soal');
+    const errorBox = document.getElementById('import-excel-error-box');
+    const errorTitle = document.getElementById('import-excel-error-title');
+    const errorList = document.getElementById('import-excel-error-list');
+    const alertImportSuccess = document.getElementById('alert-import-success');
+    const alertImportSuccessText = document.getElementById('alert-import-success-text');
+
+    if (btnProsesImport) {
+        btnProsesImport.addEventListener('click', function() {
+            errorBox.classList.add('d-none');
+            errorList.innerHTML = '';
+
+            if (!inputExcelSoal.files || inputExcelSoal.files.length === 0) {
+                errorTitle.innerText = 'File belum dipilih!';
+                errorList.innerHTML = '<li>Silakan pilih file Excel (.xlsx, .xls, atau .csv) terlebih dahulu.</li>';
+                errorBox.classList.remove('d-none');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('excel_file', inputExcelSoal.files[0]);
+
+            const originalBtnHtml = btnProsesImport.innerHTML;
+            btnProsesImport.disabled = true;
+            btnProsesImport.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Memproses...';
+
+            fetch("{{ route('sba.soal.import_preview') }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) {
+                    throw data;
+                }
+                return data;
+            })
+            .then(data => {
+                const mode = document.querySelector('input[name="import_mode"]:checked').value;
+
+                if (mode === 'replace') {
+                    container.innerHTML = '';
+                }
+
+                data.soals.forEach(soalData => {
+                    addSoal(null, 'end', soalData);
+                });
+
+                updateSoalNames();
+                updateSummary();
+
+                // Reset input file & tutup modal
+                inputExcelSoal.value = '';
+                const modalEl = document.getElementById('modalImportSoalExcel');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+
+                // Tampilkan banner sukses sementara
+                alertImportSuccessText.innerHTML = `<strong>Berhasil Dimuat!</strong> ${data.message}`;
+                alertImportSuccess.classList.remove('d-none');
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            })
+            .catch(err => {
+                errorTitle.innerText = err.message || 'Terjadi kesalahan saat memproses file Excel.';
+                if (err.errors && Array.isArray(err.errors)) {
+                    err.errors.forEach(msg => {
+                        const li = document.createElement('li');
+                        li.innerText = msg;
+                        errorList.appendChild(li);
+                    });
+                } else if (err.errors && typeof err.errors === 'object') {
+                    Object.values(err.errors).flat().forEach(msg => {
+                        const li = document.createElement('li');
+                        li.innerText = msg;
+                        errorList.appendChild(li);
+                    });
+                }
+                errorBox.classList.remove('d-none');
+            })
+            .finally(() => {
+                btnProsesImport.disabled = false;
+                btnProsesImport.innerHTML = originalBtnHtml;
+            });
+        });
+    }
+
+    // ========================================================================
     // TOGGLE OTOMATIS ULANGI JIKA GAGAL & MAKS. PERCOBAAN
     // ========================================================================
     const switchUlangi = document.getElementById('ulangi_jika_gagal');
@@ -684,14 +874,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (switchUlangi && wrapperPercobaan && inputPercobaan) {
         switchUlangi.addEventListener('change', function() {
             if (this.checked) {
-                // Tampilkan kolom dan set default ke 2 jika sebelumnya bernilai 1
                 wrapperPercobaan.classList.remove('d-none');
                 if (parseInt(inputPercobaan.value) <= 1 || !inputPercobaan.value) {
                     inputPercobaan.value = 2;
                 }
                 inputPercobaan.min = 2;
             } else {
-                // Sembunyikan kolom dan kembalikan nilai ke 1 agar tetap terkirim saat submit
                 wrapperPercobaan.classList.add('d-none');
                 inputPercobaan.min = 1;
                 inputPercobaan.value = 1;
