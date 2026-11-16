@@ -92,26 +92,35 @@
                             </div>
                         @endif
 
+                        @php
+                            $hasViewAll = $canViewAll ?? auth()->user()->can('sba.view_all');
+                            $activeAuthorId = isset($selectedAuthorId)
+                                ? (string) $selectedAuthorId
+                                : ($hasViewAll ? ($request->has('user_id') ? (string) request('user_id', '') : (string) auth()->id()) : (string) auth()->id());
+                        @endphp
+
                         {{-- PANEL FILTER & SEARCH --}}
                         <form action="{{ route('sba.index') }}" method="GET" class="row g-2 mb-3 align-items-center">
                             {{-- Pertahankan parameter sorting & per_page jika ada --}}
                             <input type="hidden" name="sort_by" value="{{ request('sort_by', 'id') }}">
                             <input type="hidden" name="sort_order" value="{{ request('sort_order', 'desc') }}">
 
-                            {{-- Filter Author Dropdown --}}
-                            <div class="col-md-3">
-                                <select name="user_id" class="form-select form-select-sm border px-2 py-1">
-                                    <option value="">-- Semua Author Pembuat --</option>
-                                    @foreach($authors as $author)
-                                        <option value="{{ $author->id }}" {{ request('user_id') == $author->id ? 'selected' : '' }}>
-                                            {{ $author->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
+                            {{-- Filter Author Dropdown (Hanya tampil jika punya permission sba.view_all) --}}
+                            @if($hasViewAll)
+                                <div class="col-md-3">
+                                    <select name="user_id" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
+                                        <option value="" {{ $activeAuthorId === '' ? 'selected' : '' }}>-- Semua Author Pembuat --</option>
+                                        @foreach($authors as $author)
+                                            <option value="{{ $author->id }}" {{ $activeAuthorId === (string) $author->id ? 'selected' : '' }}>
+                                                {{ $author->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
 
                             {{-- Filter Keysearch --}}
-                            <div class="col-md-5">
+                            <div class="{{ $hasViewAll ? 'col-md-5' : 'col-md-8' }}">
                                 <div class="input-group input-group-sm border rounded">
                                     <span class="input-group-text bg-transparent border-0 pe-1">
                                         <i class="fas fa-search text-secondary text-xs"></i>

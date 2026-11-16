@@ -66,6 +66,12 @@ class RolePermissionSeeder extends Seeder
             '08. Menu Siswa' => [
                 'siswa.menu' => 'Akses bagi siswa untuk melihat data diri, nilai, rapor, dll di portal siswa', 
             ],
+
+            // I. SMART BASED ASSESSMENT (SBA)
+            '09. Smart Based Assessment (SBA)' => [
+                'sba.menu'     => 'Akses Halaman & Manajemen SBA',
+                'sba.view_all' => 'Melihat Semua Uji SBA (Lintas User)',
+            ],
         ];
 
         // Kumpulkan nama permission untuk verifikasi (Opsional: menghapus permission lama)
@@ -105,6 +111,7 @@ class RolePermissionSeeder extends Seeder
             'nilai.menu', 'nilai.input',
             'ekskul.menu', 
             'pkl.nilai.menu',
+            'sba.menu',
         ]);
 
         // --- Role 2a: GURU EKSTRAKURIKULER (Opsional) ---
@@ -121,6 +128,7 @@ class RolePermissionSeeder extends Seeder
             'nilai.menu', 'nilai.input',
             'ekskul.menu', 
             'pkl.nilai.menu',
+            'sba.menu',
         ]);
 
         // --- ROLE 4: SISWA (BACKUP / SUPER SISWA) ---

@@ -90,7 +90,7 @@
         }
         #sidenav-main .nav-link[data-bs-toggle="collapse"][aria-expanded="true"]::after { opacity: 1; }
 
-        /* 👇 CSS KHUSUS UNTUK KATEGORI LACI (ACCORDION LEVEL 1) 👇 */
+        /* CSS KHUSUS UNTUK KATEGORI LACI (ACCORDION LEVEL 1) */
         .sidenav-category-toggle {
             padding: 0.75rem 1rem;
             margin: 0.5rem 0.5rem 0.25rem 0.5rem;
@@ -160,11 +160,10 @@
             <li class="nav-item">
                 @php $isDashboardActive = request()->routeIs('dashboard') || request()->routeIs('siswa.dashboard'); @endphp 
                 <a class="nav-link {{ $isDashboardActive ? 'active' : '' }}" href="{{ auth()->user()?->hasRole('siswa') || auth()->user()?->level == 'siswa' ? route('siswa.dashboard') : route('dashboard') }}">
-                        <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
-                            <i class="fas fa-chart-line text-sm"></i>
-                        </div>
-                        <span class="nav-link-text">Dashboard</span>
-                    </a>
+                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">
+                        <i class="fas fa-chart-line text-sm"></i>
+                    </div>
+                    <span class="nav-link-text">Dashboard</span>
                 </a>
             </li>
 
@@ -339,11 +338,8 @@
                                 <ul class="nav flex-column">
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.catatan.input') ? 'active' : '' }}" href="{{ route('walikelas.catatan.input') }}">Catatan Walikelas</a></li>
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.monitoring.wali') ? 'active' : '' }}" href="{{ route('walikelas.monitoring.wali') }}">Finalisasi Nilai</a></li>
-                                    {{-- TAMBAHAN MENU LEDGER WALI --}}
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.ledger.index') ? 'active' : '' }}" href="{{ route('walikelas.ledger.index') }}">Ledger Kelas</a></li>
-                                    
                                     <li class="nav-item"><a class="nav-link {{ request()->routeIs('walikelas.cakok.index') ? 'active' : '' }}" href="{{ route('walikelas.cakok.index') }}">Set Template</a></li>
-                                    
                                 </ul>
                             </div> 
                         </li>
@@ -463,30 +459,32 @@
             {{-- ========================================================= --}}
             {{-- ADD-ON: SMART BASED ASSESSMENT (SBA) --}}
             {{-- ========================================================= --}}
-            @if(Route::has('sba.index'))
-            @php
-                $isSbaActive = request()->routeIs(['sba.*']);
-            @endphp
-            <li class="nav-item mt-2">
-                <a class="sidenav-category-toggle" data-bs-toggle="collapse" href="#catSba" role="button" aria-expanded="{{ $isSbaActive ? 'true' : 'false' }}">
-                    <span class="cat-title text-uppercase text-warning">
-                        <i class="fas fa-star me-1"></i> Ujian SBA
-                    </span>
-                    <i class="fas fa-chevron-down cat-icon"></i>
-                </a>
-                
-                <div class="collapse {{ $isSbaActive ? 'show' : '' }} category-wrapper" id="catSba" data-bs-parent="#sidenav-collapse-main">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('sba.index') ? 'active' : '' }}" href="{{ route('sba.index') }}">
-                                <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-laptop-code text-sm"></i></div>
-                                <span class="nav-link-text">Daftar Ujian</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-            @endif
+            @can('sba.menu')
+                @if(Route::has('sba.index'))
+                @php
+                    $isSbaActive = request()->routeIs(['sba.*']);
+                @endphp
+                <li class="nav-item mt-2">
+                    <a class="sidenav-category-toggle" data-bs-toggle="collapse" href="#catSba" role="button" aria-expanded="{{ $isSbaActive ? 'true' : 'false' }}">
+                        <span class="cat-title text-uppercase text-warning">
+                            <i class="fas fa-star me-1"></i> Ujian SBA
+                        </span>
+                        <i class="fas fa-chevron-down cat-icon"></i>
+                    </a>
+                    
+                    <div class="collapse {{ $isSbaActive ? 'show' : '' }} category-wrapper" id="catSba" data-bs-parent="#sidenav-collapse-main">
+                        <ul class="nav flex-column">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('sba.index') ? 'active' : '' }}" href="{{ route('sba.index') }}">
+                                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-laptop-code text-sm"></i></div>
+                                    <span class="nav-link-text">Daftar Ujian</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
+                @endif
+            @endcan
 
             {{-- ========================================================= --}}
             {{-- 6. PENGATURAN (KATEGORI UTAMA) --}}
@@ -499,7 +497,6 @@
                 $isSeasonActive    = request()->routeIs(['settings.erapor.season.*', 'settings.pkl.season.*', 'settings.bio_season.*']);
                 $isSystemSetActive = request()->routeIs(['settings.system.*']);
                 
-                // Tambahkan $isEventActive ke dalam logika trigger collapse Kategori Pengaturan
                 $isCatPengaturanActive = $isEventActive || $isEraporSetActive || $isPklSetActive || $isSeasonActive || $isSystemSetActive;
             @endphp
             <li class="nav-item mt-2">
@@ -511,7 +508,7 @@
                 <div class="collapse {{ $isCatPengaturanActive ? 'show' : '' }} category-wrapper" id="catPengaturan" data-bs-parent="#sidenav-collapse-main">
                     <ul class="nav flex-column">
                         
-                        {{-- 1. MENU EVENT (Dipindah ke atas) --}}
+                        {{-- 1. MENU EVENT --}}
                         <li class="nav-item">
                             <a data-bs-toggle="collapse" href="#settingEventMenu" class="nav-link {{ $isEventActive ? 'active' : '' }}" aria-expanded="{{ $isEventActive ? 'true' : 'false' }}">
                                 <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-bullhorn text-sm"></i></div>
@@ -623,7 +620,6 @@
                 </a>
             </li>
 
-            {{-- 👇 PERBAIKAN: Sub-Menu ChangeLog dipindahkan ke mari 👇 --}}
             <li class="nav-item">
                 <a class="nav-link {{ request()->routeIs('changelog.*') ? 'active' : '' }}" href="{{ route('changelog.index') }}">
                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;">

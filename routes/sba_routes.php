@@ -14,9 +14,9 @@ use App\Http\Controllers\SbaUjiController;
 */
 
 // ==============================================================================
-// 1. ADMIN & GURU MANAGEMENT ROUTES (Memerlukan Login / Protected)
+// 1. ADMIN & GURU MANAGEMENT ROUTES (Memerlukan Login & Permission sba.menu)
 // ==============================================================================
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'can:sba.menu'])->group(function () {
     
     // Group Admin/Guru SBA (URL Prefix: /admin/sba, Route Name Prefix: sba.)
     Route::prefix('admin/sba')->name('sba.')->group(function () {
@@ -39,7 +39,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/template-soal', [SbaController::class, 'downloadTemplateSoal'])->name('soal.template');
         Route::post('/import-soal-preview', [SbaController::class, 'importSoalPreview'])->name('soal.import_preview');
 
-        
         // Endpoint AJAX Hapus Single Soal + Gambar Media
         Route::delete('/soal/{soal_id}', [SbaController::class, 'destroySoal'])->name('soal.destroy');
         
@@ -57,7 +56,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/hasil/{hasil_id}/export-pdf', [SbaController::class, 'exportHasilDetailPdf'])->name('hasil.detail.pdf');
         Route::delete('/hasil/{hasil_id}', [SbaController::class, 'hasilDestroy'])->name('hasil.destroy');
         
-        // TAMBAHKAN BARIS INI (Unlock Sesi Gagal Pelanggaran):
+        // Unlock Sesi Gagal Pelanggaran & Finalisasi Paksa
         Route::post('/hasil/{hasil_id}/unlock', [SbaController::class, 'unlockSesi'])->name('hasil.unlock');
         Route::post('/hasil/{hasil_id}/finalisasi', [SbaController::class, 'finalisasiPaksa'])->name('hasil.finalisasi');
 

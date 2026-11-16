@@ -11,11 +11,39 @@ use Illuminate\Support\Facades\Storage;
 
 class SbaController extends Controller
 {
+    /**
+     * Validasi hak akses terhadap suatu asesmen berdasarkan permission sba.view_all
+     */
+    private function authorizeUjiAccess(Uji $uji): void
+    {
+        if (!auth()->user()->can('sba.view_all') && (int) $uji->user_id !== (int) auth()->id()) {
+            abort(403, 'Anda tidak memiliki izin untuk mengakses asesmen milik pengguna lain.');
+        }
+    }
+
     public function index(Request $request)
     {
-        // 1. Ambil daftar ID user yang memiliki asesmen dari tabel ujis secara langsung
-        $authorIds = Uji::select('user_id')->distinct()->pluck('user_id');
-        $authors = \App\Models\User::whereIn('id', $authorIds)->get(['id', 'name']);
+        $canViewAll = auth()->user()->can('sba.view_all');
+        $currentUserId = (string) auth()->id();
+
+        // 1. Daftar Author (hanya dimuat jika memiliki permission sba.view_all)
+        if ($canViewAll) {
+            $authorIds = Uji::select('user_id')->distinct()->pluck('user_id')->toArray();
+            if (!in_array((int) $currentUserId, array_map('intval', $authorIds), true)) {
+                $authorIds[] = (int) $currentUserId;
+            }
+            $authors = \App\Models\User::whereIn('id', $authorIds)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+            // Default pertama kali buka halaman adalah milik sendiri; jika memilih "Semua Author" (?user_id=), nilai menjadi ''
+            $selectedAuthorId = $request->has('user_id')
+                ? (string) $request->input('user_id', '')
+                : $currentUserId;
+        } else {
+            $authors = collect();
+            $selectedAuthorId = $currentUserId;
+        }
 
         // 2. Query Utama Uji (memuat soals & count hasil berstatus 'selesai' untuk deteksi antrean penilaian)
         $query = Uji::with(['author', 'soals'])
@@ -24,16 +52,20 @@ class SbaController extends Controller
         // Filter Search (Kode Uji, Judul, Deskripsi)
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('kode_uji', 'like', "%{$search}%")
-                ->orWhere('judul', 'like', "%{$search}%")
-                ->orWhere('deskripsi', 'like', "%{$search}%");
+                    ->orWhere('judul', 'like', "%{$search}%")
+                    ->orWhere('deskripsi', 'like', "%{$search}%");
             });
         }
 
-        // Filter Author
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
+        // Filter Author (jika punya sba.view_all, filter mengikuti $selectedAuthorId; jika tidak, dikunci ke auth()->id())
+        if ($canViewAll) {
+            if ($selectedAuthorId !== '') {
+                $query->where('user_id', $selectedAuthorId);
+            }
+        } else {
+            $query->where('user_id', $currentUserId);
         }
 
         // Sorting Kolom (Default: id DESC / Latest)
@@ -51,7 +83,7 @@ class SbaController extends Controller
         $perPage = (int) $request->get('per_page', 10);
         $ujis = $query->paginate($perPage)->withQueryString();
 
-        return view('sba.index', compact('ujis', 'authors'));
+        return view('sba.index', compact('ujis', 'authors', 'canViewAll', 'selectedAuthorId'));
     }
 
     public function create()
@@ -61,6 +93,8 @@ class SbaController extends Controller
 
     public function edit(Uji $uji)
     {
+        $this->authorizeUjiAccess($uji);
+
         $uji->load('soals');
         return view('sba.form', compact('uji'));
     }
@@ -124,6 +158,7 @@ class SbaController extends Controller
     public function update(Request $request, $id)
     {
         $uji = Uji::with('soals')->findOrFail($id);
+        $this->authorizeUjiAccess($uji);
 
         $request->validate([
             'judul'                 => 'required|string|max:255',
@@ -196,13 +231,16 @@ class SbaController extends Controller
      */
     public function destroySoal($soal_id)
     {
-        $soal = \App\Models\UjiSoal::findOrFail($soal_id);
-        
+        $soal = \App\Models\UjiSoal::with('uji')->findOrFail($soal_id);
+        if ($soal->uji) {
+            $this->authorizeUjiAccess($soal->uji);
+        }
+
         // Memanggil delete() akan memicu static::deleting pada Model UjiSoal untuk menghapus file fisik di storage
         $soal->delete();
 
         return response()->json([
-            'status' => 'success', 
+            'status' => 'success',
             'message' => 'Soal dan file media berhasil dihapus dari server.'
         ]);
     }
@@ -213,7 +251,8 @@ class SbaController extends Controller
     public function destroy($id)
     {
         $uji = Uji::findOrFail($id);
-        
+        $this->authorizeUjiAccess($uji);
+
         // Memanggil delete() pada Uji akan memicu static::deleting di Model Uji yang menghapus seluruh UjiSoal beserta gambar fisiknya
         $uji->delete();
 
@@ -226,6 +265,8 @@ class SbaController extends Controller
     public function hasilIndex(Request $request, $uji_id)
     {
         $uji = Uji::with('soals')->findOrFail($uji_id);
+        $this->authorizeUjiAccess($uji);
+
         $butuhPenilaianManual = $uji->butuhPenilaianManual();
         $jumlahPerluDinilai = $butuhPenilaianManual
             ? UjiHasil::where('uji_id', $uji->id)->where('status_pengerjaan', 'selesai')->count()
@@ -249,12 +290,12 @@ class SbaController extends Controller
         // Filter Search (Asesi ID, Nama Peserta Publik, Nama User)
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('asesi_id', 'like', "%{$search}%")
-                ->orWhere('nama_peserta_publik', 'like', "%{$search}%")
-                ->orWhereHas('asesi', function($userQuery) use ($search) {
-                    $userQuery->where('name', 'like', "%{$search}%");
-                });
+                    ->orWhere('nama_peserta_publik', 'like', "%{$search}%")
+                    ->orWhereHas('asesi', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -301,8 +342,10 @@ class SbaController extends Controller
     public function exportHasil(Request $request, $uji_id)
     {
         $uji = Uji::findOrFail($uji_id);
+        $this->authorizeUjiAccess($uji);
+
         $format = $request->get('format', 'excel'); // 'excel' atau 'pdf'
-        
+
         // Ambil data sesuai filter aktif tanpa pagination
         $dataHasils = $this->getFilteredHasilQuery($request, $uji->id)->get();
 
@@ -310,13 +353,13 @@ class SbaController extends Controller
             // Menggunakan DomPDF / Laravel PDF View
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('sba.exports.hasil_pdf', compact('uji', 'dataHasils'))
                 ->setPaper('a4', 'landscape');
-                
+
             return $pdf->download("Rekap_Hasil_{$uji->kode_uji}.pdf");
         }
 
         // Export format Microsoft Excel (.xls) via HTML Spreadsheet Stream
         $fileName = "Rekap_Hasil_{$uji->kode_uji}.xls";
-        
+
         $headers = [
             "Content-Type"        => "application/vnd.ms-excel; charset=UTF-8",
             "Content-Disposition" => "attachment; filename=\"$fileName\"",
@@ -324,7 +367,7 @@ class SbaController extends Controller
             "Pragma"              => "no-cache",
         ];
 
-        $callback = function() use ($uji, $dataHasils) {
+        $callback = function () use ($uji, $dataHasils) {
             // Output format HTML Spreadsheet yang dibaca sempurna oleh Microsoft Excel (.xls)
             echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
             echo '<head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Hasil Ujian</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
@@ -344,7 +387,7 @@ class SbaController extends Controller
 
             foreach ($dataHasils as $idx => $row) {
                 $nama = $row->asesi ? $row->asesi->name : ($row->nama_peserta_publik ?? 'Guest');
-                
+
                 // Kalkulasi Durasi Eksplisit
                 $durasiText = '-';
                 if ($row->waktu_mulai && $row->waktu_selesai) {
@@ -382,9 +425,11 @@ class SbaController extends Controller
      */
     public function hasilDestroy($hasil_id)
     {
-        $hasil = UjiHasil::findOrFail($hasil_id);
+        $hasil = UjiHasil::with('uji')->findOrFail($hasil_id);
+        $this->authorizeUjiAccess($hasil->uji);
+
         $ujiId = $hasil->uji_id;
-        
+
         // Jawaban peserta otomatis terhapus via CASCADE / Manual Delete
         $hasil->jawabans()->delete();
         $hasil->delete();
@@ -392,14 +437,14 @@ class SbaController extends Controller
         return redirect()->route('sba.hasil.index', $ujiId)->with('success', 'Data hasil ujian peserta berhasil dihapus.');
     }
 
-
     /**
      * Halaman Detail & Penilaian Jawaban Asesi
      */
     public function hasilDetail($hasil_id)
     {
         $hasil = UjiHasil::with(['uji.soals', 'jawabans', 'asesi'])->findOrFail($hasil_id);
-        
+        $this->authorizeUjiAccess($hasil->uji);
+
         // Mapping jawaban siswa berdasarkan uji_soal_id agar mudah dipanggil di Blade
         $mapJawaban = $hasil->jawabans->keyBy('uji_soal_id');
 
@@ -412,6 +457,7 @@ class SbaController extends Controller
     public function simpanPenilaianEsai(Request $request, $hasil_id)
     {
         $hasil = UjiHasil::with('uji.soals')->findOrFail($hasil_id);
+        $this->authorizeUjiAccess($hasil->uji);
 
         $skorManualTotal = 0;
         $skorOtomatisPg = 0;
@@ -474,7 +520,8 @@ class SbaController extends Controller
      */
     public function unlockSesi($hasil_id)
     {
-        $hasil = UjiHasil::findOrFail($hasil_id);
+        $hasil = UjiHasil::with('uji')->findOrFail($hasil_id);
+        $this->authorizeUjiAccess($hasil->uji);
 
         if ($hasil->status_pengerjaan !== 'gagal_pelanggaran') {
             return redirect()->back()->with('error', 'Hanya peserta dengan status diskualifikasi yang dapat di-unlock.');
@@ -499,6 +546,7 @@ class SbaController extends Controller
     public function finalisasiPaksa($hasil_id)
     {
         $hasil = UjiHasil::with(['uji.soals', 'jawabans'])->findOrFail($hasil_id);
+        $this->authorizeUjiAccess($hasil->uji);
 
         if ($hasil->status_pengerjaan !== 'berlangsung') {
             return redirect()->back()->with('error', 'Hanya sesi dengan status berlangsung yang dapat difinalisasi.');
@@ -509,7 +557,9 @@ class SbaController extends Controller
 
         foreach ($hasil->jawabans as $jawabanSiswa) {
             $soal = $mapSoal->get($jawabanSiswa->uji_soal_id);
-            if (!$soal) continue;
+            if (!$soal) {
+                continue;
+            }
 
             if (in_array($soal->tipe, ['pg', 'pg_kompleks'])) {
                 $kunciArray = $soal->kunci_jawaban ?? [];
@@ -554,6 +604,8 @@ class SbaController extends Controller
     public function exportHasilDetailPdf($hasil_id)
     {
         $hasil = UjiHasil::with(['uji.soals', 'jawabans', 'asesi'])->findOrFail($hasil_id);
+        $this->authorizeUjiAccess($hasil->uji);
+
         $mapJawaban = $hasil->jawabans->keyBy('uji_soal_id');
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('sba.exports.hasil_detail_pdf', compact('hasil', 'mapJawaban'))
@@ -567,9 +619,12 @@ class SbaController extends Controller
 
     public function bulkDelete(Request $request, $uji_id)
     {
+        $uji = Uji::findOrFail($uji_id);
+        $this->authorizeUjiAccess($uji);
+
         $request->validate([
             'ids'   => 'required|array|min:1',
-            'ids.*' => 'exists:uji_hasils,id', // Sesuaikan nama tabel hasil uji kamu jika berbeda (misal: uji_hasil)
+            'ids.*' => 'exists:uji_hasils,id',
         ]);
 
         try {
@@ -590,6 +645,7 @@ class SbaController extends Controller
     public function duplicate($id)
     {
         $ujiAsli = Uji::with('soals')->findOrFail($id);
+        $this->authorizeUjiAccess($ujiAsli);
 
         return \Illuminate\Support\Facades\DB::transaction(function () use ($ujiAsli) {
             // 1. Generate Kode Uji 6 karakter yang benar-benar baru dan unik
@@ -899,5 +955,4 @@ class SbaController extends Controller
             ], 500);
         }
     }
-
 }
