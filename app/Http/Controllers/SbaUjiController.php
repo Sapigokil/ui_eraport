@@ -284,7 +284,16 @@ class SbaUjiController extends Controller
         $hasil->increment('jumlah_pelanggaran');
         $pelanggaranSekarang = $hasil->jumlah_pelanggaran;
 
-        $catatan = $hasil->catatan_pelanggaran . " | Pindah tab/keluar fullscreen ke-" . $pelanggaranSekarang . " pada " . now();
+        $tipeMap = [
+            'pindah_tab' => 'Pindah tab / membuka aplikasi lain',
+            'loss_focus' => 'Kehilangan fokus jendela ujian',
+            'keluar_fullscreen' => 'Keluar dari mode layar penuh',
+            'ganti_soal_non_fullscreen' => 'Berpindah soal di luar mode layar penuh',
+        ];
+        $tipeInput = $request->input('tipe', '');
+        $keteranganTipe = $tipeMap[$tipeInput] ?? 'Pindah tab/keluar area ujian';
+
+        $catatan = $hasil->catatan_pelanggaran . " | " . $keteranganTipe . " ke-" . $pelanggaranSekarang . " pada " . now();
         $hasil->update(['catatan_pelanggaran' => $catatan]);
 
         if ($pelanggaranSekarang >= $uji->toleransi_pelanggaran) {

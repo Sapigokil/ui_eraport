@@ -252,8 +252,8 @@
                             
                             <div class="alert alert-danger border-0 rounded-3 p-3 mb-4 bg-opacity-10" style="background-color: #fce8e6;">
                                 <ul class="text-dark small ps-3 mb-0" style="line-height: 1.6;">
-                                    <li>Asesmen dikerjakan penuh dalam mode <strong>Layar Penuh (Fullscreen)</strong>.</li>
-                                    <li>Setiap tindakan <strong>pindah tab, memperkecil layar, atau berpindah soal tanpa fullscreen</strong> dianggap sebagai pelanggaran.</li>
+                                    <li>Asesmen dikerjakan penuh dalam mode <strong>Layar Penuh (Fullscreen)</strong> pada perangkat yang mendukung.</li>
+                                    <li>Setiap tindakan <strong>pindah tab, membuka aplikasi lain, atau keluar dari area ujian</strong> dianggap sebagai pelanggaran.</li>
                                     <li>Sisa toleransi pelanggaran Anda: <strong class="text-danger fs-6">{{ $uji->toleransi_pelanggaran }} kali</strong>. Melebihi batas akan membuat sistem mengunci ujian otomatis.</li>
                                 </ul>
                             </div>
@@ -261,7 +261,7 @@
                             <div class="form-check mb-4 bg-light p-3 rounded border">
                                 <input class="form-check-input ms-1 border-secondary" type="checkbox" id="checkSetuju" style="transform: scale(1.2); cursor: pointer;">
                                 <label class="form-check-label ms-3 text-sm text-dark fw-bold" for="checkSetuju" style="cursor: pointer;">
-                                    Saya memahami aturan dan siap masuk ke layar penuh ujian.
+                                    Saya memahami aturan dan siap memulai ujian.
                                 </label>
                             </div>
                         @endif
@@ -508,7 +508,7 @@
                     <h5 class="modal-title fw-bold"><i class="fas fa-exclamation-triangle me-2"></i> PERINGATAN PELANGGARAN</h5>
                 </div>
                 <div class="modal-body p-4 text-center">
-                    <p class="fs-6 text-dark mb-2" id="text-pesan-pelanggaran">Anda terdeteksi keluar dari area layar penuh ujian!</p>
+                    <p class="fs-6 text-dark mb-2" id="text-pesan-pelanggaran">Anda terdeteksi keluar dari area ujian!</p>
                     <div class="alert alert-warning py-2 mb-0 border-0 rounded-3">
                         Sisa toleransi kesempatan Anda: <strong id="text-sisa-toleransi" class="fs-5 text-danger">0</strong> kali lagi.
                     </div>
@@ -550,13 +550,42 @@
             const btnMulaiUji = document.getElementById('btnMulaiUji');
             const secPersiapan = document.getElementById('section-persiapan');
             const secUjian = document.getElementById('section-ujian');
+            const btnFullscreen = document.getElementById('btnFullscreen');
+            const btnKembaliUjian = document.getElementById('btnKembaliUjian');
             
             const isOpenBook = {{ $uji->open_book ? 'true' : 'false' }};
             let isUjianDimulai = false;
             let isLockedGagal = false; // Flag pengunci jika diskualifikasi
 
+            // Deteksi perangkat iOS (iPhone / iPad) & dukungan Fullscreen API browser
+            const docEl = document.documentElement;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const supportsFullscreen = !isIOS && Boolean(
+                (docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen) &&
+                (document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled)
+            );
+
+            // Penyesuaian UI untuk perangkat non-fullscreen (seperti iPhone/iPad)
+            if (!supportsFullscreen) {
+                if (btnFullscreen) {
+                    btnFullscreen.classList.add('d-none');
+                }
+                if (btnKembaliUjian) {
+                    btnKembaliUjian.innerHTML = '<i class="fas fa-play me-2"></i> Lanjutkan Ujian';
+                }
+            }
+
             function getCsrfToken() {
                 return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+            }
+
+            function isSedangFullscreen() {
+                return Boolean(
+                    document.fullscreenElement ||
+                    document.webkitFullscreenElement ||
+                    document.msFullscreenElement
+                );
             }
 
             // --- 1. TOGGLE TOMBOL MULAI PERSIAPAN ---
@@ -574,22 +603,23 @@
 
             // --- 2. FUNGSI FULLSCREEN ---
             function mintaFullscreen() {
-                if (isLockedGagal) return;
-                const docEl = document.documentElement;
-                if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (isLockedGagal || !supportsFullscreen) return;
+                if (!isSedangFullscreen()) {
                     if (docEl.requestFullscreen) {
                         docEl.requestFullscreen().catch(err => console.log("Fullscreen restriction:", err));
                     } else if (docEl.webkitRequestFullscreen) {
                         docEl.webkitRequestFullscreen();
+                    } else if (docEl.msRequestFullscreen) {
+                        docEl.msRequestFullscreen();
                     }
                 }
             }
 
-            document.getElementById('btnFullscreen')?.addEventListener('click', mintaFullscreen);
+            btnFullscreen?.addEventListener('click', mintaFullscreen);
 
             // --- 3. KLIK MULAI UJIAN ---
             btnMulaiUji.addEventListener('click', function() {
-                if (!isOpenBook) {
+                if (!isOpenBook && supportsFullscreen) {
                     mintaFullscreen();
                 }
 
@@ -613,7 +643,6 @@
             const modalGagalEl = document.getElementById('modalGagal');
             const bsModalGagal = new bootstrap.Modal(modalGagalEl);
             
-            const btnKembaliUjian = document.getElementById('btnKembaliUjian');
             const btnKeluarPortal = document.getElementById('btnKeluarPortal');
 
             function kunciFormUjian() {
@@ -670,7 +699,7 @@
             btnKembaliUjian.addEventListener('click', function() {
                 if (isLockedGagal) return;
                 bsModalPelanggaran.hide();
-                if (!isOpenBook) {
+                if (!isOpenBook && supportsFullscreen) {
                     mintaFullscreen();
                 }
             });
@@ -681,23 +710,34 @@
 
             // Event Listeners Pelanggaran (Hanya berjalan jika BUKAN mode Open Book)
             if (!isOpenBook) {
+                // Berlaku di semua perangkat (PC, Android, maupun iPhone/iPad) saat pindah tab / aplikasi / Home Screen
                 document.addEventListener("visibilitychange", function() {
                     if (document.hidden) {
                         laporkanPelanggaran('pindah_tab');
                     }
                 });
 
-                window.addEventListener('blur', function() {
-                    if (!document.hidden) {
-                        laporkanPelanggaran('loss_focus');
-                    }
-                });
+                // Khusus perangkat desktop / browser yang mendukung fullscreen penuh
+                // (Di iOS Safari, window.blur sering terpicu palsu oleh keyboard virtual, address bar, atau notifikasi)
+                if (supportsFullscreen) {
+                    window.addEventListener('blur', function() {
+                        if (!document.hidden) {
+                            laporkanPelanggaran('loss_focus');
+                        }
+                    });
 
-                document.addEventListener("fullscreenchange", function() {
-                    if (!document.fullscreenElement && !document.webkitFullscreenElement && isUjianDimulai && !document.hidden) {
-                        laporkanPelanggaran('keluar_fullscreen');
-                    }
-                });
+                    document.addEventListener("fullscreenchange", function() {
+                        if (!isSedangFullscreen() && isUjianDimulai && !document.hidden) {
+                            laporkanPelanggaran('keluar_fullscreen');
+                        }
+                    });
+
+                    document.addEventListener("webkitfullscreenchange", function() {
+                        if (!isSedangFullscreen() && isUjianDimulai && !document.hidden) {
+                            laporkanPelanggaran('keluar_fullscreen');
+                        }
+                    });
+                }
             }
 
             // Mencegat submit manual finalisasi jika user terkena diskualifikasi
@@ -717,8 +757,9 @@
             function switchSoal(targetIndex) {
                 if (isLockedGagal) return;
 
-                // PENGECEKAN KETAT FULLSCREEN SETIAP PERPINDAHAN SOAL (Kecuali Open Book)
-                if (!isOpenBook && isUjianDimulai && !document.fullscreenElement && !document.webkitFullscreenElement) {
+                // PENGECEKAN FULLSCREEN SETIAP PERPINDAHAN SOAL
+                // Hanya dijalankan jika BUKAN Open Book DAN perangkat mendukung Fullscreen API
+                if (!isOpenBook && supportsFullscreen && isUjianDimulai && !isSedangFullscreen()) {
                     laporkanPelanggaran('ganti_soal_non_fullscreen');
                 }
 
