@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\Siswa;
 use App\Models\Uji;
 use App\Models\UjiHasil;
 use App\Models\UjiJawaban;
@@ -62,12 +63,28 @@ class SbaUjiController extends Controller
         // --- JALUR SISWA / ASESI ---
         else {
             $request->validate(['nisn' => 'required|string']);
-            $asesi = User::where('nisn', $request->nisn)->first();
-            if (!$asesi) {
+            $nisnInput = trim($request->nisn);
+
+            // 1. Cari data siswa berdasarkan kolom nisn pada tabel siswa
+            $siswa = Siswa::where('nisn', $nisnInput)->first();
+            if (!$siswa) {
                 return back()->with('error', 'NISN tidak terdaftar dalam sistem!');
             }
-            $asesiId = $asesi->id;
-            $namaPublik = $asesi->name;
+
+            // 2. Cek apakah siswa sudah terhubung ke akun tabel users (via id_siswa atau username)
+            $asesi = User::where('id_siswa', $siswa->id_siswa)
+                ->orWhere('username', $siswa->nisn)
+                ->first();
+
+            if ($asesi) {
+                $asesiId = $asesi->id;
+                $namaPublik = $asesi->name ?: $siswa->nama_siswa;
+            } else {
+                // Fallback jika siswa belum membuat akun di tabel users
+                $asesiId = null;
+                $namaPublik = $siswa->nama_siswa . ' (' . $siswa->nisn . ')';
+            }
+
             $mode = 'siswa';
         }
 
@@ -330,6 +347,4 @@ class SbaUjiController extends Controller
 
         return view('sba-uji.selesai', compact('uji', 'hasil'));
     }
-
-    
 }
