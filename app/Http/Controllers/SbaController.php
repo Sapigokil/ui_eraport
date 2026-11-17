@@ -101,8 +101,13 @@ class SbaController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge([
+            'kode_uji' => strtoupper(trim((string) $request->kode_uji)),
+        ]);
+
         $request->validate([
             'judul'                 => 'required|string|max:255',
+            'kode_uji'              => ['required', 'string', 'max:12', 'regex:/^[A-Z0-9]+$/', 'unique:ujis,kode_uji'],
             'durasi_menit'          => 'required|integer|min:0',
             'toleransi_pelanggaran' => 'required|integer|min:1',
             'waktu_mulai'           => 'nullable|date',
@@ -112,12 +117,17 @@ class SbaController extends Controller
             'soals.*.pertanyaan'    => 'required|string',
             'soals.*.tipe'          => 'required|in:pg,pg_kompleks,esai',
             'soals.*.media'         => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ], [
+            'kode_uji.required' => 'Kode Asesmen wajib diisi.',
+            'kode_uji.max'      => 'Kode Asesmen maksimal 12 karakter.',
+            'kode_uji.regex'    => 'Kode Asesmen hanya boleh berisi huruf (A-Z) dan angka (0-9) tanpa spasi atau simbol.',
+            'kode_uji.unique'   => 'Kode Asesmen sudah digunakan oleh ujian lain. Silakan gunakan kode lain.',
         ]);
 
         // 1. Buat Ujian Utama
         $uji = Uji::create([
             'user_id'               => auth()->id(),
-            'kode_uji'              => strtoupper(\Illuminate\Support\Str::random(6)),
+            'kode_uji'              => $request->kode_uji,
             'judul'                 => $request->judul,
             'deskripsi'             => $request->deskripsi,
             'waktu_mulai'           => $request->waktu_mulai,
@@ -152,7 +162,7 @@ class SbaController extends Controller
             ]);
         }
 
-        return redirect()->route('sba.index')->with('success', 'Ujian dan soal berhasil dibuat!');
+        return redirect()->route('sba.index')->with('success', 'Ujian dan soal berhasil dibuat dengan kode: ' . $uji->kode_uji);
     }
 
     public function update(Request $request, $id)
@@ -160,8 +170,13 @@ class SbaController extends Controller
         $uji = Uji::with('soals')->findOrFail($id);
         $this->authorizeUjiAccess($uji);
 
+        $request->merge([
+            'kode_uji' => strtoupper(trim((string) $request->kode_uji)),
+        ]);
+
         $request->validate([
             'judul'                 => 'required|string|max:255',
+            'kode_uji'              => ['required', 'string', 'max:12', 'regex:/^[A-Z0-9]+$/', 'unique:ujis,kode_uji,' . $uji->id],
             'durasi_menit'          => 'required|integer|min:0',
             'toleransi_pelanggaran' => 'required|integer|min:1',
             'waktu_mulai'           => 'nullable|date',
@@ -170,10 +185,16 @@ class SbaController extends Controller
             'soals'                 => 'required|array|min:1',
             'soals.*.pertanyaan'    => 'required|string',
             'soals.*.media'         => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ], [
+            'kode_uji.required' => 'Kode Asesmen wajib diisi.',
+            'kode_uji.max'      => 'Kode Asesmen maksimal 12 karakter.',
+            'kode_uji.regex'    => 'Kode Asesmen hanya boleh berisi huruf (A-Z) dan angka (0-9) tanpa spasi atau simbol.',
+            'kode_uji.unique'   => 'Kode Asesmen sudah digunakan oleh ujian lain. Silakan gunakan kode lain.',
         ]);
 
         // 1. Update Data Utama Ujian
         $uji->update([
+            'kode_uji'              => $request->kode_uji,
             'judul'                 => $request->judul,
             'deskripsi'             => $request->deskripsi,
             'waktu_mulai'           => $request->waktu_mulai,

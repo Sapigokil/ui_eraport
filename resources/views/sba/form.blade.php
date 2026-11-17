@@ -101,9 +101,17 @@
 
                                     <div class="form-group mb-2">
                                         <label for="kode_uji" class="form-control-label text-xs mb-1">Kode Asesmen <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control form-control-sm border px-2 py-1 text-uppercase" id="kode_uji" name="kode_uji" 
-                                               value="{{ old('kode_uji', $uji->kode_uji ?? strtoupper(Str::random(6))) }}" 
-                                               placeholder="Contoh: MAT01" required maxlength="20">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" class="form-control form-control-sm border px-2 py-1 text-uppercase fw-bold @error('kode_uji') is-invalid @enderror" 
+                                                   id="kode_uji" name="kode_uji" 
+                                                   value="{{ old('kode_uji', $uji->kode_uji ?? strtoupper(\Illuminate\Support\Str::random(6))) }}" 
+                                                   placeholder="Contoh: MAT2026" required maxlength="12" pattern="[A-Za-z0-9]{1,12}"
+                                                   title="Hanya huruf (A-Z) dan angka (0-9), maksimal 12 karakter">
+                                            <button type="button" class="btn btn-outline-secondary mb-0 px-3" id="btn-generate-kode" title="Acak Kode Otomatis (6 Karakter)">
+                                                <i class="fas fa-sync-alt me-1"></i> Acak
+                                            </button>
+                                        </div>
+                                        <small class="text-xxs text-secondary d-block mt-1">Bisa diisi kode custom (hanya huruf A-Z dan angka 0-9, maksimal 12 karakter, tanpa spasi).</small>
                                     </div>
 
                                     <div class="form-group mb-0">
@@ -474,6 +482,32 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
+    /* ========================================================================
+     * VALIDASI & GENERATOR KODE ASESMEN (A-Z, 0-9, MAX 12 KARAKTER)
+     * ======================================================================== */
+    const inputKodeUji = document.getElementById('kode_uji');
+    const btnGenerateKode = document.getElementById('btn-generate-kode');
+
+    if (inputKodeUji) {
+        inputKodeUji.addEventListener('input', function() {
+            this.value = this.value
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, '')
+                .slice(0, 12);
+        });
+    }
+
+    if (btnGenerateKode && inputKodeUji) {
+        btnGenerateKode.addEventListener('click', function() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let randomCode = '';
+            for (let i = 0; i < 6; i++) {
+                randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            inputKodeUji.value = randomCode;
+        });
+    }
 
     /* ========================================================================
      * MANAJEMEN SOAL DINAMIS, DRAG-AND-DROP & UPLOAD MEDIA
