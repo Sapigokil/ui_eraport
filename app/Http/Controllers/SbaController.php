@@ -473,6 +473,75 @@ class SbaController extends Controller
     }
 
     /**
+     * Refresh / Hitung Ulang Nilai Peserta Sesuai Bobot Soal Terbaru
+     */
+    public function refreshNilaiHasil($hasil_id)
+    {
+        $hasil = UjiHasil::with(['uji.soals', 'jawabans'])->findOrFail($hasil_id);
+        $this->authorizeUjiAccess($hasil->uji);
+
+        $mapJawaban = $hasil->jawabans->keyBy('uji_soal_id');
+        $skorOtomatisBaru = 0;
+        $skorManualTotal = 0;
+
+        foreach ($hasil->uji->soals as $soal) {
+            $jawaban = $mapJawaban->get($soal->id);
+            $kunciArray = is_array($soal->kunci_jawaban)
+                ? array_values(array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== ''))
+                : [];
+            $isManualGraded = ($soal->tipe === 'esai') || (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray));
+
+            if ($isManualGraded) {
+                // Pertahankan skor manual yang ada, namun pangkas jika melebihi bobot soal terbaru
+                if ($jawaban) {
+                    $skorManualItem = (float) $jawaban->skor_didapat;
+                    if ($skorManualItem > (float) $soal->bobot_nilai) {
+                        $skorManualItem = (float) $soal->bobot_nilai;
+                        $jawaban->update(['skor_didapat' => $skorManualItem]);
+                    }
+                    $skorManualTotal += $skorManualItem;
+                }
+            } else {
+                // Evaluasi ulang soal otomatis (PG / PG Kompleks dengan kunci) sesuai bobot terbaru
+                $skorItemBaru = 0;
+
+                if ($jawaban && $jawaban->jawaban !== null && $jawaban->jawaban !== '') {
+                    $isBenar = false;
+
+                    if ($soal->tipe === 'pg_kompleks') {
+                        $jawabanSiswaArray = array_map('strval', json_decode($jawaban->jawaban, true) ?? []);
+                        $kunciStrArray = array_map('strval', $kunciArray);
+                        sort($kunciStrArray);
+                        sort($jawabanSiswaArray);
+                        $isBenar = ($kunciStrArray === $jawabanSiswaArray && !empty($kunciStrArray));
+                    } else {
+                        $isBenar = in_array((string) $jawaban->jawaban, array_map('strval', $kunciArray), true);
+                    }
+
+                    if ($isBenar) {
+                        $skorItemBaru = (float) $soal->bobot_nilai;
+                    }
+
+                    $jawaban->update(['skor_didapat' => $skorItemBaru]);
+                } elseif ($jawaban) {
+                    $jawaban->update(['skor_didapat' => 0]);
+                }
+
+                $skorOtomatisBaru += $skorItemBaru;
+            }
+        }
+
+        $totalSkorBaru = $skorOtomatisBaru + $skorManualTotal;
+
+        $hasil->update([
+            'skor_otomatis' => $skorOtomatisBaru,
+            'total_skor'    => $totalSkorBaru,
+        ]);
+
+        return redirect()->back()->with('success', "Nilai peserta berhasil diperbarui sesuai bobot soal terbaru (Total Skor: {$totalSkorBaru} Poin).");
+    }
+
+    /**
      * Simpan Penilaian Manual (Esai & PG/PGK Tanpa Kunci) serta Finalisasi Skor (Status menjadi 'final')
      */
     public function simpanPenilaianEsai(Request $request, $hasil_id)

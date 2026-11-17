@@ -53,6 +53,7 @@ Route::middleware(['auth', 'can:sba.menu'])->group(function () {
         // ----------------------------------------------------------------------
         Route::get('/hasil/{hasil_id}/detail', [SbaController::class, 'hasilDetail'])->name('hasil.detail');
         Route::post('/hasil/{hasil_id}/simpan-nilai', [SbaController::class, 'simpanPenilaianEsai'])->name('hasil.simpan_nilai');
+        Route::post('/hasil/{hasil_id}/refresh-nilai', [SbaController::class, 'refreshNilaiHasil'])->name('hasil.refresh_nilai');
         Route::get('/hasil/{hasil_id}/export-pdf', [SbaController::class, 'exportHasilDetailPdf'])->name('hasil.detail.pdf');
         Route::delete('/hasil/{hasil_id}', [SbaController::class, 'hasilDestroy'])->name('hasil.destroy');
         

@@ -35,7 +35,7 @@
                         </div>
                     @endif
 
-                    {{-- ALERT NOTIFIKASI HASIL IMPORT EXCEL KE VIEW --}}
+                    {{-- ALERT NOTIFIKASI HASIL IMPORT EXCEL / PENYESUAIAN BOBOT DI VIEW --}}
                     <div id="alert-import-success" class="alert bg-gradient-success text-white alert-dismissible fade show text-sm py-2 mb-4 d-none" role="alert">
                         <span id="alert-import-success-text"></span>
                         <button type="button" class="btn-close text-lg py-2 opacity-10" onclick="this.parentElement.classList.add('d-none')" aria-label="Close">
@@ -226,7 +226,7 @@
                             </div>
 
                             {{-- INFORMASI TOTAL DAN AUTO ADJUST --}}
-                            <div class="row mb-3 mt-2">
+                            <div class="row mb-3 mt-2" id="box-rekap-soal">
                                 <div class="col-12">
                                     <div class="p-3 bg-gray-50 border rounded d-flex flex-column flex-md-row justify-content-between align-items-center shadow-sm">
                                         <div class="mb-2 mb-md-0">
@@ -278,6 +278,60 @@
     </div>
     <x-app.footer />
 </main>
+
+{{-- MODAL PERINGATAN TOTAL BOBOT NILAI TIDAK SAMA DENGAN 100 --}}
+<div class="modal fade" id="modalPeringatanBobot" tabindex="-1" aria-labelledby="modalPeringatanBobotLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header bg-gradient-warning border-0 py-3 px-4">
+                <h6 class="modal-title fw-bold text-white mb-0" id="modalPeringatanBobotLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Konfirmasi Total Bobot Nilai
+                </h6>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-white text-start">
+                <p class="text-dark text-sm mb-3" style="line-height: 1.5;">
+                    Total bobot nilai seluruh soal saat ini <strong class="text-danger">tidak berjumlah 100 poin</strong>. Silakan periksa ringkasan penyusunan soal berikut sebelum menyimpan:
+                </p>
+
+                {{-- RINGKASAN JUMLAH SOAL & TOTAL BOBOT --}}
+                <div class="row g-2 mb-3 text-center">
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <span class="d-block text-secondary text-uppercase" style="font-size: 0.7rem; font-weight: 700;">Jumlah Soal</span>
+                            <strong class="fs-4 text-primary" id="modal-bobot-jumlah-soal">0</strong>
+                            <span class="d-block text-xxs text-secondary">Butir Soal</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <span class="d-block text-secondary text-uppercase" style="font-size: 0.7rem; font-weight: 700;">Total Bobot Nilai</span>
+                            <strong class="fs-4 text-danger" id="modal-bobot-total-poin">0</strong>
+                            <span class="d-block text-xxs text-secondary">Target Standar: <strong>100 Poin</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-2 px-3 mb-0 rounded border-start border-4 border-warning bg-light text-dark text-xs" id="modal-bobot-keterangan">
+                    {{-- Diisi dinamis oleh JS (kurang/lebih berapa poin) --}}
+                </div>
+            </div>
+
+            <div class="modal-footer border-top bg-light py-2 px-4 d-flex justify-content-end align-items-center flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-3 mb-0" data-bs-dismiss="modal">
+                    Batal
+                </button>
+                <button type="button" id="btn-modal-tetap-simpan" class="btn btn-sm bg-gradient-info text-white fw-bold px-3 shadow-sm mb-0">
+                    <i class="fas fa-save me-1"></i> Tetap Simpan
+                </button>
+                <button type="button" id="btn-modal-sesuaikan-bobot" class="btn btn-sm bg-gradient-primary text-white fw-bold px-3 shadow-sm mb-0">
+                    <i class="fas fa-magic me-1"></i> Sesuaikan Bobot dan Simpan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {{-- MODAL IMPORT SOAL EXCEL (SELARAS DENGAN TEMA SBA) --}}
 <div class="modal fade" id="modalImportSoalExcel" tabindex="-1" aria-labelledby="modalImportSoalExcelLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -771,13 +825,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function updateSummary() {
+    function hitungStatistikSoal() {
         const bobotInputs = document.querySelectorAll('.soal-bobot');
         let totalPoin = 0;
         bobotInputs.forEach(input => {
             totalPoin += parseInt(input.value) || 0;
         });
-        document.getElementById('summary-total-soal').innerText = bobotInputs.length;
+        return {
+            jumlahSoal: bobotInputs.length,
+            totalPoin: totalPoin
+        };
+    }
+
+    function updateSummary() {
+        const { jumlahSoal, totalPoin } = hitungStatistikSoal();
+        document.getElementById('summary-total-soal').innerText = jumlahSoal;
         
         const poinEl = document.getElementById('summary-total-poin');
         const warningEl = document.getElementById('poin-warning');
@@ -797,6 +859,25 @@ document.addEventListener('DOMContentLoaded', function() {
             poinEl.classList.add('text-info');
             warningEl.classList.add('d-none');
         }
+    }
+
+    function sesuaikanBobotOtomatis() {
+        const bobotInputs = document.querySelectorAll('.soal-bobot');
+        const n = bobotInputs.length;
+        if (n === 0) return;
+        
+        const basePoin = Math.floor(100 / n);
+        const remainder = 100 % n;
+        
+        bobotInputs.forEach((input, index) => {
+            if (index === n - 1) {
+                input.value = basePoin + remainder;
+            } else {
+                input.value = basePoin;
+            }
+        });
+        
+        updateSummary();
     }
 
     // ========================================================================
@@ -937,23 +1018,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    document.getElementById('btn-sesuaikan-poin').addEventListener('click', function() {
-        const bobotInputs = document.querySelectorAll('.soal-bobot');
-        const n = bobotInputs.length;
-        if (n === 0) return;
-        
-        const basePoin = Math.floor(100 / n);
-        const remainder = 100 % n;
-        
-        bobotInputs.forEach((input, index) => {
-            if (index === n - 1) {
-                input.value = basePoin + remainder;
-            } else {
-                input.value = basePoin;
-            }
-        });
-        
-        updateSummary();
+    const btnSesuaikanPoin = document.getElementById('btn-sesuaikan-poin');
+    btnSesuaikanPoin.addEventListener('click', function() {
+        sesuaikanBobotOtomatis();
         
         const originalText = this.innerHTML;
         this.innerHTML = '<i class="fas fa-check me-1"></i> Berhasil Disesuaikan';
@@ -963,6 +1030,70 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.replace('bg-gradient-success', 'bg-gradient-info');
         }, 2000);
     });
+
+    // ========================================================================
+    // INTERCEPT SUBMIT FORM: MODAL PERINGATAN JIKA TOTAL BOBOT != 100
+    // ========================================================================
+    const formUjianSba = document.getElementById('form-ujian-sba');
+    const modalBobotEl = document.getElementById('modalPeringatanBobot');
+    const btnModalSesuaikanBobot = document.getElementById('btn-modal-sesuaikan-bobot');
+    const btnModalTetapSimpan = document.getElementById('btn-modal-tetap-simpan');
+    let bypassBobotCheck = false;
+
+    function submitFormSetelahKonfirmasi() {
+        bypassBobotCheck = true;
+
+        const bsModalBobot = bootstrap.Modal.getInstance(modalBobotEl);
+        if (bsModalBobot) {
+            bsModalBobot.hide();
+        }
+
+        if (typeof formUjianSba.requestSubmit === 'function') {
+            formUjianSba.requestSubmit();
+        } else {
+            formUjianSba.submit();
+        }
+    }
+
+    if (formUjianSba && modalBobotEl) {
+        formUjianSba.addEventListener('submit', function(e) {
+            if (bypassBobotCheck) {
+                return;
+            }
+
+            const { jumlahSoal, totalPoin } = hitungStatistikSoal();
+
+            if (totalPoin !== 100) {
+                e.preventDefault();
+
+                document.getElementById('modal-bobot-jumlah-soal').innerText = jumlahSoal;
+                document.getElementById('modal-bobot-total-poin').innerText = totalPoin + ' Poin';
+
+                const ketEl = document.getElementById('modal-bobot-keterangan');
+                if (totalPoin < 100) {
+                    const kurang = 100 - totalPoin;
+                    ketEl.innerHTML = `<i class="fas fa-info-circle text-warning me-1"></i> Total bobot nilai dari <strong>${jumlahSoal} soal</strong> saat ini masih <strong>kurang ${kurang} poin</strong> dari standar nilai maksimal 100.`;
+                } else {
+                    const lebih = totalPoin - 100;
+                    ketEl.innerHTML = `<i class="fas fa-info-circle text-warning me-1"></i> Total bobot nilai dari <strong>${jumlahSoal} soal</strong> saat ini <strong>melebihi ${lebih} poin</strong> dari standar nilai maksimal 100.`;
+                }
+
+                const bsModalBobot = bootstrap.Modal.getOrCreateInstance(modalBobotEl);
+                bsModalBobot.show();
+            }
+        });
+
+        // Opsi 1 (Urutan 2): Tetap Simpan meskipun total bobot != 100
+        btnModalTetapSimpan?.addEventListener('click', function() {
+            submitFormSetelahKonfirmasi();
+        });
+
+        // Opsi 2 (Urutan 3): Sesuaikan Bobot ke 100 lalu langsung Simpan
+        btnModalSesuaikanBobot?.addEventListener('click', function() {
+            sesuaikanBobotOtomatis();
+            submitFormSetelahKonfirmasi();
+        });
+    }
 
     updateSummary();
 });

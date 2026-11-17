@@ -45,10 +45,12 @@
             padding: 2px 8px;
             border-radius: 4px;
         }
-        .sticky-summary {
-            position: sticky;
-            top: 90px;
-            z-index: 100;
+        @media (min-width: 992px) {
+            .sticky-summary {
+                position: sticky;
+                top: 90px;
+                z-index: 100;
+            }
         }
     </style>
 
@@ -62,10 +64,17 @@
             </div>
         @endif
 
+        @if (session('error'))
+            <div class="alert bg-gradient-danger alert-dismissible text-white fade show mb-4" role="alert">
+                <span class="text-sm"><strong>Gagal!</strong> {{ session('error') }}</span>
+                <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert">&times;</button>
+            </div>
+        @endif
+
         {{-- HEADER BANNER & IDENTITAS ASESI --}}
         <div class="card card-custom mb-4 border">
             <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 px-3 d-flex justify-content-between align-items-center">
+                <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div>
                         <h6 class="text-white mb-0"><i class="fas fa-user-check me-2"></i> Detail & Lembar Penilaian Asesi</h6>
                         <p class="text-white text-xs opacity-8 mb-0 ms-4">
@@ -87,7 +96,7 @@
             </div>
 
             <div class="card-body px-4 py-3">
-                <div class="row align-items-center">
+                <div class="row align-items-center g-3">
                     <div class="col-md-3 border-end">
                         <span class="text-xs text-secondary d-block">Nama Peserta / Asesi:</span>
                         <h6 class="mb-0 text-dark font-weight-bold">
@@ -110,7 +119,7 @@
                         </span>
                     </div>
 
-                    <div class="col-md-2 border-end text-center">
+                    <div class="col-md-2 border-end text-md-center">
                         <span class="text-xs text-secondary d-block">Percobaan / Pelanggaran:</span>
                         <span class="badge bg-light text-dark border text-xxs font-weight-bold">
                             Ke-{{ $hasil->percobaan_ke }}
@@ -135,17 +144,65 @@
             </div>
         </div>
 
+        {{-- FORM HIDDEN UNTUK REFRESH NILAI OTOMATIS SESUAI BOBOT TERBARU --}}
+        <form action="{{ route('sba.hasil.refresh_nilai', $hasil->id) }}" method="POST" id="formRefreshNilai" class="d-none">
+            @csrf
+        </form>
+
         {{-- FORM PENILAIAN MANUAL (ESAI & PG/PGK TANPA KUNCI) --}}
         <form action="{{ route('sba.hasil.simpan_nilai', $hasil->id) }}" method="POST" id="formPenilaian">
             @csrf
             
             @php
                 $totalSkorOtomatis = 0;
+                $hasManualQuestions = false;
             @endphp
 
             <div class="row">
-                {{-- KOLOM DAFTAR SOAL --}}
-                <div class="col-lg-9">
+                {{-- SIDEBAR AKSI & AUTO SCORING (Tampil di ATAS pada Mobile/Tablet, di KANAN pada Desktop) --}}
+                <div class="col-lg-3 order-1 order-lg-2 mb-4 mb-lg-0">
+                    <div class="card card-custom border sticky-summary">
+                        <div class="card-header bg-light py-3 border-bottom">
+                            <h6 class="mb-0 text-sm font-weight-bold text-dark"><i class="fas fa-sliders-h me-2 text-primary"></i> Panel Akses Nilai</h6>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="p-2 bg-light rounded border mb-3 text-xs">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-secondary">Skor Otomatis:</span>
+                                    <strong class="text-dark" id="sidebar-skor-otomatis">{{ number_format($hasil->skor_otomatis ?? 0, 0) }} Poin</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-secondary">Skor Manual:</span>
+                                    <strong class="text-warning" id="sidebar-skor-manual">0 Poin</strong>
+                                </div>
+                            </div>
+
+                            {{-- TOMBOL REFRESH NILAI SESUAI BOBOT SOAL TERBARU --}}
+                            <button type="button" id="btnRefreshNilai" class="btn btn-outline-primary btn-sm w-100 mb-1">
+                                <i class="fas fa-sync-alt me-1"></i> Refresh Nilai (Bobot Baru)
+                            </button>
+                            <small class="text-xxs text-muted d-block mb-3" style="line-height: 1.3;">
+                                *Menghitung ulang skor PG/PG Kompleks mengikuti perubahan bobot soal terbaru.
+                            </small>
+
+                            <button type="button" id="btnAutoScoring" class="btn btn-outline-info btn-sm w-100 mb-1">
+                                <i class="fas fa-magic me-1"></i> Auto-Scoring Penuh
+                            </button>
+                            <small class="text-xxs text-muted d-block mb-3" style="line-height: 1.3;">
+                                *Memberikan nilai maksimal pada seluruh soal manual (esai / PG tanpa kunci).
+                            </small>
+
+                            <hr class="my-2">
+
+                            <button type="submit" class="btn bg-gradient-primary text-white btn-sm w-100 py-2 font-weight-bold shadow-sm mb-0">
+                                <i class="fas fa-save me-1"></i> Simpan & Finalisasi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- KOLOM DAFTAR SOAL (Tampil di BAWAH pada Mobile/Tablet, di KIRI pada Desktop) --}}
+                <div class="col-lg-9 order-2 order-lg-1">
                     @foreach($hasil->uji->soals as $index => $soal)
                         @php
                             $jawabanSiswa = $mapJawaban->get($soal->id);
@@ -155,7 +212,9 @@
                             $tanpaKunci = in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray);
                             $isManualGraded = ($soal->tipe === 'esai') || $tanpaKunci;
 
-                            if (!$isManualGraded) {
+                            if ($isManualGraded) {
+                                $hasManualQuestions = true;
+                            } else {
                                 $totalSkorOtomatis += $skorDidapat;
                             }
                         @endphp
@@ -314,40 +373,6 @@
                         </div>
                     @endforeach
                 </div>
-
-                {{-- SIDEBAR AKSI & AUTO SCORING --}}
-                <div class="col-lg-3">
-                    <div class="card card-custom border sticky-summary">
-                        <div class="card-header bg-light py-3 border-bottom">
-                            <h6 class="mb-0 text-sm font-weight-bold text-dark"><i class="fas fa-sliders-h me-2 text-primary"></i> Panel Akses Nilai</h6>
-                        </div>
-                        <div class="card-body p-3">
-                            <div class="p-2 bg-light rounded border mb-3 text-xs">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span class="text-secondary">Skor Otomatis:</span>
-                                    <strong class="text-dark">{{ number_format($totalSkorOtomatis, 0) }} Poin</strong>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-secondary">Skor Manual:</span>
-                                    <strong class="text-warning" id="sidebar-skor-manual">0 Poin</strong>
-                                </div>
-                            </div>
-
-                            <button type="button" id="btnAutoScoring" class="btn btn-outline-info btn-sm w-100 mb-2">
-                                <i class="fas fa-magic me-1"></i> Auto-Scoring Penuh
-                            </button>
-                            <small class="text-xxs text-muted d-block mb-3">
-                                *Memberikan nilai maksimal pada seluruh soal manual (esai / PG tanpa kunci).
-                            </small>
-
-                            <hr class="my-2">
-
-                            <button type="submit" class="btn bg-gradient-primary text-white btn-sm w-100 py-2 font-weight-bold shadow-sm mb-0">
-                                <i class="fas fa-save me-1"></i> Simpan & Finalisasi
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
         </form>
 
@@ -361,7 +386,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const skorOtomatisBase = {{ (float) $totalSkorOtomatis }};
     const manualInputs = document.querySelectorAll('.input-skor-manual');
     const totalRealtimeEl = document.getElementById('nilai-total-realtime');
+    const sidebarOtomatisEl = document.getElementById('sidebar-skor-otomatis');
     const sidebarManualEl = document.getElementById('sidebar-skor-manual');
+
+    if (sidebarOtomatisEl) {
+        sidebarOtomatisEl.innerText = `${Number.isInteger(skorOtomatisBase) ? skorOtomatisBase : skorOtomatisBase.toFixed(1)} Poin`;
+    }
 
     function recalculateTotalRealtime() {
         let totalManual = 0;
@@ -393,6 +423,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Refresh Nilai Otomatis Sesuai Bobot Soal Terbaru
+    const btnRefreshNilai = document.getElementById('btnRefreshNilai');
+    const formRefreshNilai = document.getElementById('formRefreshNilai');
+    if (btnRefreshNilai && formRefreshNilai) {
+        btnRefreshNilai.addEventListener('click', function() {
+            if (!confirm('Hitung ulang dan perbarui nilai peserta ini sesuai bobot soal terbaru?')) return;
+            formRefreshNilai.submit();
+        });
+    }
 
     // Auto Scoring Penuh untuk semua item penilaian manual
     document.getElementById('btnAutoScoring').addEventListener('click', function() {
