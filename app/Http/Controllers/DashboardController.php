@@ -36,10 +36,18 @@ class DashboardController extends Controller
             // Ambil Season Aktif
             $activeSeason = Season::where('is_active', 1)->first();
             
-            // Ambil Pengumuman / Event (Tampilkan semua event yang akan datang & hari ini)
-            $pengumuman = Event::where('tanggal', '>=', Carbon::today())
-                               ->orderBy('tanggal', 'asc')
-                               ->get();
+            // Ambil Pengumuman / Event aktif untuk target 'semua' atau 'siswa' yang belum melewati tanggal_selesai
+            $pengumuman = Event::where('status', 'aktif')
+                ->whereIn('target', ['semua', 'siswa'])
+                ->where(function ($query) {
+                    $query->where('tanggal_selesai', '>=', Carbon::today())
+                          ->orWhere(function ($q) {
+                              $q->whereNull('tanggal_selesai')
+                                ->where('tanggal', '>=', Carbon::today());
+                          });
+                })
+                ->orderBy('tanggal', 'asc')
+                ->get();
 
             // Cek apakah siswa punya pengajuan biodata yang masih pending
             $pengajuanPending = PengajuanBiodata::where('id_siswa', $siswa->id_siswa ?? $user->id_siswa)

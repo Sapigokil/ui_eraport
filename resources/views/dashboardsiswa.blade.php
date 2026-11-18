@@ -26,7 +26,7 @@
                     font-size: 13px;
                 ">
                     <h6 style="margin-bottom:6px; font-weight:600;">
-                        📅 Status Tahun Ajaran Akademik
+                        <i class="fas fa-calendar-alt text-info me-1"></i> Status Tahun Ajaran Akademik
                     </h6>
 
                     <div style="line-height:1.5; color:#333;">
@@ -68,7 +68,7 @@
                     border-radius: 6px;
                     font-size: 13px;
                 ">
-                    ⚠️ Tahun Ajaran saat ini belum diset oleh Admin Sekolah.
+                    <i class="fas fa-exclamation-triangle text-warning me-1"></i> Tahun Ajaran saat ini belum diset oleh Admin Sekolah.
                 </div>
                 @endif
 
@@ -81,7 +81,7 @@
                     font-size: 13px;
                 ">
                     <h6 style="margin-bottom:6px; font-weight:600;">
-                        👤 Identitas Siswa
+                        <i class="fas fa-id-card text-success me-1"></i> Identitas Siswa
                     </h6>
                     <div style="line-height:1.5; color:#333;">
                         <table style="width: 100%; border:none;">
@@ -113,7 +113,7 @@
                     font-size: 13px;
                 ">
                     <h6 style="margin-bottom:6px; font-weight:600;">
-                        💼 Ruang Praktik (TBA)
+                        <i class="fas fa-briefcase text-danger me-1"></i> Ruang Praktik (TBA)
                     </h6>
                     <div style="line-height:1.5; color:#555;">
                         Fitur pantauan kehadiran dan capaian nilai rapor sementara akan segera hadir di area ini.
@@ -130,33 +130,52 @@
                 <div class="notification-card" style="
                     background-color: #FFFFE0;
                     border-left: 4px solid #FFCB61;
-                    padding: 10px 14px;
+                    padding: 12px 16px;
                     margin-bottom: 12px;
                     border-radius: 6px;
                     font-size: 13px;
                 ">
-                    <h6 style="
-                        margin-bottom: 4px;
-                        font-size: 14px;
-                        font-weight: 600;
-                    ">
-                        <i class="fas fa-bullhorn text-warning me-1"></i> Informasi Sekolah
-                    </h6>
-
-                    <div style="
-                        margin-bottom: 4px;
-                        line-height: 1.3;
-                        color: #333;
-                        text-align: justify;
-                    ">
-                        {{ $event->deskripsi }}
+                    <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                        <h6 style="
+                            margin-bottom: 0;
+                            font-size: 14px;
+                            font-weight: 600;
+                        ">
+                            <i class="fas fa-bullhorn text-warning me-1"></i> {{ $event->judul ?? 'Informasi Sekolah' }}
+                        </h6>
+                        @if(!empty($event->kategori))
+                            <span class="badge {{ $event->kategori === 'Pengumuman' ? 'bg-warning text-dark' : 'bg-info text-white' }}" style="font-size: 10px;">
+                                {{ $event->kategori }}
+                            </span>
+                        @endif
                     </div>
 
                     <div style="
+                        margin-bottom: 6px;
+                        line-height: 1.4;
+                        color: #333;
+                        text-align: justify;
+                    ">
+                        {!! nl2br(e($event->deskripsi)) !!}
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2" style="
                         font-size: 11px;
                         color: #555;
                     ">
-                        ({{ \Carbon\Carbon::parse($event->tanggal)->locale('id')->translatedFormat('l, d F Y') }})
+                        <span>
+                            <i class="far fa-calendar-alt me-1"></i>
+                            {{ \Carbon\Carbon::parse($event->tanggal)->locale('id')->translatedFormat('l, d F Y') }}
+                            @if(!empty($event->tanggal_selesai) && $event->tanggal_selesai != $event->tanggal)
+                                s.d. {{ \Carbon\Carbon::parse($event->tanggal_selesai)->locale('id')->translatedFormat('l, d F Y') }}
+                            @endif
+                        </span>
+
+                        @if(!empty($event->lampiran))
+                            <a href="{{ asset('storage/' . $event->lampiran) }}" target="_blank" class="btn btn-xs btn-outline-dark mb-0 py-1 px-2" style="font-size: 11px;">
+                                <i class="fas fa-paperclip me-1"></i> Lihat Lampiran
+                            </a>
+                        @endif
                     </div>
                 </div>
                 @empty
