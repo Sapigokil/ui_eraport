@@ -73,19 +73,19 @@ Route::middleware(['auth', 'can:sba.menu'])->group(function () {
 // ==============================================================================
 Route::prefix('sba')->group(function () {
     
-    // A. Portal Masuk Asesmen (Input Token/Pin Uji)
+    // A. Portal Masuk Asesmen (Input Kode Asesmen hanya dilakukan di sini)
     Route::get('/', [SbaUjiController::class, 'portal'])->name('sba.portal');
     Route::post('/process', [SbaUjiController::class, 'processPortal'])->name('sba.portal.process');
 
-    // B. Ruang CBT Engine (Halaman Utama Pengerjaan Ujian)
-    Route::get('/asesmen/{kode_uji}', [SbaUjiController::class, 'halamanUji'])->name('sba.uji.halaman');
+    // B. Ruang CBT Engine (Menggunakan uji_id agar kebal terhadap perubahan kode_uji di tengah sesi)
+    Route::get('/asesmen/{uji_id}', [SbaUjiController::class, 'halamanUji'])->name('sba.uji.halaman');
 
     // C. Endpoint AJAX In-Game (Autosave Jawaban & Tracking Pelanggaran Strict Mode)
-    Route::post('/asesmen/{kode_uji}/simpan', [SbaUjiController::class, 'simpanJawaban'])->name('sba.uji.simpan');
-    Route::post('/asesmen/{kode_uji}/pelanggaran', [SbaUjiController::class, 'catatPelanggaran'])->name('sba.uji.pelanggaran');
+    Route::post('/asesmen/{uji_id}/simpan', [SbaUjiController::class, 'simpanJawaban'])->name('sba.uji.simpan');
+    Route::post('/asesmen/{uji_id}/pelanggaran', [SbaUjiController::class, 'catatPelanggaran'])->name('sba.uji.pelanggaran');
 
     // D. Finalisasi Ujian & Output Hasil
-    Route::post('/asesmen/{kode_uji}/selesai', [SbaUjiController::class, 'selesaiUjian'])->name('sba.uji.selesai');
-    Route::get('/asesmen/{kode_uji}/selesai/{hasil_id}', [SbaUjiController::class, 'tampilkanHasil'])->name('sba.uji.selesai.tampil');
+    Route::post('/asesmen/{uji_id}/selesai', [SbaUjiController::class, 'selesaiUjian'])->name('sba.uji.selesai');
+    Route::get('/asesmen/{uji_id}/selesai/{hasil_id}', [SbaUjiController::class, 'tampilkanHasil'])->name('sba.uji.selesai.tampil');
 
 });

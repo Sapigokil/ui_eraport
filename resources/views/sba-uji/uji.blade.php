@@ -207,20 +207,37 @@
                                 <span class="text-muted small"><i class="fas fa-book-open text-primary me-2"></i>Judul Asesmen:</span>
                                 <span class="fw-bold text-dark text-end">{{ $uji->judul }}</span>
                             </div>
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between {{ $uji->waktu_selesai ? 'mb-2 border-bottom pb-2' : '' }}">
                                 <span class="text-muted small"><i class="fas fa-hourglass-half text-primary me-2"></i>Durasi Ujian:</span>
                                 <span class="fw-bold text-primary">
                                     {{ $uji->durasi_menit > 0 ? $uji->durasi_menit . ' Menit' : 'Tanpa Batas Waktu' }}
                                 </span>
                             </div>
+                            @if($uji->waktu_selesai)
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted small"><i class="fas fa-calendar-times text-danger me-2"></i>Jadwal Berakhir:</span>
+                                    <span class="fw-bold text-danger">{{ $uji->waktu_selesai->format('d/m/Y H:i') }} WIB</span>
+                                </div>
+                            @endif
                         </div>
+
+                        @if($uji->waktu_selesai && $uji->durasi_menit > 0 && $hasil->waktu_mulai->copy()->addMinutes($uji->durasi_menit)->gt($uji->waktu_selesai))
+                            <div class="alert alert-warning border-0 rounded-3 p-3 mb-4" style="background-color: #fff8e1;">
+                                <div class="d-flex align-items-center text-dark small">
+                                    <i class="fas fa-clock text-warning fs-5 me-3"></i>
+                                    <div>
+                                        <strong>Perhatian Jadwal Berakhir:</strong> Sisa waktu pengerjaan mengikuti batas jadwal selesai ujian pada pukul <strong>{{ $uji->waktu_selesai->format('H:i') }} WIB</strong> dan akan terkumpul otomatis saat jadwal berakhir.
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
 
                         @if(isset($jawabanTersimpan) && $jawabanTersimpan->count() > 0)
                             <div class="alert alert-info border-0 rounded-3 p-3 mb-4 bg-opacity-10" style="background-color: #e3f2fd;">
                                 <div class="d-flex align-items-center text-primary small">
                                     <i class="fas fa-history fs-5 me-3"></i>
                                     <div>
-                                        <strong>Melanjutkan Sesi Sebelumnya:</strong> Sebanyak <strong>{{ $jawabanTersimpan->count() }} jawaban</strong> Anda telah dipulihkan otomatis. Sisa waktu mengikuti waktu mulai awal.
+                                        <strong>Melanjutkan Sesi Sebelumnya:</strong> Sebanyak <strong>{{ $jawabanTersimpan->count() }} jawaban</strong> Anda telah dipulihkan otomatis. Sisa waktu mengikuti waktu mulai awal dan jadwal ujian.
                                     </div>
                                 </div>
                             </div>
@@ -235,7 +252,7 @@
                                 <ul class="text-dark small ps-3 mb-0" style="line-height: 1.6;">
                                     <li>Asesmen ini menggunakan <strong>Mode Open Book</strong>.</li>
                                     <li>Anda diperbolehkan membuka tab lain, catatan, atau referensi materi selama waktu ujian masih berjalan.</li>
-                                    <li>Pastikan menekan tombol <strong>Kumpulkan Ujian</strong> sebelum durasi waktu habis.</li>
+                                    <li>Pastikan menekan tombol <strong>Kumpulkan Ujian</strong> sebelum durasi atau jadwal ujian berakhir.</li>
                                 </ul>
                             </div>
 
@@ -491,7 +508,7 @@
                 </div>
                 <div class="modal-footer bg-light px-4 py-3 border-0">
                     <button type="button" class="btn btn-outline-secondary px-4 rounded-3" data-bs-dismiss="modal">Kembali</button>
-                    <form action="{{ route('sba.uji.selesai', $uji->kode_uji) }}" method="POST" id="form-finalisasi">
+                    <form action="{{ route('sba.uji.selesai', $uji->id) }}" method="POST" id="form-finalisasi">
                         @csrf
                         <button type="submit" class="btn btn-success px-4 fw-bold rounded-3">Ya, Kumpulkan</button>
                     </form>
@@ -556,6 +573,11 @@
             const isOpenBook = {{ $uji->open_book ? 'true' : 'false' }};
             let isUjianDimulai = false;
             let isLockedGagal = false; // Flag pengunci jika diskualifikasi
+            let isSubmittingFinal = false;
+
+            // Sinkronisasi sisa waktu langsung dari waktu server saat halaman dimuat
+            const initialRemainingSeconds = {{ $sisaDetikAwal !== null ? (int) $sisaDetikAwal : 'null' }};
+            const clientPageLoadTimestamp = Date.now();
 
             // Deteksi perangkat iOS (iPhone / iPad) & dukungan Fullscreen API browser
             const docEl = document.documentElement;
@@ -586,6 +608,12 @@
                     document.webkitFullscreenElement ||
                     document.msFullscreenElement
                 );
+            }
+
+            function submitFinalisasiOtomatis() {
+                if (isSubmittingFinal || isLockedGagal) return;
+                isSubmittingFinal = true;
+                document.getElementById('form-finalisasi').submit();
             }
 
             // --- 1. TOGGLE TOMBOL MULAI PERSIAPAN ---
@@ -660,15 +688,15 @@
 
                 const sekarang = new Date().getTime();
 
-                // Jangan laporkan jika ujian belum mulai, sedang gagal/terkunci, sedang melapor, atau masih dalam jeda cooldown
-                if (!isUjianDimulai || isLockedGagal || sedangMelapor || (sekarang - waktuPelanggaranTerakhir < jedaPelanggaranMs)) {
+                // Jangan laporkan jika ujian belum mulai, sedang finalisasi, sedang gagal/terkunci, sedang melapor, atau masih dalam jeda cooldown
+                if (!isUjianDimulai || isSubmittingFinal || isLockedGagal || sedangMelapor || (sekarang - waktuPelanggaranTerakhir < jedaPelanggaranMs)) {
                     return;
                 }
 
                 sedangMelapor = true;
                 waktuPelanggaranTerakhir = sekarang;
 
-                fetch("{{ route('sba.uji.pelanggaran', $uji->kode_uji) }}", {
+                fetch("{{ route('sba.uji.pelanggaran', $uji->id) }}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -718,7 +746,6 @@
                 });
 
                 // Khusus perangkat desktop / browser yang mendukung fullscreen penuh
-                // (Di iOS Safari, window.blur sering terpicu palsu oleh keyboard virtual, address bar, atau notifikasi)
                 if (supportsFullscreen) {
                     window.addEventListener('blur', function() {
                         if (!document.hidden) {
@@ -745,7 +772,9 @@
                 if (isLockedGagal) {
                     e.preventDefault();
                     alert('Ujian Anda telah dihentikan oleh sistem.');
+                    return;
                 }
+                isSubmittingFinal = true;
             });
 
             // --- 5. LOGIKA NAVIGASI & PENGECEKAN FULLSCREEN SETIAP GANTI SOAL ---
@@ -758,7 +787,6 @@
                 if (isLockedGagal) return;
 
                 // PENGECEKAN FULLSCREEN SETIAP PERPINDAHAN SOAL
-                // Hanya dijalankan jika BUKAN Open Book DAN perangkat mendukung Fullscreen API
                 if (!isOpenBook && supportsFullscreen && isUjianDimulai && !isSedangFullscreen()) {
                     laporkanPelanggaran('ganti_soal_non_fullscreen');
                 }
@@ -790,9 +818,9 @@
 
             // AJAX Simpan Jawaban
             function simpanKeServer(soalId, jawabanVal, raguVal) {
-                if (isLockedGagal) return;
+                if (isLockedGagal || isSubmittingFinal) return;
 
-                fetch("{{ route('sba.uji.simpan', $uji->kode_uji) }}", {
+                fetch("{{ route('sba.uji.simpan', $uji->id) }}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -803,7 +831,16 @@
                         jawaban: jawabanVal,
                         ragu_ragu: raguVal ? 1 : 0
                     })
-                }).then(() => updateGridStatus());
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.status === 'expired') {
+                        submitFinalisasiOtomatis();
+                        return;
+                    }
+                    updateGridStatus();
+                })
+                .catch(() => updateGridStatus());
             }
 
             document.querySelectorAll('.radio-jawaban').forEach(r => {
@@ -875,34 +912,38 @@
                 document.getElementById('stat-belum').innerText = totalSoal - terjawabCount;
             }
 
-            // --- 6. TIMER ---
+            // --- 6. TIMER (MENGIKUTI BATAS TERCEPAT: DURASI UJIAN VS JADWAL SELESAI) ---
+            function renderCountdown(timeLeft) {
+                let safeSeconds = Math.max(0, timeLeft);
+                let hours = Math.floor(safeSeconds / 3600);
+                let minutes = Math.floor((safeSeconds % 3600) / 60);
+                let seconds = safeSeconds % 60;
+
+                document.getElementById('timer-countdown').innerText = 
+                    String(hours).padStart(2, '0') + ":" + 
+                    String(minutes).padStart(2, '0') + ":" + 
+                    String(seconds).padStart(2, '0');
+            }
+
             function mulaiTimer() {
-                @if($uji->durasi_menit > 0)
-                    let durasiDetik = {{ $uji->durasi_menit }} * 60;
-                    const waktuMulai = new Date("{{ $hasil->waktu_mulai->format('Y-m-d H:i:s') }}").getTime();
-                    
+                if (initialRemainingSeconds !== null) {
+                    renderCountdown(initialRemainingSeconds);
+
                     let x = setInterval(function() {
-                        let now = new Date().getTime();
-                        let elapsedSeconds = Math.floor((now - waktuMulai) / 1000);
-                        let timeLeft = durasiDetik - elapsedSeconds;
+                        let elapsedSeconds = Math.floor((Date.now() - clientPageLoadTimestamp) / 1000);
+                        let timeLeft = initialRemainingSeconds - elapsedSeconds;
 
                         if (timeLeft <= 0) {
+                            renderCountdown(0);
                             clearInterval(x);
-                            document.getElementById('modalFinalisasi').querySelector('form').submit();
+                            submitFinalisasiOtomatis();
                         } else {
-                            let hours = Math.floor(timeLeft / 3600);
-                            let minutes = Math.floor((timeLeft % 3600) / 60);
-                            let seconds = timeLeft % 60;
-
-                            document.getElementById('timer-countdown').innerText = 
-                                String(hours).padStart(2, '0') + ":" + 
-                                String(minutes).padStart(2, '0') + ":" + 
-                                String(seconds).padStart(2, '0');
+                            renderCountdown(timeLeft);
                         }
                     }, 1000);
-                @else
+                } else {
                     document.getElementById('timer-countdown').innerText = "Tanpa Batas";
-                @endif
+                }
             }
         });
     </script>

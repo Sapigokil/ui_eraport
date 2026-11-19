@@ -13,7 +13,7 @@ use Carbon\Carbon;
 class SbaUjiController extends Controller
 {
     // ======================================================================
-    // 1. PORTAL & VALIDASI MASUK
+    // 1. PORTAL & VALIDASI MASUK (Validasi kode_uji hanya di sini)
     // ======================================================================
     
     public function portal()
@@ -38,7 +38,7 @@ class SbaUjiController extends Controller
             return back()->with('error', 'Asesmen ini sudah ditutup oleh admin.');
         }
 
-        // Cek Validasi Waktu Mulai & Selesai
+        // Cek Validasi Waktu Mulai & Selesai (Patokan Utama)
         $now = now();
         if ($uji->waktu_mulai && $now->lt($uji->waktu_mulai)) {
             return back()->with('error', 'Ujian belum dimulai. Jadwal: ' . $uji->waktu_mulai->format('d/m/Y H:i'));
@@ -88,7 +88,7 @@ class SbaUjiController extends Controller
             $mode = 'siswa';
         }
 
-        // Cek Riwayat Percobaan & Pelanggaran
+        // Cek Riwayat Percobaan & Pelanggaran berdasarkan uji_id
         $riwayat = UjiHasil::where('uji_id', $uji->id)
             ->where(function($q) use ($asesiId, $namaPublik) {
                 if ($asesiId) {
@@ -98,7 +98,7 @@ class SbaUjiController extends Controller
                 }
             })->get();
 
-        // Apakah ada sesi yang masih 'berlangsung'?
+        // Apakah ada sesi yang masih 'berlangsung'? (Termasuk sesi yang baru di-unlock admin)
         $sesiAktif = $riwayat->where('status_pengerjaan', 'berlangsung')->first();
         
         if (!$sesiAktif) {
@@ -114,43 +114,67 @@ class SbaUjiController extends Controller
             }
         }
 
-        // Set Sesi Terisolasi
+        // Set Sesi Terisolasi berbasis uji_id
+        session()->forget('sba_kode_uji');
         session([
-            'sba_mode' => $mode,
-            'sba_peserta_id' => $asesiId,
+            'sba_mode'         => $mode,
+            'sba_peserta_id'   => $asesiId,
             'sba_peserta_nama' => $namaPublik,
-            'sba_kode_uji' => $kodeUji
+            'sba_uji_id'       => $uji->id,
         ]);
 
-        // LANGSUNG DIALIHKAN KE HALAMAN UJIAN (1 VIEW)
-        return redirect()->route('sba.uji.halaman', ['kode_uji' => $kodeUji]);
+        // LANGSUNG DIALIHKAN KE HALAMAN UJIAN BERBASIS uji_id
+        return redirect()->route('sba.uji.halaman', ['uji_id' => $uji->id]);
     }
 
     // ======================================================================
-    // 2. PELAKSANAAN UJIAN (SINGLE PAGE ENGINE)
+    // 2. PELAKSANAAN UJIAN (SINGLE PAGE ENGINE - BERBASIS uji_id)
     // ======================================================================
 
-    public function halamanUji($kode_uji)
+    public function halamanUji($uji_id)
     {
-        $kodeUji = strtoupper(trim($kode_uji));
-        $uji = Uji::with('soals')->where('kode_uji', $kodeUji)->firstOrFail();
+        $uji = Uji::with('soals')->findOrFail($uji_id);
 
-        // Cek apakah peserta belum masuk portal ATAU kode ujian di sesi berbeda dengan URL yang diakses
-        if ((!session()->has('sba_peserta_id') && !session()->has('sba_peserta_nama')) || session('sba_kode_uji') !== $kodeUji) {
-            return redirect()->route('sba.portal', ['kode' => $kodeUji])
-                ->with('warning', 'Silakan masukkan data diri untuk memulai ujian.');
+        // Cek apakah peserta belum masuk portal ATAU uji_id di sesi berbeda dengan URL yang diakses
+        if ((!session()->has('sba_peserta_id') && !session()->has('sba_peserta_nama')) || (int) session('sba_uji_id') !== (int) $uji->id) {
+            return redirect()->route('sba.portal')
+                ->with('warning', 'Silakan masukkan kode asesmen dan data diri untuk memulai ujian.');
+        }
+
+        $now = now();
+        if ($uji->waktu_mulai && $now->lt($uji->waktu_mulai)) {
+            return redirect()->route('sba.portal')
+                ->with('error', 'Ujian belum dimulai. Jadwal: ' . $uji->waktu_mulai->format('d/m/Y H:i'));
         }
 
         $asesiId = session('sba_peserta_id');
         $namaPeserta = session('sba_peserta_nama');
 
-        // Cari atau Buat Sesi Pengerjaan Database (UjiHasil)
+        // Cari Sesi Pengerjaan Database (UjiHasil)
         $hasil = UjiHasil::where('uji_id', $uji->id)
             ->where('status_pengerjaan', 'berlangsung')
             ->where(function($q) use ($asesiId, $namaPeserta) {
                 if ($asesiId) $q->where('asesi_id', $asesiId);
                 else $q->where('nama_peserta_publik', $namaPeserta);
             })->first();
+
+        // Jika jadwal selesai sudah terlewati atau status closed
+        if ($uji->status === 'closed' || ($uji->waktu_selesai && $now->gte($uji->waktu_selesai))) {
+            if ($hasil) {
+                $totalSkorOtomatis = $this->hitungSkorOtomatis($uji, $hasil);
+                $hasil->update([
+                    'waktu_selesai'     => $now,
+                    'skor_otomatis'     => $totalSkorOtomatis,
+                    'total_skor'        => $totalSkorOtomatis,
+                    'status_pengerjaan' => 'selesai',
+                ]);
+                session()->forget(['sba_hasil_id', 'sba_uji_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
+                return redirect()->route('sba.uji.selesai.tampil', ['uji_id' => $uji->id, 'hasil_id' => $hasil->id]);
+            }
+
+            session()->forget(['sba_hasil_id', 'sba_uji_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
+            return redirect()->route('sba.portal')->with('error', 'Jadwal ujian telah berakhir.');
+        }
 
         if (!$hasil) {
             $percobaanSebelumnya = UjiHasil::where('uji_id', $uji->id)
@@ -160,14 +184,45 @@ class SbaUjiController extends Controller
                 })->count();
 
             $hasil = UjiHasil::create([
-                'uji_id' => $uji->id,
-                'asesi_id' => $asesiId,
+                'uji_id'              => $uji->id,
+                'asesi_id'            => $asesiId,
                 'nama_peserta_publik' => $asesiId ? null : $namaPeserta,
-                'percobaan_ke' => $percobaanSebelumnya + 1,
-                'waktu_mulai' => now(),
-                'status_pengerjaan' => 'berlangsung',
-                'jumlah_pelanggaran' => 0
+                'percobaan_ke'        => $percobaanSebelumnya + 1,
+                'waktu_mulai'         => $now,
+                'status_pengerjaan'   => 'berlangsung',
+                'jumlah_pelanggaran'  => 0,
             ]);
+        }
+
+        // Hitung batas waktu efektif (yang paling cepat tercapai antara durasi ujian vs jadwal waktu_selesai)
+        $batasDurasi = $uji->durasi_menit > 0
+            ? $hasil->waktu_mulai->copy()->addMinutes($uji->durasi_menit)
+            : null;
+        $batasJadwal = $uji->waktu_selesai
+            ? $uji->waktu_selesai->copy()
+            : null;
+
+        $batasAkhir = null;
+        if ($batasDurasi && $batasJadwal) {
+            $batasAkhir = $batasDurasi->lt($batasJadwal) ? $batasDurasi : $batasJadwal;
+        } else {
+            $batasAkhir = $batasDurasi ?? $batasJadwal;
+        }
+
+        $sisaDetikAwal = null;
+        if ($batasAkhir) {
+            $sisaDetikAwal = (int) $now->diffInSeconds($batasAkhir, false);
+            if ($sisaDetikAwal <= 0) {
+                $totalSkorOtomatis = $this->hitungSkorOtomatis($uji, $hasil);
+                $hasil->update([
+                    'waktu_selesai'     => $now,
+                    'skor_otomatis'     => $totalSkorOtomatis,
+                    'total_skor'        => $totalSkorOtomatis,
+                    'status_pengerjaan' => 'selesai',
+                ]);
+                session()->forget(['sba_hasil_id', 'sba_uji_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
+                return redirect()->route('sba.uji.selesai.tampil', ['uji_id' => $uji->id, 'hasil_id' => $hasil->id]);
+            }
         }
 
         // Simpan ID Hasil ke sesi
@@ -181,23 +236,35 @@ class SbaUjiController extends Controller
         // Acak Soal jika diaktifkan
         $soals = $uji->acak_soal ? $uji->soals->shuffle() : $uji->soals;
 
-        return view('sba-uji.uji', compact('uji', 'namaPeserta', 'hasil', 'soals', 'jawabanTersimpan'));
+        return view('sba-uji.uji', compact('uji', 'namaPeserta', 'hasil', 'soals', 'jawabanTersimpan', 'sisaDetikAwal', 'batasAkhir'));
     }
 
     // ======================================================================
     // 3. AJAX: SIMPAN JAWABAN PER BUTIR SOAL
     // ======================================================================
-    public function simpanJawaban(Request $request, $kode_uji)
+    public function simpanJawaban(Request $request, $uji_id)
     {
         $hasilId = session('sba_hasil_id');
         if (!$hasilId) {
             return response()->json(['status' => 'error', 'message' => 'Sesi tidak ditemukan.'], 401);
         }
 
+        $uji = Uji::findOrFail($uji_id);
+        $hasil = UjiHasil::where('id', $hasilId)->where('uji_id', $uji->id)->first();
+
+        if (!$hasil || $hasil->status_pengerjaan !== 'berlangsung') {
+            return response()->json(['status' => 'error', 'message' => 'Sesi ujian sudah berakhir.'], 403);
+        }
+
+        // Jika jadwal selesai sudah terlewati, beri sinyal expired agar frontend otomatis finalisasi
+        if ($uji->waktu_selesai && now()->gt($uji->waktu_selesai)) {
+            return response()->json(['status' => 'expired', 'message' => 'Jadwal ujian telah berakhir.'], 403);
+        }
+
         $request->validate([
             'uji_soal_id' => 'required|exists:uji_soals,id',
-            'jawaban' => 'nullable',
-            'ragu_ragu' => 'nullable|boolean',
+            'jawaban'     => 'nullable',
+            'ragu_ragu'   => 'nullable|boolean',
         ]);
 
         $jawabanInput = $request->jawaban;
@@ -208,10 +275,10 @@ class SbaUjiController extends Controller
         UjiJawaban::updateOrCreate(
             [
                 'uji_hasil_id' => $hasilId,
-                'uji_soal_id' => $request->uji_soal_id,
+                'uji_soal_id'  => $request->uji_soal_id,
             ],
             [
-                'jawaban' => $jawabanInput,
+                'jawaban'   => $jawabanInput,
                 'ragu_ragu' => $request->has('ragu_ragu') ? $request->ragu_ragu : false,
             ]
         );
@@ -262,20 +329,20 @@ class SbaUjiController extends Controller
     // ======================================================================
     // 4. AJAX: CATAT PELANGGARAN (Tetap Hitung Skor yang Sudah Dikerjakan)
     // ======================================================================
-    public function catatPelanggaran(Request $request, $kode_uji)
+    public function catatPelanggaran(Request $request, $uji_id)
     {
         $hasilId = session('sba_hasil_id');
-        $uji = Uji::with('soals')->where('kode_uji', strtoupper($kode_uji))->firstOrFail();
+        $uji = Uji::with('soals')->findOrFail($uji_id);
 
         // Jika mode Open Book aktif, abaikan seluruh pencatatan pelanggaran
         if ($uji->open_book) {
             return response()->json([
-                'status' => 'ignored',
+                'status'  => 'ignored',
                 'message' => 'Mode Open Book aktif, perpindahan tab diizinkan.'
             ]);
         }
 
-        $hasil = UjiHasil::find($hasilId);
+        $hasil = UjiHasil::where('id', $hasilId)->where('uji_id', $uji->id)->first();
 
         if (!$hasil || $hasil->status_pengerjaan !== 'berlangsung') {
             return response()->json(['status' => 'error']);
@@ -285,9 +352,9 @@ class SbaUjiController extends Controller
         $pelanggaranSekarang = $hasil->jumlah_pelanggaran;
 
         $tipeMap = [
-            'pindah_tab' => 'Pindah tab / membuka aplikasi lain',
-            'loss_focus' => 'Kehilangan fokus jendela ujian',
-            'keluar_fullscreen' => 'Keluar dari mode layar penuh',
+            'pindah_tab'                => 'Pindah tab / membuka aplikasi lain',
+            'loss_focus'                => 'Kehilangan fokus jendela ujian',
+            'keluar_fullscreen'         => 'Keluar dari mode layar penuh',
             'ganti_soal_non_fullscreen' => 'Berpindah soal di luar mode layar penuh',
         ];
         $tipeInput = $request->input('tipe', '');
@@ -307,29 +374,29 @@ class SbaUjiController extends Controller
                 'total_skor'        => $skorTerkumpul,
             ]);
             
-            session()->forget(['sba_hasil_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
+            session()->forget(['sba_hasil_id', 'sba_uji_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
 
             return response()->json([
-                'status' => 'gagal',
+                'status'  => 'gagal',
                 'message' => 'Anda telah melewati batas toleransi pelanggaran. Ujian dihentikan otomatis.'
             ]);
         }
 
         return response()->json([
-            'status' => 'warning',
+            'status'         => 'warning',
             'sisa_toleransi' => $uji->toleransi_pelanggaran - $pelanggaranSekarang,
-            'message' => 'Peringatan! Anda terdeteksi keluar dari area ujian.'
+            'message'        => 'Peringatan! Anda terdeteksi keluar dari area ujian.'
         ]);
     }
 
     // ======================================================================
     // 5. FINALISASI & PENILAIAN OTOMATIS
     // ======================================================================
-    public function selesaiUjian(Request $request, $kode_uji)
+    public function selesaiUjian(Request $request, $uji_id)
     {
         $hasilId = session('sba_hasil_id');
-        $uji = Uji::with('soals')->where('kode_uji', strtoupper($kode_uji))->firstOrFail();
-        $hasil = UjiHasil::with('jawabans')->where('id', $hasilId)->firstOrFail();
+        $uji = Uji::with('soals')->findOrFail($uji_id);
+        $hasil = UjiHasil::with('jawabans')->where('id', $hasilId)->where('uji_id', $uji->id)->firstOrFail();
 
         if ($hasil->status_pengerjaan !== 'berlangsung') {
             return redirect()->route('sba.portal')->with('error', 'Ujian sudah diselesaikan sebelumnya.');
@@ -344,15 +411,15 @@ class SbaUjiController extends Controller
             'status_pengerjaan' => 'selesai'
         ]);
 
-        session()->forget(['sba_hasil_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
+        session()->forget(['sba_hasil_id', 'sba_uji_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
 
-        return redirect()->route('sba.uji.selesai.tampil', ['kode_uji' => $kode_uji, 'hasil_id' => $hasil->id]);
+        return redirect()->route('sba.uji.selesai.tampil', ['uji_id' => $uji->id, 'hasil_id' => $hasil->id]);
     }
 
-    public function tampilkanHasil($kode_uji, $hasil_id)
+    public function tampilkanHasil($uji_id, $hasil_id)
     {
-        $uji = Uji::where('kode_uji', strtoupper($kode_uji))->firstOrFail();
-        $hasil = UjiHasil::where('id', $hasil_id)->firstOrFail();
+        $uji = Uji::with('soals')->findOrFail($uji_id);
+        $hasil = UjiHasil::where('id', $hasil_id)->where('uji_id', $uji->id)->firstOrFail();
 
         return view('sba-uji.selesai', compact('uji', 'hasil'));
     }
