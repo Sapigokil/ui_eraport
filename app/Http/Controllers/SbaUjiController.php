@@ -123,34 +123,60 @@ class SbaUjiController extends Controller
             'sba_uji_id'       => $uji->id,
         ]);
 
-        // LANGSUNG DIALIHKAN KE HALAMAN UJIAN BERBASIS uji_id
-        return redirect()->route('sba.uji.halaman', ['uji_id' => $uji->id]);
+        // Dialihkan ke URL /sba/asesmen/{kode_uji}
+        return redirect()->route('sba.uji.halaman', ['kode_uji' => $uji->kode_uji]);
     }
 
     // ======================================================================
-    // 2. PELAKSANAAN UJIAN (SINGLE PAGE ENGINE - BERBASIS uji_id)
+    // 2. PELAKSANAAN UJIAN & QUICKLINK (/sba/asesmen/{kode_uji})
     // ======================================================================
 
-    public function halamanUji($uji_id)
+    public function halamanUji($kode_uji)
     {
-        $uji = Uji::with('soals')->findOrFail($uji_id);
+        $kodeUji = strtoupper(trim($kode_uji));
+        $sessionUjiId = session('sba_uji_id');
+        $hasPesertaSession = session()->has('sba_peserta_id') || session()->has('sba_peserta_nama');
 
-        // Cek apakah peserta belum masuk portal ATAU uji_id di sesi berbeda dengan URL yang diakses
-        if ((!session()->has('sba_peserta_id') && !session()->has('sba_peserta_nama')) || (int) session('sba_uji_id') !== (int) $uji->id) {
-            return redirect()->route('sba.portal')
-                ->with('warning', 'Silakan masukkan kode asesmen dan data diri untuk memulai ujian.');
+        // Jika peserta sudah tervalidasi lewat portal, utamakan pencarian lewat sba_uji_id
+        // agar tetap aman meski guru mengubah kode_uji di tengah sesi atau peserta me-refresh halaman
+        if ($hasPesertaSession && $sessionUjiId) {
+            $uji = Uji::with('soals')->find($sessionUjiId);
+
+            // Jika ternyata kode pada URL cocok dengan ujian lain (misal peserta membuka quicklink ujian berbeda)
+            $ujiDariUrl = Uji::where('kode_uji', $kodeUji)->first();
+            if ($ujiDariUrl && (int) $ujiDariUrl->id !== (int) $sessionUjiId) {
+                return redirect()->route('sba.portal', ['kode' => $ujiDariUrl->kode_uji])
+                    ->with('warning', 'Silakan masukkan data diri untuk memulai ujian ini.');
+            }
+
+            if (!$uji) {
+                session()->forget(['sba_hasil_id', 'sba_uji_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
+                return redirect()->route('sba.portal')
+                    ->with('error', 'Data asesmen tidak ditemukan.');
+            }
+        } else {
+            // Akses langsung via Quicklink (misal: /sba/asesmen/COBA123) tanpa sesi portal
+            $uji = Uji::where('kode_uji', $kodeUji)->first();
+
+            if (!$uji) {
+                return redirect()->route('sba.portal')
+                    ->with('error', 'Kode Asesmen tidak ditemukan atau sudah tidak berlaku.');
+            }
+
+            return redirect()->route('sba.portal', ['kode' => $uji->kode_uji])
+                ->with('warning', 'Silakan masukkan data diri untuk memulai ujian.');
         }
 
         $now = now();
         if ($uji->waktu_mulai && $now->lt($uji->waktu_mulai)) {
-            return redirect()->route('sba.portal')
+            return redirect()->route('sba.portal', ['kode' => $uji->kode_uji])
                 ->with('error', 'Ujian belum dimulai. Jadwal: ' . $uji->waktu_mulai->format('d/m/Y H:i'));
         }
 
         $asesiId = session('sba_peserta_id');
         $namaPeserta = session('sba_peserta_nama');
 
-        // Cari Sesi Pengerjaan Database (UjiHasil)
+        // Cari Sesi Pengerjaan Database (UjiHasil) berdasarkan uji_id
         $hasil = UjiHasil::where('uji_id', $uji->id)
             ->where('status_pengerjaan', 'berlangsung')
             ->where(function($q) use ($asesiId, $namaPeserta) {
