@@ -639,6 +639,50 @@ class SbaController extends Controller
     }
 
     /**
+     * Helper Private: Pemetaan NISN & Nama Kelas untuk Koleksi UjiHasil
+     */
+    private function attachSiswaKelasInfo($hasilsCollection): void
+    {
+        $siswaIds = $hasilsCollection->map(function ($row) {
+            return $row->asesi ? $row->asesi->id_siswa : null;
+        })->filter()->unique()->values()->all();
+
+        $siswaMap = !empty($siswaIds)
+            ? DB::table('siswa')
+                ->whereIn('id_siswa', $siswaIds)
+                ->get(['id_siswa', 'nisn', 'id_kelas'])
+                ->keyBy('id_siswa')
+            : collect();
+
+        $kelasIds = $siswaMap->pluck('id_kelas')->filter()->unique()->values()->all();
+
+        $kelasMap = !empty($kelasIds)
+            ? DB::table('kelas')
+                ->whereIn('id_kelas', $kelasIds)
+                ->get(['id_kelas', 'nama_kelas'])
+                ->keyBy('id_kelas')
+            : collect();
+
+        foreach ($hasilsCollection as $row) {
+            $siswaData = ($row->asesi && !empty($row->asesi->id_siswa))
+                ? $siswaMap->get($row->asesi->id_siswa)
+                : null;
+
+            $kelasData = ($siswaData && !empty($siswaData->id_kelas))
+                ? $kelasMap->get($siswaData->id_kelas)
+                : null;
+
+            $row->nisn_display = ($siswaData && !empty($siswaData->nisn))
+                ? (string) $siswaData->nisn
+                : null;
+
+            $row->nama_kelas_display = ($kelasData && !empty($kelasData->nama_kelas))
+                ? (string) $kelasData->nama_kelas
+                : null;
+        }
+    }
+
+    /**
      * Halaman Index Daftar Hasil Peserta / Asesi per Ujian
      */
     public function hasilIndex(Request $request, $uji_id)
@@ -651,11 +695,34 @@ class SbaController extends Controller
             ? UjiHasil::where('uji_id', $uji->id)->where('status_pengerjaan', 'selesai')->count()
             : 0;
 
+        // Ambil daftar kelas unik dari peserta ujian ini untuk dropdown filter kelas
+        $kelasIdsPeserta = DB::table('uji_hasils')
+            ->join('users', 'uji_hasils.asesi_id', '=', 'users.id')
+            ->join('siswa', 'users.id_siswa', '=', 'siswa.id_siswa')
+            ->where('uji_hasils.uji_id', $uji->id)
+            ->whereNotNull('siswa.id_kelas')
+            ->distinct()
+            ->pluck('siswa.id_kelas')
+            ->toArray();
+
+        if ($request->filled('id_kelas') && !in_array($request->id_kelas, $kelasIdsPeserta)) {
+            $kelasIdsPeserta[] = $request->id_kelas;
+        }
+
+        $kelasList = !empty($kelasIdsPeserta)
+            ? DB::table('kelas')
+                ->whereIn('id_kelas', $kelasIdsPeserta)
+                ->orderBy('nama_kelas')
+                ->get(['id_kelas', 'nama_kelas'])
+            : collect();
+
         $hasils = $this->getFilteredHasilQuery($request, $uji->id)
             ->paginate((int) $request->get('per_page', 10))
             ->withQueryString();
 
-        return view('sba.hasil', compact('uji', 'hasils', 'butuhPenilaianManual', 'jumlahPerluDinilai'));
+        $this->attachSiswaKelasInfo($hasils->getCollection());
+
+        return view('sba.hasil', compact('uji', 'hasils', 'butuhPenilaianManual', 'jumlahPerluDinilai', 'kelasList'));
     }
 
     /**
@@ -667,13 +734,32 @@ class SbaController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
+            $userIdsByNisn = DB::table('users')
+                ->join('siswa', 'users.id_siswa', '=', 'siswa.id_siswa')
+                ->where('siswa.nisn', 'like', "%{$search}%")
+                ->pluck('users.id');
+
+            $query->where(function ($q) use ($search, $userIdsByNisn) {
                 $q->where('asesi_id', 'like', "%{$search}%")
                     ->orWhere('nama_peserta_publik', 'like', "%{$search}%")
                     ->orWhereHas('asesi', function ($userQuery) use ($search) {
                         $userQuery->where('name', 'like', "%{$search}%");
                     });
+
+                if ($userIdsByNisn->isNotEmpty()) {
+                    $q->orWhereIn('asesi_id', $userIdsByNisn);
+                }
             });
+        }
+
+        if ($request->filled('id_kelas')) {
+            $idKelas = $request->id_kelas;
+            $userIdsInKelas = DB::table('users')
+                ->join('siswa', 'users.id_siswa', '=', 'siswa.id_siswa')
+                ->where('siswa.id_kelas', $idKelas)
+                ->pluck('users.id');
+
+            $query->whereIn('asesi_id', $userIdsInKelas);
         }
 
         if ($request->filled('status_pengerjaan')) {
@@ -714,7 +800,7 @@ class SbaController extends Controller
      */
     public function exportHasil(Request $request, $uji_id)
     {
-        $uji = Uji::findOrFail($uji_id);
+        $uji = Uji::with('soals')->findOrFail($uji_id);
         $this->authorizeUjiAccess($uji);
 
         $format = $request->get('format', 'excel');
@@ -727,6 +813,11 @@ class SbaController extends Controller
             return $pdf->download("Rekap_Hasil_{$uji->kode_uji}.pdf");
         }
 
+        // Muat jawaban peserta secara batch untuk rincian skor per soal
+        $dataHasils->load('jawabans');
+        $this->attachSiswaKelasInfo($dataHasils);
+
+        $daftarSoals = $uji->soals;
         $fileName = "Rekap_Hasil_{$uji->kode_uji}.xls";
 
         $headers = [
@@ -736,7 +827,7 @@ class SbaController extends Controller
             "Pragma"              => "no-cache",
         ];
 
-        $callback = function () use ($uji, $dataHasils) {
+        $callback = function () use ($dataHasils, $daftarSoals) {
             echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
             echo '<head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Hasil Ujian</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
             echo '<body>';
@@ -745,16 +836,28 @@ class SbaController extends Controller
             echo '<th>No</th>';
             echo '<th>ID Asesi</th>';
             echo '<th>Nama Peserta</th>';
+            echo '<th>Kelas</th>';
             echo '<th>Percobaan Ke</th>';
             echo '<th>Waktu Mulai</th>';
             echo '<th>Waktu Selesai</th>';
             echo '<th>Durasi</th>';
             echo '<th>Status</th>';
             echo '<th>Skor Akhir</th>';
+            foreach ($daftarSoals as $soalIdx => $soalItem) {
+                echo '<th>Soal ' . ($soalIdx + 1) . '</th>';
+            }
             echo '</tr>';
 
             foreach ($dataHasils as $idx => $row) {
                 $nama = $row->asesi ? $row->asesi->name : ($row->nama_peserta_publik ?? 'Guest');
+
+                $idAsesiDisplay = !empty($row->nisn_display)
+                    ? (string) $row->nisn_display
+                    : (string) ($row->asesi_id ?? 'Publik');
+
+                $namaKelasDisplay = !empty($row->nama_kelas_display)
+                    ? (string) $row->nama_kelas_display
+                    : '-';
 
                 $durasiText = '-';
                 if ($row->waktu_mulai && $row->waktu_selesai) {
@@ -767,20 +870,29 @@ class SbaController extends Controller
                     $durasiText = 'Sedang Berjalan';
                 }
 
+                $mapJawabanSoal = $row->jawabans->keyBy('uji_soal_id');
+
                 echo '<tr>';
                 echo '<td>' . ($idx + 1) . '</td>';
-                echo '<td>' . ($row->asesi_id ?? 'Publik') . '</td>';
+                echo '<td style="mso-number-format:\'\@\';">' . htmlspecialchars($idAsesiDisplay) . '</td>';
                 echo '<td>' . htmlspecialchars($nama) . '</td>';
+                echo '<td>' . htmlspecialchars($namaKelasDisplay) . '</td>';
                 echo '<td>' . $row->percobaan_ke . '</td>';
                 echo '<td>' . ($row->waktu_mulai ? $row->waktu_mulai->format('d/m/Y H:i:s') : '-') . '</td>';
                 echo '<td>' . ($row->waktu_selesai ? $row->waktu_selesai->format('d/m/Y H:i:s') : '-') . '</td>';
                 echo '<td>' . $durasiText . '</td>';
                 echo '<td>' . strtoupper($row->status_pengerjaan) . '</td>';
                 echo '<td>' . $row->total_skor . '</td>';
+                foreach ($daftarSoals as $soalItem) {
+                    $jawabanItem = $mapJawabanSoal->get($soalItem->id);
+                    $skorSoal = $jawabanItem ? $jawabanItem->skor_didapat : 0;
+                    echo '<td>' . $skorSoal . '</td>';
+                }
                 echo '</tr>';
             }
 
             echo '</table>';
+            echo '</body>';
             echo '</html>';
         };
 

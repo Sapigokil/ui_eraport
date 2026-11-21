@@ -51,6 +51,12 @@
             border: 1px solid #f59e0b;
             font-weight: 700;
         }
+        .badge-pelanggaran-count {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            font-weight: 700;
+        }
         .row-perlu-dinilai {
             background-color: #fffdf7 !important;
             border-left: 4px solid #fb8c00 !important;
@@ -87,6 +93,12 @@
             background-color: #5e72e4 !important;
             border-color: #5e72e4 !important;
         }
+
+        /* Mencegah input date meluber pada layar sempit / half-desktop */
+        .filter-date-input {
+            min-width: 0 !important;
+            width: 100%;
+        }
     </style>
 
     <div class="container-fluid py-4 px-4">
@@ -101,7 +113,7 @@
                                 <i class="fas fa-poll-h text-white" style="font-size: 8rem;"></i>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center position-relative z-index-1 px-3">
+                            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 position-relative z-index-1 px-3">
                                 <div>
                                     <h6 class="text-white text-capitalize mb-0">
                                         <i class="fas fa-chart-bar me-2"></i> Hasil Asesmen: {{ $uji->judul }}
@@ -110,7 +122,7 @@
                                         Kode Uji: <strong>{{ strtoupper($uji->kode_uji) }}</strong> | Total Data Tampil: <strong>{{ $hasils->total() }} Peserta</strong>
                                     </p>
                                 </div>
-                                <div class="d-flex gap-2">
+                                <div class="d-flex flex-wrap gap-2">
                                     {{-- DROPDOWN TOMBOL EXPORT REKAP DATA --}}
                                     <div class="dropdown" style="position: relative; z-index: 1060 !important;">
                                         <button class="btn btn-white text-primary dropdown-toggle btn-sm mb-0 shadow-sm" type="button" id="dropdownExport" data-bs-toggle="dropdown" aria-expanded="false">
@@ -122,11 +134,11 @@
                                                     <i class="fas fa-file-excel text-success me-2 fs-6"></i> Export to Excel (.xlsx/.csv)
                                                 </a>
                                             </li>
-                                            <li>
+                                            {{-- <li>
                                                 <a class="dropdown-item text-xs py-2 fw-bold" href="{{ route('sba.hasil.export', array_merge(['uji_id' => $uji->id, 'format' => 'pdf'], request()->query())) }}" target="_blank">
                                                     <i class="fas fa-file-pdf text-danger me-2 fs-6"></i> Export to PDF (.pdf)
                                                 </a>
-                                            </li>
+                                            </li> --}}
                                         </ul>
                                     </div>
 
@@ -176,13 +188,13 @@
                             </div>
                         @endif
 
-                        {{-- PANEL FILTER AUTO-SUBMIT ONCHANGE & TOMBOL RESET --}}
+                        {{-- PANEL FILTER AUTO-SUBMIT ONCHANGE & TOMBOL RESET (RESPONSIVE MOBILE & HALF-DESKTOP) --}}
                         <form id="filterForm" action="{{ route('sba.hasil.index', $uji->id) }}" method="GET" class="row g-2 mb-3 align-items-center">
                             <input type="hidden" name="sort_by" value="{{ request('sort_by', 'total_skor') }}">
                             <input type="hidden" name="sort_order" value="{{ request('sort_order', 'desc') }}">
 
                             {{-- Filter Status Pengerjaan (Auto-Submit) --}}
-                            <div class="col-md-2">
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                                 <select name="status_pengerjaan" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
                                     <option value="">-- Semua Status --</option>
                                     <option value="berlangsung" {{ request('status_pengerjaan') == 'berlangsung' ? 'selected' : '' }}>Berlangsung</option>
@@ -194,58 +206,68 @@
                                 </select>
                             </div>
 
-                            {{-- Filter Keysearch --}}
-                            <div class="col-md-3">
+                            {{-- Filter Kelas (Auto-Submit) --}}
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
+                                <select name="id_kelas" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
+                                    <option value="">-- Semua Kelas --</option>
+                                    @foreach($kelasList ?? [] as $kelasItem)
+                                        <option value="{{ $kelasItem->id_kelas }}" {{ (string) request('id_kelas') === (string) $kelasItem->id_kelas ? 'selected' : '' }}>
+                                            {{ $kelasItem->nama_kelas }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Filter Keysearch (NISN / ID Asesi / Nama) --}}
+                            <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                                 <div class="input-group input-group-sm border rounded">
                                     <span class="input-group-text bg-transparent border-0 pe-1">
                                         <i class="fas fa-search text-secondary text-xs"></i>
                                     </span>
                                     <input type="text" name="search" class="form-control border-0 ps-1" 
-                                           placeholder="Cari ID Asesi / Nama..." 
+                                           placeholder="Cari NISN / Nama..." 
                                            value="{{ request('search') }}"
                                            onkeypress="if(event.key === 'Enter') this.form.submit()">
                                 </div>
                             </div>
 
                             {{-- FILTER RENTANG TANGGAL PENGUMPULAN --}}
-                            <div class="col-md-3">
+                            <div class="col-12 col-sm-6 col-lg-6 col-xl-3">
                                 <div class="d-flex align-items-center gap-1">
-                                    <input type="date" name="tgl_mulai" class="form-control form-control-sm border px-2 py-1 text-xs" 
+                                    <input type="date" name="tgl_mulai" class="form-control form-control-sm border px-2 py-1 text-xs filter-date-input flex-grow-1" 
                                            value="{{ request('tgl_mulai') }}" title="Tanggal Pengumpulan Mulai" onchange="this.form.submit()">
-                                    <span class="text-xs text-secondary">s/d</span>
-                                    <input type="date" name="tgl_selesai" class="form-control form-control-sm border px-2 py-1 text-xs" 
+                                    <span class="text-xs text-secondary flex-shrink-0 px-1">s/d</span>
+                                    <input type="date" name="tgl_selesai" class="form-control form-control-sm border px-2 py-1 text-xs filter-date-input flex-grow-1" 
                                            value="{{ request('tgl_selesai') }}" title="Tanggal Pengumpulan Selesai" onchange="this.form.submit()">
                                 </div>
                             </div>
 
-                            {{-- Checkbox Sembunyikan Identitas Ganda (Auto-Submit) --}}
-                            <div class="col-md-2">
-                                <div class="form-check m-0">
-                                    <input class="form-check-input border-secondary" type="checkbox" name="hide_duplicates" value="1" id="hideDuplicates" 
-                                           {{ request('hide_duplicates') == '1' ? 'checked' : '' }} onchange="this.form.submit()">
-                                    <label class="form-check-label text-xs font-weight-bold text-dark cursor-pointer mb-0" for="hideDuplicates">
-                                        Identitas Ganda
-                                    </label>
+                            {{-- Checkbox Identitas Ganda, Tombol Reset Filter & Per Page Selector --}}
+                            <div class="col-12 col-lg-6 col-xl-3">
+                                <div class="d-flex flex-wrap flex-sm-nowrap align-items-center justify-content-between justify-content-xl-end gap-2">
+                                    <div class="form-check m-0 d-flex align-items-center flex-shrink-0">
+                                        <input class="form-check-input border-secondary mt-0 me-1" type="checkbox" name="hide_duplicates" value="1" id="hideDuplicates" 
+                                               {{ request('hide_duplicates') == '1' ? 'checked' : '' }} onchange="this.form.submit()">
+                                        <label class="form-check-label text-xs font-weight-bold text-dark cursor-pointer mb-0 text-nowrap" for="hideDuplicates">
+                                            Identitas Ganda
+                                        </label>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                        <a href="{{ route('sba.hasil.index', $uji->id) }}" class="btn btn-sm btn-outline-secondary mb-0 px-2 text-nowrap" title="Reset Filter">
+                                            <i class="fas fa-undo me-1"></i> Reset
+                                        </a>
+
+                                        <select name="per_page" class="form-select form-select-sm border px-2 py-1 w-auto flex-shrink-0" 
+                                                style="padding-right: 1.8rem !important; min-width: 65px;" onchange="this.form.submit()">
+                                            @foreach([10, 25, 50, 100] as $pageOption)
+                                                <option value="{{ $pageOption }}" {{ request('per_page', 10) == $pageOption ? 'selected' : '' }}>
+                                                    {{ $pageOption }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
-
-                            {{-- Tombol Reset Filter --}}
-                            <div class="col-md-1 text-end">
-                                <a href="{{ route('sba.hasil.index', $uji->id) }}" class="btn btn-sm btn-outline-secondary mb-0 w-100 px-2" title="Reset Filter">
-                                    <i class="fas fa-undo me-1"></i> Reset
-                                </a>
-                            </div>
-
-                            {{-- Per Page Selector --}}
-                            <div class="col-md-1 text-end">
-                                <select name="per_page" class="form-select form-select-sm border px-2 py-1 w-auto" 
-                                        style="padding-right: 1.8rem !important; min-width: 65px;" onchange="this.form.submit()">
-                                    @foreach([10, 25, 50, 100] as $pageOption)
-                                        <option value="{{ $pageOption }}" {{ request('per_page', 10) == $pageOption ? 'selected' : '' }}>
-                                            {{ $pageOption }}
-                                        </option>
-                                    @endforeach
-                                </select>
                             </div>
                         </form>
 
@@ -285,16 +307,16 @@
                                             
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-2" width="4%">No</th>
                                             
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="11%">
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="13%">
                                                 <a href="{{ getSortUrlHasil('asesi_id') }}" class="sort-header">
-                                                    Asesi ID {!! getSortIconHasil('asesi_id') !!}
+                                                    ID Asesi {!! getSortIconHasil('asesi_id') !!}
                                                 </a>
                                             </th>
                                             
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="20%">Nama Peserta</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="19%">Nama Peserta</th>
                                             
                                             {{-- KOLOM DURASI PENGERJAAN --}}
-                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="16%">Waktu & Durasi</th>
+                                            <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="15%">Waktu & Durasi</th>
 
                                             <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="14%">
                                                 <a href="{{ getSortUrlHasil('total_skor') }}" class="sort-header justify-content-center">
@@ -315,6 +337,7 @@
                                         @forelse($hasils as $index => $hasil)
                                         @php
                                             $perluDinilai = $butuhPenilaianManual && ($hasil->status_pengerjaan === 'selesai');
+                                            $jumlahPelanggaran = (int) ($hasil->jumlah_pelanggaran ?? 0);
                                         @endphp
                                         <tr class="{{ $perluDinilai ? 'row-perlu-dinilai' : '' }}">
                                             {{-- CHECKBOX PER BARIS --}}
@@ -327,12 +350,26 @@
                                                 {{ ($hasils instanceof \Illuminate\Pagination\LengthAwarePaginator) ? $hasils->firstItem() + $index : $loop->iteration }}
                                             </td>
 
-                                            {{-- ASESI ID --}}
+                                            {{-- NISN / ID ASESI & KELAS --}}
                                             <td class="text-start ps-3 align-middle">
                                                 @if($hasil->asesi_id)
-                                                    <span class="badge bg-gradient-dark text-xxs font-weight-bold">
-                                                        USER #{{ $hasil->asesi_id }}
-                                                    </span>
+                                                    <div class="d-flex flex-column align-items-start gap-1">
+                                                        @if(!empty($hasil->nisn_display))
+                                                            <span class="badge bg-gradient-dark text-xxs font-weight-bold" title="NISN Siswa">
+                                                                NISN: {{ $hasil->nisn_display }}
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-gradient-dark text-xxs font-weight-bold">
+                                                                USER #{{ $hasil->asesi_id }}
+                                                            </span>
+                                                        @endif
+
+                                                        @if(!empty($hasil->nama_kelas_display))
+                                                            <span class="text-xxs text-secondary font-weight-bold">
+                                                                <i class="fas fa-chalkboard text-primary me-1"></i>{{ $hasil->nama_kelas_display }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                 @else
                                                     <span class="badge bg-secondary text-xxs font-weight-bold">
                                                         PUBLIK / GUEST
@@ -395,7 +432,7 @@
                                                 </div>
                                             </td>
 
-                                            {{-- STATUS / PERCOBAAN KE --}}
+                                            {{-- STATUS / PERCOBAAN KE / JUMLAH PELANGGARAN --}}
                                             <td class="align-middle text-center text-sm">
                                                 <div class="d-flex flex-column align-items-center gap-1">
                                                     @if($hasil->status_pengerjaan === 'final')
@@ -416,6 +453,17 @@
                                                     <span class="text-xxs text-secondary">
                                                         Percobaan ke-{{ $hasil->percobaan_ke }}
                                                     </span>
+
+                                                    @if($jumlahPelanggaran > 0)
+                                                        <span class="badge badge-pelanggaran-count text-xxs"
+                                                              title="{{ $hasil->catatan_pelanggaran ?? 'Tercatat melakukan pelanggaran selama ujian' }}">
+                                                            <i class="fas fa-exclamation-triangle me-1"></i> Pelanggaran: {{ $jumlahPelanggaran }}x
+                                                        </span>
+                                                    @else
+                                                        <span class="text-xxs text-secondary">
+                                                            <i class="fas fa-shield-alt text-success me-1"></i> Pelanggaran: 0
+                                                        </span>
+                                                    @endif
                                                 </div>
                                             </td>
 

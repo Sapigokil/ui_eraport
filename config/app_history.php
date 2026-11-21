@@ -11,11 +11,35 @@ return [
     |
     */
 
-    'current_version' => '1.0.27',
+    'current_version' => '1.0.28',
     
-    'last_updated' => '2026-11-14',
+    'last_updated' => '2026-11-21',
 
     'changelog' => [
+        [
+            'version' => '1.0.28',
+            'date'    => '2026-11-21',
+            'notes'   => [
+                'Penambahan tipe soal Benar / Salah dengan pengaturan bobot nilai pada masing-masing pernyataan.',
+                'Penambahan fitur sisipkan lampiran gambar pada setiap pilihan jawaban (PG dan PG Kompleks).',
+                'Penambahan klasifikasi kategori asesmen (PSTS, PSAS, Sumatif, Umum) serta pemilihan mata pelajaran.',
+                'Penambahan fitur export daftar soal sebagai bank data dalam format Excel (.xlsx) dan PDF.',
+                'Penyempurnaan Export Excel rekap hasil peserta dengan penambahan kolom NISN, kelas, dan analisis skor per nomor soal.',
+                'Integrasi penuh data asesi dengan database induk siswa (NISN dan kelas) serta penambahan filter kelas pada halaman hasil.',
+                'Penambahan informasi jumlah pelanggaran peserta pada daftar tabel rekap hasil ujian.',
+                'Penambahan fitur screenshot dan opsi unduh bukti hasil skor peserta pada halaman selesai sebelum kembali ke portal.',
+                'Perbaikan validasi pencarian kode asesmen pada portal peserta saat kode asesmen diperbarui.',
+                'Perbaikan stabilitas form asesmen untuk mencegah halaman blank saat reset, gagal simpan ujian, maupun daftar soal yang hilang.',
+            ],
+        ],
+        [
+            'version' => '1.0.27',
+            'date'    => '2026-11-14',
+            'notes'   => [
+                'Penambahan Modul Smart Based Assessment (SBA) untuk manajemen bank soal, pembuatan ujian, CBT engine, dan analytics hasil ujian.',
+                'Penyesuaian modul SBA dengan sistem utama untuk integrasi data guru, siswa, dan kelas.',
+            ],
+        ],
         [
             'version' => '1.0.27',
             'date'    => '2026-11-14',
