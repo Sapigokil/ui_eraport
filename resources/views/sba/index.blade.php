@@ -101,15 +101,40 @@
 
                         {{-- PANEL FILTER & SEARCH --}}
                         <form action="{{ route('sba.index') }}" method="GET" class="row g-2 mb-3 align-items-center">
-                            {{-- Pertahankan parameter sorting & per_page jika ada --}}
+                            {{-- Pertahankan parameter sorting jika ada --}}
                             <input type="hidden" name="sort_by" value="{{ request('sort_by', 'id') }}">
                             <input type="hidden" name="sort_order" value="{{ request('sort_order', 'desc') }}">
 
+                            {{-- Filter Kategori Uji --}}
+                            <div class="col-md-2">
+                                <select name="kategori_uji" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
+                                    <option value="">-- Semua Kategori --</option>
+                                    @foreach(['PSTS', 'PSAS', 'Sumatif', 'Umum'] as $katOption)
+                                        <option value="{{ $katOption }}" {{ request('kategori_uji') === $katOption ? 'selected' : '' }}>
+                                            {{ $katOption }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Filter Mata Pelajaran --}}
+                            <div class="{{ $hasViewAll ? 'col-md-2' : 'col-md-3' }}">
+                                <select name="id_mapel" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
+                                    <option value="">-- Semua Mapel --</option>
+                                    <option value="none" {{ request('id_mapel') === 'none' ? 'selected' : '' }}>Tanpa Mapel (Umum)</option>
+                                    @foreach($mapels ?? [] as $mapel)
+                                        <option value="{{ $mapel->id_mapel }}" {{ (string) request('id_mapel') === (string) $mapel->id_mapel ? 'selected' : '' }}>
+                                            {{ $mapel->nama_mapel }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
                             {{-- Filter Author Dropdown (Hanya tampil jika punya permission sba.view_all) --}}
                             @if($hasViewAll)
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <select name="user_id" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
-                                        <option value="" {{ $activeAuthorId === '' ? 'selected' : '' }}>-- Semua Author Pembuat --</option>
+                                        <option value="" {{ $activeAuthorId === '' ? 'selected' : '' }}>-- Semua Author --</option>
                                         @foreach($authors as $author)
                                             <option value="{{ $author->id }}" {{ $activeAuthorId === (string) $author->id ? 'selected' : '' }}>
                                                 {{ $author->name }}
@@ -120,7 +145,7 @@
                             @endif
 
                             {{-- Filter Keysearch --}}
-                            <div class="{{ $hasViewAll ? 'col-md-5' : 'col-md-8' }}">
+                            <div class="{{ $hasViewAll ? 'col-md-3' : 'col-md-4' }}">
                                 <div class="input-group input-group-sm border rounded">
                                     <span class="input-group-text bg-transparent border-0 pe-1">
                                         <i class="fas fa-search text-secondary text-xs"></i>
@@ -132,11 +157,11 @@
                             </div>
 
                             {{-- Tombol Submit & Reset Filter --}}
-                            <div class="col-md-2 d-flex gap-1">
-                                <button type="submit" class="btn btn-sm btn-primary mb-0 w-100 px-2" style="background-color: #6f42c1; border-color: #6f42c1;">
-                                    <i class="fas fa-filter me-1"></i> Cari
+                            <div class="col-md-1 d-flex gap-1">
+                                <button type="submit" class="btn btn-sm btn-primary mb-0 w-100 px-2" style="background-color: #6f42c1; border-color: #6f42c1;" title="Cari / Filter">
+                                    <i class="fas fa-filter"></i>
                                 </button>
-                                @if(request()->hasAny(['search', 'user_id', 'per_page', 'sort_by']))
+                                @if(request()->hasAny(['search', 'user_id', 'kategori_uji', 'id_mapel', 'per_page', 'sort_by']))
                                     <a href="{{ route('sba.index') }}" class="btn btn-sm btn-outline-secondary mb-0 px-2" title="Reset Filter">
                                         <i class="fas fa-undo"></i>
                                     </a>
@@ -186,21 +211,21 @@
                                     <tr>
                                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="5%">No</th>
                                         
-                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="14%">
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="13%">
                                             <a href="{{ getSortUrl('kode_uji') }}" class="sort-header">
                                                 Kode Uji {!! getSortIcon('kode_uji') !!}
                                             </a>
                                         </th>
                                         
-                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="26%">
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="24%">
                                             <a href="{{ getSortUrl('judul') }}" class="sort-header">
                                                 Judul / Deskripsi {!! getSortIcon('judul') !!}
                                             </a>
                                         </th>
                                         
-                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="15%">
-                                            <a href="{{ getSortUrl('user_id') }}" class="sort-header">
-                                                Author {!! getSortIcon('user_id') !!}
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-start ps-3" width="19%">
+                                            <a href="{{ getSortUrl('id_mapel') }}" class="sort-header">
+                                                Mapel - Kategori / Author {!! getSortIcon('id_mapel') !!}
                                             </a>
                                         </th>
                                         
@@ -210,7 +235,7 @@
                                             </a>
                                         </th>
                                         
-                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="12%">
+                                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center" width="11%">
                                             <a href="{{ getSortUrl('status') }}" class="sort-header justify-content-center">
                                                 Status / Hasil {!! getSortIcon('status') !!}
                                             </a>
@@ -223,6 +248,8 @@
                                     @forelse($ujis as $index => $uji)
                                     @php
                                         $jumlahPerluDinilai = $uji->butuhPenilaianManual() ? ($uji->hasils_selesai_count ?? 0) : 0;
+                                        $namaMapel = $uji->mapel ? $uji->mapel->nama_mapel : 'Umum / Tanpa Mapel';
+                                        $kategoriLabel = $uji->kategori_uji ?? 'Umum';
                                     @endphp
                                     <tr>
                                         {{-- NO --}}
@@ -249,11 +276,15 @@
                                             </p>
                                         </td>
 
-                                        {{-- 3. AUTHOR (PEMBUAT) --}}
+                                        {{-- 3. MAPEL - KATEGORI & AUTHOR --}}
                                         <td class="text-start ps-3 align-middle">
-                                            <div class="d-flex align-items-center">
-                                                <i class="fas fa-user-circle text-secondary me-2 text-sm"></i>
-                                                <span class="text-xs font-weight-bold text-dark">
+                                            <div class="d-flex flex-column">
+                                                <span class="text-xs font-weight-bold text-dark mb-1">
+                                                    <i class="fas fa-book text-primary me-1"></i>
+                                                    {{ $namaMapel }} - <span class="badge bg-light text-primary border text-xxs px-2 py-0">{{ $kategoriLabel }}</span>
+                                                </span>
+                                                <span class="text-xs text-secondary">
+                                                    <i class="fas fa-user-circle me-1"></i>
                                                     {{ $uji->author->name ?? 'Administrator' }}
                                                 </span>
                                             </div>

@@ -313,7 +313,7 @@ class SbaUjiController extends Controller
     }
 
     /**
-     * Helper Private: Hitung Skor Otomatis PG & PG Kompleks dari Jawaban yang Sudah Masuk
+     * Helper Private: Hitung Skor Otomatis PG, PG Kompleks, & Pernyataan Benar Salah
      */
     private function hitungSkorOtomatis(Uji $uji, UjiHasil $hasil)
     {
@@ -325,7 +325,27 @@ class SbaUjiController extends Controller
             $soal = $mapSoal->get($jawabanSiswa->uji_soal_id);
             if (!$soal) continue;
 
-            if (in_array($soal->tipe, ['pg', 'pg_kompleks'])) {
+            if ($soal->tipe === 'benar_salah') {
+                $pernyataanList = is_array($soal->opsi_jawaban) ? $soal->opsi_jawaban : [];
+                $kunciArray = is_array($soal->kunci_jawaban) ? $soal->kunci_jawaban : [];
+                $jawabanSiswaArray = is_array($jawabanSiswa->jawaban)
+                    ? $jawabanSiswa->jawaban
+                    : (json_decode((string) $jawabanSiswa->jawaban, true) ?? []);
+
+                $skorItem = 0;
+                foreach ($pernyataanList as $idx => $item) {
+                    $kunciItem = strtolower(trim((string) ($kunciArray[$idx] ?? '')));
+                    $jawabItem = strtolower(trim((string) ($jawabanSiswaArray[$idx] ?? '')));
+                    $bobotItem = (float) ($item['bobot'] ?? 0);
+
+                    if ($kunciItem !== '' && $jawabItem === $kunciItem) {
+                        $skorItem += $bobotItem;
+                    }
+                }
+
+                $totalSkorOtomatis += $skorItem;
+                $jawabanSiswa->update(['skor_didapat' => $skorItem]);
+            } elseif (in_array($soal->tipe, ['pg', 'pg_kompleks'])) {
                 $kunciArray = $soal->kunci_jawaban ?? [];
                 $jawabanSiswaRaw = $jawabanSiswa->jawaban;
                 $skorItem = 0;
@@ -335,7 +355,7 @@ class SbaUjiController extends Controller
                     sort($kunciArray);
                     sort($jawabanSiswaArray);
 
-                    if ($kunciArray == $jawabanSiswaArray) {
+                    if ($kunciArray == $jawabanSiswaArray && !empty($kunciArray)) {
                         $skorItem = $soal->bobot_nilai;
                     }
                 } else {
@@ -420,12 +440,26 @@ class SbaUjiController extends Controller
     // ======================================================================
     public function selesaiUjian(Request $request, $uji_id)
     {
-        $hasilId = session('sba_hasil_id');
         $uji = Uji::with('soals')->findOrFail($uji_id);
-        $hasil = UjiHasil::with('jawabans')->where('id', $hasilId)->where('uji_id', $uji->id)->firstOrFail();
+        $hasilId = session('sba_hasil_id') ?? $request->input('hasil_id');
+
+        $hasil = UjiHasil::with('jawabans')
+            ->where('id', $hasilId)
+            ->where('uji_id', $uji->id)
+            ->first();
+
+        if (!$hasil) {
+            return redirect()->route('sba.portal')->with('error', 'Data sesi ujian tidak ditemukan.');
+        }
+
+        // Jika sudah selesai (akibat double-tap / auto-submit bersamaan), langsung tampilkan hasil
+        if (in_array($hasil->status_pengerjaan, ['selesai', 'final'])) {
+            session()->forget(['sba_hasil_id', 'sba_uji_id', 'sba_kode_uji', 'sba_mode', 'sba_peserta_id', 'sba_peserta_nama']);
+            return redirect()->route('sba.uji.selesai.tampil', ['uji_id' => $uji->id, 'hasil_id' => $hasil->id]);
+        }
 
         if ($hasil->status_pengerjaan !== 'berlangsung') {
-            return redirect()->route('sba.portal')->with('error', 'Ujian sudah diselesaikan sebelumnya.');
+            return redirect()->route('sba.portal')->with('error', 'Sesi ujian tidak valid atau dihentikan.');
         }
 
         $totalSkorOtomatis = $this->hitungSkorOtomatis($uji, $hasil);

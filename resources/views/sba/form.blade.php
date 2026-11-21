@@ -6,6 +6,20 @@
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
     <x-app.navbar />
 
+    <style>
+        .btn-export-excel-ungu {
+            background-color: #ffffff !important;
+            border: 1px solid #6f42c1 !important;
+            color: #6f42c1 !important;
+        }
+        .btn-export-excel-ungu:hover,
+        .btn-export-excel-ungu:focus {
+            background-color: #f8f5ff !important;
+            border-color: #59339d !important;
+            color: #59339d !important;
+        }
+    </style>
+
     <div class="container-fluid py-4 px-4">
         {{-- ENCTYPE MULTIPART/FORM-DATA PENTING UNTUK UPLOAD GAMBAR --}}
         <form action="{{ isset($uji) ? route('sba.update', $uji->id) : route('sba.store') }}" 
@@ -20,7 +34,7 @@
             <div class="row">
                 <div class="col-12">
                     
-                    {{-- MENAMPILKAN ERROR VALIDASI --}}
+                    {{-- MENAMPILKAN ERROR VALIDASI (FALLBACK SERVER) --}}
                     @if ($errors->any())
                         <div class="alert bg-gradient-danger text-white alert-dismissible fade show text-sm py-2 mb-4" role="alert">
                             <strong class="d-block mb-1">Terjadi Kesalahan!</strong>
@@ -34,6 +48,23 @@
                             </button>
                         </div>
                     @endif
+
+                    {{-- ALERT ERROR VALIDASI / GAGAL SIMPAN VIA AJAX (TANPA RELOAD) --}}
+                    <div id="ajax-error-alert" class="alert bg-gradient-danger text-white alert-dismissible fade show text-sm py-3 px-4 mb-4 d-none shadow-sm" role="alert">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-exclamation-circle text-lg me-2 mt-1"></i>
+                            <div class="flex-grow-1">
+                                <strong class="d-block mb-1" id="ajax-error-title">Gagal Menyimpan Asesmen!</strong>
+                                <ul class="mb-0 ps-3" id="ajax-error-list"></ul>
+                                <small class="d-block mt-2 opacity-9">
+                                    <i class="fas fa-shield-alt me-1"></i> Seluruh butir soal dan lampiran gambar Anda tetap aman dan tidak hilang. Silakan perbaiki data di atas lalu simpan kembali.
+                                </small>
+                            </div>
+                            <button type="button" class="btn-close text-lg py-2 opacity-10" onclick="document.getElementById('ajax-error-alert').classList.add('d-none')" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    </div>
 
                     {{-- ALERT NOTIFIKASI HASIL IMPORT EXCEL / PENYESUAIAN BOBOT DI VIEW --}}
                     <div id="alert-import-success" class="alert bg-gradient-success text-white alert-dismissible fade show text-sm py-2 mb-4 d-none" role="alert">
@@ -64,7 +95,7 @@
                                         <a href="{{ route('sba.index') }}" class="btn btn-outline-white btn-sm mb-0 px-3">
                                             <i class="fas fa-arrow-left me-1"></i> Kembali
                                         </a>
-                                        <button type="submit" class="btn btn-white text-primary btn-sm mb-0 shadow-sm px-3 fw-bold">
+                                        <button type="submit" class="btn btn-white text-primary btn-sm mb-0 shadow-sm px-3 fw-bold btn-submit-sba">
                                             <i class="fas fa-save me-1"></i> {{ isset($uji) ? 'Simpan Perubahan' : 'Simpan Asesmen' }}
                                         </button>
                                     </div>
@@ -99,6 +130,34 @@
                                                placeholder="Contoh: Penilaian Tengah Semester - Matematika" required>
                                     </div>
 
+                                    {{-- DROPDOWN KATEGORI UJI & MATA PELAJARAN --}}
+                                    @php
+                                        $selectedKategori = old('kategori_uji', $uji->kategori_uji ?? 'Umum');
+                                        $selectedMapel = old('id_mapel', isset($uji) ? $uji->id_mapel : ($defaultMapelId ?? null));
+                                    @endphp
+                                    <div class="row">
+                                        <div class="col-md-5 form-group mb-2">
+                                            <label for="kategori_uji" class="form-control-label text-xs mb-1">Kategori Uji <span class="text-danger">*</span></label>
+                                            <select class="form-select form-select-sm border px-2 py-1 @error('kategori_uji') is-invalid @enderror" id="kategori_uji" name="kategori_uji" required>
+                                                <option value="Umum" {{ $selectedKategori == 'Umum' ? 'selected' : '' }}>Umum</option>
+                                                <option value="PSTS" {{ $selectedKategori == 'PSTS' ? 'selected' : '' }}>PSTS</option>
+                                                <option value="PSAS" {{ $selectedKategori == 'PSAS' ? 'selected' : '' }}>PSAS</option>
+                                                <option value="Sumatif" {{ $selectedKategori == 'Sumatif' ? 'selected' : '' }}>Sumatif</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-7 form-group mb-2">
+                                            <label for="id_mapel" class="form-control-label text-xs mb-1">Mata Pelajaran</label>
+                                            <select class="form-select form-select-sm border px-2 py-1 @error('id_mapel') is-invalid @enderror" id="id_mapel" name="id_mapel">
+                                                <option value="" {{ empty($selectedMapel) ? 'selected' : '' }}>-- Tanpa Mata Pelajaran (Umum) --</option>
+                                                @foreach($mapels ?? [] as $mapel)
+                                                    <option value="{{ $mapel->id_mapel }}" {{ (string) $selectedMapel === (string) $mapel->id_mapel ? 'selected' : '' }}>
+                                                        {{ $mapel->nama_mapel }}{{ !empty($mapel->nama_singkat) ? ' (' . $mapel->nama_singkat . ')' : '' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+
                                     <div class="form-group mb-2">
                                         <label for="kode_uji" class="form-control-label text-xs mb-1">Kode Asesmen <span class="text-danger">*</span></label>
                                         <div class="input-group input-group-sm">
@@ -111,6 +170,7 @@
                                                 <i class="fas fa-sync-alt me-1"></i> Acak
                                             </button>
                                         </div>
+                                        <small id="kode-uji-status" class="text-xxs d-block mt-1 fw-semibold d-none"></small>
                                         <small class="text-xxs text-secondary d-block mt-1">Bisa diisi kode custom (hanya huruf A-Z dan angka 0-9, maksimal 12 karakter, tanpa spasi).</small>
                                     </div>
 
@@ -138,9 +198,9 @@
 
                                     <div class="row">
                                         <div class="col-md-6 form-group mb-2">
-                                            <label for="durasi_menit" class="form-control-label text-xs mb-1">Durasi (Menit)</label>
+                                            <label for="durasi_menit" class="form-control-label text-xs mb-1">Durasi (Menit) <span class="text-danger">*</span></label>
                                             <input type="number" class="form-control form-control-sm border px-2 py-1" id="durasi_menit" name="durasi_menit" 
-                                                   value="{{ old('durasi_menit', $uji->durasi_menit ?? '') }}" min="0" placeholder="0 = Tanpa Batas">
+                                                   value="{{ old('durasi_menit', $uji->durasi_menit ?? 0) }}" min="0" placeholder="0 = Tanpa Batas" required>
                                             <small class="text-xxs text-secondary">0 = Tanpa batas</small>
                                         </div>
                                         <div class="col-md-6 form-group mb-2">
@@ -164,14 +224,12 @@
                                                     <label class="form-check-label text-xs ms-2 mb-0 fw-bold text-dark" for="open_book">Mode Open Book</label>
                                                 </div>
                                                 
-                                                {{-- Keterangan Dinamis Sesuai Status Switch --}}
                                                 <small id="text-open-book-desc" class="text-xxs d-block {{ old('open_book', $uji->open_book ?? false) ? 'text-success fw-bold' : 'text-secondary' }}" style="line-height: 1.3;">
                                                     {{ old('open_book', $uji->open_book ?? false) 
                                                         ? 'Izinkan peserta berpindah tab / minimize tanpa pelanggaran' 
                                                         : 'Peserta dilarang berpindah / minimize tab selama uji berlangsung' }}
                                                 </small>
 
-                                                {{-- Wrapper Toleransi Pelanggaran (Sembunyi jika Open Book aktif) --}}
                                                 <div id="wrapper-toleransi" class="form-group mb-0 border-top pt-2 mt-2 {{ old('open_book', $uji->open_book ?? false) ? 'd-none' : '' }}">
                                                     <label for="toleransi_pelanggaran" class="form-control-label text-xs mb-1">Toleransi Pelanggaran</label>
                                                     <input type="number" class="form-control form-control-sm border px-2 py-1 bg-white" id="toleransi_pelanggaran" name="toleransi_pelanggaran" 
@@ -180,7 +238,6 @@
                                                 </div>
                                             </div>
 
-                                            {{-- Opsi Umum Lainnya --}}
                                             <div class="d-flex flex-column gap-2 mt-2">
                                                 <div class="form-check form-switch ps-0 mb-0">
                                                     <input class="form-check-input ms-0" type="checkbox" id="acak_soal" name="acak_soal" value="1" 
@@ -212,7 +269,6 @@
                                                     Izinkan peserta mengulang ujian jika gagal/pelanggaran
                                                 </small>
 
-                                                {{-- Wrapper Input Maks. Percobaan (Tampil hanya saat Ulangi Jika Gagal aktif) --}}
                                                 <div id="wrapper-maks-percobaan" class="form-group mb-0 border-top pt-2 mt-2 {{ old('ulangi_jika_gagal', $uji->ulangi_jika_gagal ?? false) ? '' : 'd-none' }}">
                                                     <label for="maksimal_percobaan" class="form-control-label text-xs mb-1">Maks. Percobaan</label>
                                                     <input type="number" class="form-control form-control-sm border px-2 py-1 bg-white" id="maksimal_percobaan" name="maksimal_percobaan" 
@@ -264,12 +320,19 @@
 
                         </div>
 
-                        {{-- TOMBOL SUBMIT UTAMA --}}
-                        <div class="card-footer bg-light border-top text-end py-3 px-4">
-                            <a href="{{ route('sba.index') }}" class="btn btn-outline-secondary btn-sm mb-0 me-2">Batal</a>
-                            <button type="submit" class="btn bg-gradient-primary btn-sm mb-0 shadow-sm">
-                                <i class="fas fa-save me-1"></i> {{ isset($uji) ? 'Simpan Perubahan' : 'Simpan Asesmen' }}
-                            </button>
+                        {{-- TOMBOL SUBMIT UTAMA (EXPORT DI KIRI, BATAL & SIMPAN DI KANAN) --}}
+                        <div class="card-footer bg-light border-top py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <button type="button" id="btn-export-soal-excel" class="btn btn-sm btn-export-excel-ungu mb-0 shadow-sm" title="Export daftar soal saat ini ke file Excel (.xlsx) sesuai format template import">
+                                    <i class="fas fa-file-export me-1"></i> Export Soal Excel
+                                </button>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{{ route('sba.index') }}" class="btn btn-outline-secondary btn-sm mb-0">Batal</a>
+                                <button type="submit" class="btn bg-gradient-primary btn-sm mb-0 shadow-sm btn-submit-sba">
+                                    <i class="fas fa-save me-1"></i> {{ isset($uji) ? 'Simpan Perubahan' : 'Simpan Asesmen' }}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -295,7 +358,6 @@
                     Total bobot nilai seluruh soal saat ini <strong class="text-danger">tidak berjumlah 100 poin</strong>. Silakan periksa ringkasan penyusunan soal berikut sebelum menyimpan:
                 </p>
 
-                {{-- RINGKASAN JUMLAH SOAL & TOTAL BOBOT --}}
                 <div class="row g-2 mb-3 text-center">
                     <div class="col-6">
                         <div class="p-3 bg-light rounded border h-100">
@@ -314,7 +376,6 @@
                 </div>
 
                 <div class="p-2 px-3 mb-0 rounded border-start border-4 border-warning bg-light text-dark text-xs" id="modal-bobot-keterangan">
-                    {{-- Diisi dinamis oleh JS (kurang/lebih berapa poin) --}}
                 </div>
             </div>
 
@@ -337,7 +398,6 @@
 <div class="modal fade" id="modalImportSoalExcel" tabindex="-1" aria-labelledby="modalImportSoalExcelLabel" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg overflow-hidden">
-            {{-- Header Gradient Primary Selaras Banner Utama --}}
             <div class="modal-header bg-gradient-primary border-0 py-3 px-4">
                 <h6 class="modal-title fw-bold text-white mb-0" id="modalImportSoalExcelLabel">
                     <i class="fas fa-file-excel me-2"></i> Import Soal dari Excel
@@ -346,7 +406,6 @@
             </div>
             
             <div class="modal-body p-4 bg-white text-start">
-                {{-- AREA ERROR VALIDASI AJAX --}}
                 <div id="import-excel-error-box" class="alert bg-gradient-danger text-white small py-2 px-3 mb-4 rounded-3 border-0 d-none">
                     <strong class="d-block mb-1" id="import-excel-error-title"></strong>
                     <ul class="mb-0 ps-3" id="import-excel-error-list"></ul>
@@ -359,8 +418,11 @@
                         <h6 class="fw-bold text-dark mb-0" style="font-size: 0.85rem;">Unduh Format Template</h6>
                     </div>
                     <p class="text-secondary text-xs mb-2" style="line-height: 1.5;">
-                        Gunakan file template resmi dengan urutan kolom baku:<br>
-                        <code class="text-primary fw-bold">no, tipe_soal, pertanyaan, opsi_a..e, kunci_jawaban, bobot_nilai</code>
+                        Gunakan file template resmi dengan header kolom wajib:<br>
+                        <code class="text-primary fw-bold">no, tipe_soal, pertanyaan, opsi_a..e, kunci_jawaban, bobot_nilai</code><br>
+                        <span class="text-xxs text-muted d-block mt-1">
+                            • Untuk <strong>benar_salah</strong>: isi pernyataan pada kolom berawalan <code>opsi_</code> (bisa menambah kolom baru seperti <code>opsi_6</code>, <code>opsi_7</code>, dst. sesuai jumlah pernyataan), kunci dipisah koma (misal <code>B,S,B</code>), dan bobot dipisah koma (misal <code>10,10,20</code>) atau total (misal <code>40</code>).
+                        </span>
                     </p>
                     <a href="{{ route('sba.soal.template') }}" class="btn btn-sm bg-gradient-info text-white fw-bold w-100 mb-0 shadow-xs">
                         <i class="fas fa-download me-1"></i> Download Template Excel (.xlsx)
@@ -445,18 +507,22 @@
                         <select class="form-select form-select-sm border px-2 py-1 soal-tipe" required>
                             <option value="pg">Pilihan Ganda</option>
                             <option value="pg_kompleks">PG Kompleks (Banyak Jawaban)</option>
+                            <option value="benar_salah">Pernyataan Benar Salah</option>
                             <option value="esai">Uraian / Isian</option>
                         </select>
                     </div>
                     <div class="form-group mb-0">
-                        <label class="form-control-label text-xs mb-1">Bobot (Poin)</label>
-                        <input type="number" class="form-control form-control-sm border px-2 py-1 soal-bobot" value="10" min="1" required>
+                        <label class="form-control-label text-xs mb-1 label-bobot-utama">Bobot (Poin)</label>
+                        <input type="number" class="form-control form-control-sm border px-2 py-1 soal-bobot" value="10" min="0" required>
+                        <small class="text-xxs text-info d-none info-bobot-bs mt-1" style="line-height: 1.25;">
+                            *Otomatis dijumlahkan dari bobot tiap pernyataan di bawah.
+                        </small>
                     </div>
                 </div>
                 
                 <div class="col-md-9">
                     <div class="form-group mb-2">
-                        <label class="form-control-label text-xs mb-1">Pertanyaan <span class="text-danger">*</span></label>
+                        <label class="form-control-label text-xs mb-1 label-pertanyaan-utama">Pertanyaan <span class="text-danger">*</span></label>
                         <textarea class="form-control form-control-sm border px-2 py-1 soal-pertanyaan" rows="4" placeholder="Ketikkan teks pertanyaan di sini..." required style="resize: vertical; min-height: 90px; max-height: 250px;"></textarea>
                     </div>
 
@@ -471,7 +537,6 @@
                         </div>
                         <small class="text-xxs text-secondary d-block mt-1">*Format: JPG, JPEG, PNG, WEBP (Maksimal 2MB)</small>
 
-                        {{-- PREVIEW CONTAINER --}}
                         <div class="media-preview-container mt-2 position-relative d-none" style="max-width: 250px;">
                             <img src="" class="img-thumbnail rounded media-preview-img shadow-xs" style="max-height: 140px; width: auto;" alt="Preview Soal">
                             <button type="button" class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 px-2 py-1 btn-delete-media" title="Hapus Gambar Ini">
@@ -482,30 +547,71 @@
                 </div>
             </div>
 
-            {{-- Container Opsi Jawaban --}}
+            {{-- CONTAINER OPSI JAWABAN (PG & PG KOMPLEKS + GAMBAR PER OPSI) --}}
             <div class="opsi-wrapper border-top pt-3 mt-3">
                 <label class="form-control-label text-xs mb-2 text-primary d-block">
-                    <i class="fas fa-check-circle me-1"></i> Pilihan Jawaban & Kunci 
+                    <i class="fas fa-check-circle me-1"></i> Pilihan Jawaban, Lampiran Gambar Opsi & Kunci 
                     <span class="text-secondary fw-normal ms-1">(Klik bulatan "KUNCI" untuk menandai jawaban yang benar)</span>
                 </label>
                 
                 <div class="opsi-container row gx-2">
                     @foreach(['A', 'B', 'C', 'D', 'E'] as $index => $huruf)
-                    <div class="col-md-12 mb-2 opsi-item d-flex align-items-stretch">
-                        
-                        <div class="bg-light border border-secondary rounded-start d-flex flex-column align-items-center justify-content-center px-2 py-1" style="min-width: 60px;">
-                            <small class="text-xxs font-weight-bolder text-secondary mb-1" style="line-height: 1;">KUNCI</small>
-                            <input type="radio" class="form-check-input kunci-radio border-secondary m-0 bg-white" value="{{ $index }}" style="width: 1.25rem; height: 1.25rem; cursor:pointer;" title="Jadikan Jawaban Benar">
-                            <input type="checkbox" class="form-check-input kunci-checkbox border-secondary m-0 bg-white d-none" value="{{ $index }}" style="width: 1.25rem; height: 1.25rem; cursor:pointer;" title="Jadikan Jawaban Benar">
-                        </div>
-                        
-                        <div class="bg-secondary text-white border-top border-bottom border-secondary d-flex align-items-center px-3 font-weight-bold">
-                            {{ $huruf }}
-                        </div>
+                    <div class="col-md-12 mb-2 opsi-item" data-opsi-index="{{ $index }}">
+                        <div class="d-flex align-items-stretch">
+                            <div class="bg-light border border-secondary rounded-start d-flex flex-column align-items-center justify-content-center px-2 py-1" style="min-width: 60px;">
+                                <small class="text-xxs font-weight-bolder text-secondary mb-1" style="line-height: 1;">KUNCI</small>
+                                <input type="radio" class="form-check-input kunci-radio border-secondary m-0 bg-white" value="{{ $index }}" style="width: 1.25rem; height: 1.25rem; cursor:pointer;" title="Jadikan Jawaban Benar">
+                                <input type="checkbox" class="form-check-input kunci-checkbox border-secondary m-0 bg-white d-none" value="{{ $index }}" style="width: 1.25rem; height: 1.25rem; cursor:pointer;" title="Jadikan Jawaban Benar">
+                            </div>
+                            
+                            <div class="bg-secondary text-white border-top border-bottom border-secondary d-flex align-items-center px-3 font-weight-bold">
+                                {{ $huruf }}
+                            </div>
 
-                        <textarea class="form-control form-control-sm border border-secondary rounded-0 rounded-end px-2 py-1 opsi-teks flex-grow-1" rows="1" placeholder="Masukkan teks untuk opsi {{ $huruf }}..." style="resize:vertical;"></textarea>
+                            <div class="flex-grow-1 border border-secondary border-start-0 rounded-end bg-white p-2">
+                                <div class="row g-2 align-items-start">
+                                    {{-- KOLOM KIRI: ISIAN KETIKAN OPSI --}}
+                                    <div class="col-12 col-md-7">
+                                        <textarea class="form-control form-control-sm border px-2 py-1 opsi-teks" rows="2" placeholder="Masukkan teks untuk opsi {{ $huruf }} (atau kosongkan jika hanya memakai gambar)..." style="resize: vertical; min-height: 58px;"></textarea>
+                                    </div>
+
+                                    {{-- KOLOM KANAN: INSERT GAMBAR OPSI & PREVIEW --}}
+                                    <div class="col-12 col-md-5">
+                                        <input type="file" class="form-control form-control-sm border px-2 py-1 opsi-media-input" accept="image/*">
+                                        <input type="hidden" class="opsi-remove-media" value="0">
+                                        <small class="text-xxs text-muted d-block mt-1">Gambar opsi (Opsional: JPG, PNG, WEBP maks. 2MB)</small>
+
+                                        <div class="opsi-media-preview-container mt-2 position-relative d-inline-block d-none">
+                                            <img src="" class="img-thumbnail rounded opsi-media-preview-img shadow-xs" style="max-height: 95px; width: auto;" alt="Preview Opsi {{ $huruf }}">
+                                            <button type="button" class="btn btn-danger btn-xs position-absolute top-0 end-0 m-1 px-2 py-1 btn-delete-opsi-media" title="Hapus Gambar Opsi {{ $huruf }}">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     @endforeach
+                </div>
+            </div>
+
+            {{-- CONTAINER PERNYATAAN BENAR / SALAH (DINAMIS) --}}
+            <div class="bs-wrapper border-top pt-3 mt-3 d-none">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                    <div>
+                        <label class="form-control-label text-xs mb-0 text-primary d-block">
+                            <i class="fas fa-check-double me-1"></i> Daftar Pernyataan, Kunci & Bobot per Pernyataan
+                        </label>
+                        <small class="text-xxs text-secondary">Pilih kunci <strong>Benar</strong> atau <strong>Salah</strong> dan tentukan bobot poin pada masing-masing pernyataan.</small>
+                    </div>
+                    <button type="button" class="btn btn-xs btn-outline-primary mb-0 btn-add-bs-row">
+                        <i class="fas fa-plus me-1"></i> Tambah Pernyataan
+                    </button>
+                </div>
+
+                <div class="bs-rows-container d-flex flex-column gap-2">
+                    {{-- Baris pernyataan Benar/Salah dirender dinamis di sini --}}
                 </div>
             </div>
         </div>
@@ -514,6 +620,44 @@
             <button type="button" class="btn btn-sm btn-link text-primary mb-0 shadow-none btn-insert-soal text-xs py-1">
                 <i class="fas fa-plus-circle me-1"></i> Sisipkan Soal Baru di Bawah Ini
             </button>
+        </div>
+    </div>
+</template>
+
+{{-- TEMPLATE SATU BARIS PERNYATAAN BENAR / SALAH --}}
+<template id="bs-row-template">
+    <div class="bs-row p-2 bg-light border rounded">
+        <div class="row g-2 align-items-center">
+            <div class="col-auto">
+                <span class="badge bg-secondary bs-row-num">1</span>
+            </div>
+            <div class="col">
+                <textarea class="form-control form-control-sm border bg-white px-2 py-1 bs-teks" rows="1" placeholder="Tuliskan teks pernyataan..." style="resize: vertical;"></textarea>
+            </div>
+            <div class="col-md-auto">
+                <div class="d-flex align-items-center gap-2 bg-white border rounded px-2 py-1">
+                    <small class="text-xxs fw-bold text-secondary me-1">KUNCI:</small>
+                    <div class="form-check form-check-inline mb-0 me-1">
+                        <input class="form-check-input bs-kunci-benar" type="radio" value="benar" style="cursor: pointer;">
+                        <label class="form-check-label text-xs fw-bold text-success mb-0" style="cursor: pointer;">Benar</label>
+                    </div>
+                    <div class="form-check form-check-inline mb-0 me-0">
+                        <input class="form-check-input bs-kunci-salah" type="radio" value="salah" style="cursor: pointer;">
+                        <label class="form-check-label text-xs fw-bold text-danger mb-0" style="cursor: pointer;">Salah</label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-auto" style="width: 120px;">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text text-xxs bg-white px-2">Poin</span>
+                    <input type="number" class="form-control form-control-sm border bg-white text-center fw-bold px-1 bs-bobot" value="10" min="0">
+                </div>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-outline-danger btn-xs mb-0 px-2 py-1 btn-remove-bs-row" title="Hapus Pernyataan Ini">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
     </div>
 </template>
@@ -538,10 +682,46 @@
 document.addEventListener('DOMContentLoaded', function() {
 
     /* ========================================================================
-     * VALIDASI & GENERATOR KODE ASESMEN (A-Z, 0-9, MAX 12 KARAKTER)
+     * VALIDASI, GENERATOR & CEK REAL-TIME KODE ASESMEN (A-Z, 0-9, MAX 12)
      * ======================================================================== */
     const inputKodeUji = document.getElementById('kode_uji');
     const btnGenerateKode = document.getElementById('btn-generate-kode');
+    const kodeStatusEl = document.getElementById('kode-uji-status');
+    const ignoreUjiId = @json(isset($uji) ? $uji->id : null);
+    let checkKodeTimer = null;
+
+    function cekKetersediaanKode(kode) {
+        if (!kodeStatusEl || !inputKodeUji) return;
+
+        if (!kode) {
+            kodeStatusEl.classList.add('d-none');
+            inputKodeUji.classList.remove('is-invalid', 'is-valid');
+            return;
+        }
+
+        const params = new URLSearchParams({ kode: kode });
+        if (ignoreUjiId) {
+            params.append('ignore_id', ignoreUjiId);
+        }
+
+        fetch(`{{ route('sba.check_kode') }}?${params.toString()}`, {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            kodeStatusEl.classList.remove('d-none', 'text-success', 'text-danger');
+            if (data.available) {
+                kodeStatusEl.classList.add('text-success');
+                kodeStatusEl.innerHTML = `<i class="fas fa-check-circle me-1"></i> ${data.message}`;
+                inputKodeUji.classList.remove('is-invalid');
+            } else {
+                kodeStatusEl.classList.add('text-danger');
+                kodeStatusEl.innerHTML = `<i class="fas fa-times-circle me-1"></i> ${data.message}`;
+                inputKodeUji.classList.add('is-invalid');
+            }
+        })
+        .catch(() => {});
+    }
 
     if (inputKodeUji) {
         inputKodeUji.addEventListener('input', function() {
@@ -549,6 +729,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 .toUpperCase()
                 .replace(/[^A-Z0-9]/g, '')
                 .slice(0, 12);
+
+            clearTimeout(checkKodeTimer);
+            const val = this.value;
+            checkKodeTimer = setTimeout(() => cekKetersediaanKode(val), 350);
         });
     }
 
@@ -560,15 +744,87 @@ document.addEventListener('DOMContentLoaded', function() {
                 randomCode += chars.charAt(Math.floor(Math.random() * chars.length));
             }
             inputKodeUji.value = randomCode;
+            cekKetersediaanKode(randomCode);
         });
     }
 
     /* ========================================================================
-     * MANAJEMEN SOAL DINAMIS, DRAG-AND-DROP & UPLOAD MEDIA
+     * MANAJEMEN SOAL DINAMIS, PERNYATAAN BENAR/SALAH, DRAG-AND-DROP & MEDIA
      * ======================================================================== */
     const container = document.getElementById('soal-container');
     const template = document.getElementById('soal-template');
+    const bsRowTemplate = document.getElementById('bs-row-template');
     let draggedItem = null;
+
+    function syncOpsiRequiredState(soalItem) {
+        const tipe = soalItem.querySelector('.soal-tipe').value;
+        const opsiItems = soalItem.querySelectorAll('.opsi-item');
+
+        if (!['pg', 'pg_kompleks'].includes(tipe)) {
+            opsiItems.forEach(optEl => {
+                optEl.querySelector('.opsi-teks')?.removeAttribute('required');
+            });
+            return;
+        }
+
+        opsiItems.forEach((optEl, idx) => {
+            const ta = optEl.querySelector('.opsi-teks');
+            const previewContainer = optEl.querySelector('.opsi-media-preview-container');
+            const hasImage = previewContainer && !previewContainer.classList.contains('d-none');
+
+            if (idx < 2 && !hasImage) {
+                ta.setAttribute('required', 'true');
+            } else {
+                ta.removeAttribute('required');
+            }
+        });
+    }
+
+    function recalcBobotBenarSalah(soalItem) {
+        if (!soalItem || soalItem.querySelector('.soal-tipe').value !== 'benar_salah') return;
+        let total = 0;
+        soalItem.querySelectorAll('.bs-bobot').forEach(inp => {
+            total += parseInt(inp.value, 10) || 0;
+        });
+        soalItem.querySelector('.soal-bobot').value = total;
+        updateSummary();
+    }
+
+    function addBsRow(soalItem, rowData = null) {
+        const rowsContainer = soalItem.querySelector('.bs-rows-container');
+        const clone = bsRowTemplate.content.cloneNode(true);
+        const rowEl = clone.querySelector('.bs-row');
+
+        const teksInput = rowEl.querySelector('.bs-teks');
+        const radioBenar = rowEl.querySelector('.bs-kunci-benar');
+        const radioSalah = rowEl.querySelector('.bs-kunci-salah');
+        const bobotInput = rowEl.querySelector('.bs-bobot');
+        const btnRemove = rowEl.querySelector('.btn-remove-bs-row');
+
+        if (rowData) {
+            teksInput.value = rowData.teks || '';
+            bobotInput.value = (rowData.bobot !== undefined && rowData.bobot !== null) ? rowData.bobot : 10;
+            if (rowData.kunci === 'benar') {
+                radioBenar.checked = true;
+            } else if (rowData.kunci === 'salah') {
+                radioSalah.checked = true;
+            }
+        }
+
+        bobotInput.addEventListener('input', () => recalcBobotBenarSalah(soalItem));
+
+        btnRemove.addEventListener('click', function() {
+            if (rowsContainer.querySelectorAll('.bs-row').length > 1) {
+                rowEl.remove();
+                updateSoalNames();
+                recalcBobotBenarSalah(soalItem);
+            }
+        });
+
+        rowsContainer.appendChild(rowEl);
+        updateSoalNames();
+        recalcBobotBenarSalah(soalItem);
+    }
 
     const existingSoals = @json(isset($uji) ? $uji->soals : []);
     
@@ -592,7 +848,6 @@ document.addEventListener('DOMContentLoaded', function() {
             soalItem.querySelector('.soal-bobot').value = data.bobot_nilai || 10;
             soalItem.querySelector('.soal-pertanyaan').value = data.pertanyaan;
             
-            // Tampilkan Gambar Lama dari Server jika Ada
             if (data.media) {
                 const previewContainer = soalItem.querySelector('.media-preview-container');
                 const previewImg = soalItem.querySelector('.media-preview-img');
@@ -600,15 +855,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 previewContainer.classList.remove('d-none');
             }
 
-            if (['pg', 'pg_kompleks'].includes(data.tipe)) {
-                const opsiTexts = soalItem.querySelectorAll('.opsi-teks');
+            if (data.tipe === 'benar_salah') {
+                const opsiList = Array.isArray(data.opsi_jawaban) ? data.opsi_jawaban : [];
+                const kunciList = Array.isArray(data.kunci_jawaban) ? data.kunci_jawaban : [];
+
+                if (opsiList.length > 0) {
+                    opsiList.forEach((item, idx) => {
+                        addBsRow(soalItem, {
+                            teks: item.teks ?? '',
+                            bobot: item.bobot ?? 10,
+                            kunci: kunciList[idx] ?? ''
+                        });
+                    });
+                } else {
+                    addBsRow(soalItem);
+                    addBsRow(soalItem);
+                }
+            } else if (['pg', 'pg_kompleks'].includes(data.tipe)) {
+                const opsiItems = soalItem.querySelectorAll('.opsi-item');
                 const kunciRadios = soalItem.querySelectorAll('.kunci-radio');
                 const kunciCheckboxes = soalItem.querySelectorAll('.kunci-checkbox');
                 
-                let opsiData = data.opsi_jawaban || [];
-                let kunciData = data.kunci_jawaban || [];
+                let opsiData = Array.isArray(data.opsi_jawaban) ? data.opsi_jawaban : [];
+                let opsiMediaData = Array.isArray(data.opsi_media) ? data.opsi_media : [];
+                let kunciData = Array.isArray(data.kunci_jawaban) ? data.kunci_jawaban : [];
                 
-                opsiTexts.forEach((ta, i) => { if (opsiData[i]) ta.value = opsiData[i]; });
+                opsiItems.forEach((optEl, i) => {
+                    const ta = optEl.querySelector('.opsi-teks');
+                    if (opsiData[i]) ta.value = opsiData[i];
+
+                    if (opsiMediaData[i]) {
+                        const prevContainer = optEl.querySelector('.opsi-media-preview-container');
+                        const prevImg = optEl.querySelector('.opsi-media-preview-img');
+                        prevImg.src = `{{ asset('storage') }}/${opsiMediaData[i]}`;
+                        prevContainer.classList.remove('d-none');
+                    }
+                });
                 
                 if (data.tipe === 'pg') {
                     kunciRadios.forEach((r, i) => {
@@ -643,12 +925,10 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addSoal = addSoal;
 
     function setupSoalEvents(item) {
-        // EVENT HAPUS BUTIR SOAL
         item.querySelector('.btn-remove-soal').addEventListener('click', function() {
             if (document.querySelectorAll('.soal-item').length > 1) {
                 const soalId = item.querySelector('.soal-id').value;
                 if(soalId) {
-                    // Opsional hapus via AJAX jika butir soal sudah tersimpan di database
                     fetch(`{{ url('admin/sba/soal') }}/${soalId}`, {
                         method: 'DELETE',
                         headers: {
@@ -660,12 +940,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.remove();
                 updateSoalNames();
                 updateSummary();
-            } else {
-                console.log('Minimal harus ada 1 soal dalam asesmen.');
             }
         });
 
-        // EVENT MEDIA PREVIEW & HAPUS GAMBAR
+        item.querySelector('.btn-add-bs-row').addEventListener('click', function() {
+            addBsRow(item);
+        });
+
+        // Media Gambar Utama Soal
         const fileInput = item.querySelector('.soal-media');
         const previewContainer = item.querySelector('.media-preview-container');
         const previewImg = item.querySelector('.media-preview-img');
@@ -692,7 +974,37 @@ document.addEventListener('DOMContentLoaded', function() {
             removeMediaInput.value = "1";
         });
 
-        // EVENT POSITION SWAP
+        // Media Gambar Per Pilihan Jawaban (Opsi A - E)
+        item.querySelectorAll('.opsi-item').forEach(optEl => {
+            const optFileInput = optEl.querySelector('.opsi-media-input');
+            const optPreviewContainer = optEl.querySelector('.opsi-media-preview-container');
+            const optPreviewImg = optEl.querySelector('.opsi-media-preview-img');
+            const optRemoveInput = optEl.querySelector('.opsi-remove-media');
+            const btnDeleteOptMedia = optEl.querySelector('.btn-delete-opsi-media');
+
+            optFileInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        optPreviewImg.src = e.target.result;
+                        optPreviewContainer.classList.remove('d-none');
+                        optRemoveInput.value = "0";
+                        syncOpsiRequiredState(item);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            btnDeleteOptMedia.addEventListener('click', function() {
+                optFileInput.value = "";
+                optPreviewImg.src = "";
+                optPreviewContainer.classList.add('d-none');
+                optRemoveInput.value = "1";
+                syncOpsiRequiredState(item);
+            });
+        });
+
         item.querySelector('.btn-move-up').addEventListener('click', function() {
             const prev = item.previousElementSibling;
             if (prev && prev.classList.contains('soal-item')) {
@@ -717,6 +1029,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         item.querySelector('.soal-tipe').addEventListener('change', function() {
             toggleOpsiVisibility(item);
+            updateSummary();
         });
 
         item.querySelector('.soal-bobot').addEventListener('input', updateSummary);
@@ -776,20 +1089,70 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleOpsiVisibility(item) {
         const tipe = item.querySelector('.soal-tipe').value;
         const opsiWrapper = item.querySelector('.opsi-wrapper');
+        const bsWrapper = item.querySelector('.bs-wrapper');
         const radios = item.querySelectorAll('.kunci-radio');
         const checkboxes = item.querySelectorAll('.kunci-checkbox');
         const opsiTexts = item.querySelectorAll('.opsi-teks');
+        const bobotUtamaInput = item.querySelector('.soal-bobot');
+        const labelBobotUtama = item.querySelector('.label-bobot-utama');
+        const infoBobotBs = item.querySelector('.info-bobot-bs');
+        const labelPertanyaan = item.querySelector('.label-pertanyaan-utama');
+        const textareaPertanyaan = item.querySelector('.soal-pertanyaan');
 
-        if (tipe === 'esai') {
+        // Reset atribut BS terlebih dahulu
+        item.querySelectorAll('.bs-teks').forEach(el => el.removeAttribute('required'));
+        item.querySelectorAll('.bs-kunci-benar').forEach(el => el.removeAttribute('required'));
+
+        if (tipe === 'benar_salah') {
             opsiWrapper.classList.add('d-none');
+            bsWrapper.classList.remove('d-none');
+
             opsiTexts.forEach(el => el.removeAttribute('required'));
             radios.forEach(el => el.removeAttribute('required'));
             checkboxes.forEach(el => el.removeAttribute('required'));
+
+            bobotUtamaInput.readOnly = true;
+            bobotUtamaInput.classList.add('bg-light');
+            labelBobotUtama.innerText = 'Total Bobot Soal';
+            infoBobotBs.classList.remove('d-none');
+            labelPertanyaan.innerHTML = 'Penjelasan / Paragraf / Cerita Stimulus <span class="text-danger">*</span>';
+            textareaPertanyaan.placeholder = 'Ketikkan penjelasan, cerita, atau paragraf bacaan sebelum daftar pernyataan...';
+
+            if (item.querySelectorAll('.bs-row').length === 0) {
+                addBsRow(item);
+                addBsRow(item);
+            }
+
+            item.querySelectorAll('.bs-teks').forEach(el => el.setAttribute('required', 'true'));
+            item.querySelectorAll('.bs-kunci-benar').forEach(el => el.setAttribute('required', 'true'));
+
+            recalcBobotBenarSalah(item);
+        } else if (tipe === 'esai') {
+            opsiWrapper.classList.add('d-none');
+            bsWrapper.classList.add('d-none');
+
+            opsiTexts.forEach(el => el.removeAttribute('required'));
+            radios.forEach(el => el.removeAttribute('required'));
+            checkboxes.forEach(el => el.removeAttribute('required'));
+
+            bobotUtamaInput.readOnly = false;
+            bobotUtamaInput.classList.remove('bg-light');
+            labelBobotUtama.innerText = 'Bobot (Poin)';
+            infoBobotBs.classList.add('d-none');
+            labelPertanyaan.innerHTML = 'Pertanyaan <span class="text-danger">*</span>';
+            textareaPertanyaan.placeholder = 'Ketikkan teks pertanyaan di sini...';
         } else {
             opsiWrapper.classList.remove('d-none');
-            opsiTexts.forEach((el, index) => {
-                if(index < 2) el.setAttribute('required', 'true');
-            });
+            bsWrapper.classList.add('d-none');
+
+            bobotUtamaInput.readOnly = false;
+            bobotUtamaInput.classList.remove('bg-light');
+            labelBobotUtama.innerText = 'Bobot (Poin)';
+            infoBobotBs.classList.add('d-none');
+            labelPertanyaan.innerHTML = 'Pertanyaan <span class="text-danger">*</span>';
+            textareaPertanyaan.placeholder = 'Ketikkan teks pertanyaan di sini...';
+
+            syncOpsiRequiredState(item);
 
             if (tipe === 'pg') {
                 radios.forEach(el => { el.classList.remove('d-none'); el.setAttribute('required', 'true'); });
@@ -815,13 +1178,40 @@ document.addEventListener('DOMContentLoaded', function() {
             item.querySelector('.soal-bobot').name = `soals[${index}][bobot_nilai]`;
             item.querySelector('.soal-pertanyaan').name = `soals[${index}][pertanyaan]`;
             
-            // Penamaan Atribut Media & Remove Media
             item.querySelector('.soal-media').name = `soals[${index}][media]`;
             item.querySelector('.soal-remove-media').name = `soals[${index}][remove_media]`;
             
-            item.querySelectorAll('.opsi-teks').forEach(el => el.name = `soals[${index}][opsi_jawaban][]`);
+            item.querySelectorAll('.opsi-item').forEach((optEl, optIdx) => {
+                optEl.querySelector('.opsi-teks').name = `soals[${index}][opsi_jawaban][${optIdx}]`;
+                optEl.querySelector('.opsi-media-input').name = `soals[${index}][opsi_media][${optIdx}]`;
+                optEl.querySelector('.opsi-remove-media').name = `soals[${index}][remove_opsi_media][${optIdx}]`;
+            });
             item.querySelectorAll('.kunci-radio').forEach(el => el.name = `soals[${index}][kunci_jawaban][]`);
             item.querySelectorAll('.kunci-checkbox').forEach(el => el.name = `soals[${index}][kunci_jawaban][]`);
+
+            // Penamaan atribut pernyataan Benar/Salah
+            item.querySelectorAll('.bs-row').forEach((row, pIdx) => {
+                row.querySelector('.bs-row-num').innerText = pIdx + 1;
+                row.querySelector('.bs-teks').name = `soals[${index}][pernyataan_bs][${pIdx}][teks]`;
+                row.querySelector('.bs-bobot').name = `soals[${index}][pernyataan_bs][${pIdx}][bobot]`;
+
+                const radioBenar = row.querySelector('.bs-kunci-benar');
+                const radioSalah = row.querySelector('.bs-kunci-salah');
+                const labelBenar = radioBenar.nextElementSibling;
+                const labelSalah = radioSalah.nextElementSibling;
+
+                const radioName = `soals[${index}][pernyataan_bs][${pIdx}][kunci]`;
+                const idBenar = `bs_benar_${index}_${pIdx}`;
+                const idSalah = `bs_salah_${index}_${pIdx}`;
+
+                radioBenar.name = radioName;
+                radioBenar.id = idBenar;
+                labelBenar.setAttribute('for', idBenar);
+
+                radioSalah.name = radioName;
+                radioSalah.id = idSalah;
+                labelSalah.setAttribute('for', idSalah);
+            });
         });
     }
 
@@ -862,22 +1252,162 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function sesuaikanBobotOtomatis() {
-        const bobotInputs = document.querySelectorAll('.soal-bobot');
-        const n = bobotInputs.length;
+        const soalItems = document.querySelectorAll('.soal-item');
+        const n = soalItems.length;
         if (n === 0) return;
-        
-        const basePoin = Math.floor(100 / n);
-        const remainder = 100 % n;
-        
-        bobotInputs.forEach((input, index) => {
-            if (index === n - 1) {
-                input.value = basePoin + remainder;
+
+        // Hitung total unit penilaian (1 unit per soal biasa, 1 unit per pernyataan pada soal benar_salah)
+        let totalUnits = 0;
+        soalItems.forEach(item => {
+            const tipe = item.querySelector('.soal-tipe').value;
+            if (tipe === 'benar_salah') {
+                totalUnits += Math.max(1, item.querySelectorAll('.bs-bobot').length);
             } else {
-                input.value = basePoin;
+                totalUnits += 1;
+            }
+        });
+
+        const basePoin = Math.floor(100 / totalUnits);
+        const remainder = 100 % totalUnits;
+        let currentUnit = 0;
+
+        soalItems.forEach(item => {
+            const tipe = item.querySelector('.soal-tipe').value;
+            if (tipe === 'benar_salah') {
+                const bsBobots = item.querySelectorAll('.bs-bobot');
+                bsBobots.forEach(inp => {
+                    currentUnit++;
+                    inp.value = (currentUnit === totalUnits) ? (basePoin + remainder) : basePoin;
+                });
+                recalcBobotBenarSalah(item);
+            } else {
+                currentUnit++;
+                item.querySelector('.soal-bobot').value = (currentUnit === totalUnits) ? (basePoin + remainder) : basePoin;
             }
         });
         
         updateSummary();
+    }
+
+    // ========================================================================
+    // EXPORT SOAL SAAT INI KE EXCEL (.XLSX) SESUAI FORMAT TEMPLATE IMPORT
+    // ========================================================================
+    const btnExportSoalExcel = document.getElementById('btn-export-soal-excel');
+    if (btnExportSoalExcel) {
+        btnExportSoalExcel.addEventListener('click', async function() {
+            const soalItems = document.querySelectorAll('.soal-item');
+            if (soalItems.length === 0) {
+                alert('Belum ada butir soal untuk di-export.');
+                return;
+            }
+
+            const payloadSoals = [];
+            soalItems.forEach(item => {
+                const tipe = item.querySelector('.soal-tipe').value;
+                const pertanyaan = item.querySelector('.soal-pertanyaan').value;
+                const bobotNilai = item.querySelector('.soal-bobot').value;
+                const mediaPreview = item.querySelector('.media-preview-container');
+                const hasMedia = (mediaPreview && !mediaPreview.classList.contains('d-none')) ? '1' : '0';
+
+                const soalObj = {
+                    tipe: tipe,
+                    pertanyaan: pertanyaan,
+                    bobot_nilai: bobotNilai,
+                    has_media: hasMedia,
+                    opsi_jawaban: [],
+                    has_opsi_media: [],
+                    kunci_jawaban: [],
+                    pernyataan_bs: []
+                };
+
+                if (tipe === 'benar_salah') {
+                    item.querySelectorAll('.bs-row').forEach(row => {
+                        const teks = row.querySelector('.bs-teks').value;
+                        const bobot = row.querySelector('.bs-bobot').value;
+                        const radioBenar = row.querySelector('.bs-kunci-benar');
+                        const radioSalah = row.querySelector('.bs-kunci-salah');
+                        let kunci = '';
+                        if (radioBenar && radioBenar.checked) kunci = 'benar';
+                        else if (radioSalah && radioSalah.checked) kunci = 'salah';
+
+                        soalObj.pernyataan_bs.push({
+                            teks: teks,
+                            kunci: kunci,
+                            bobot: bobot
+                        });
+                    });
+                } else if (['pg', 'pg_kompleks'].includes(tipe)) {
+                    item.querySelectorAll('.opsi-item').forEach((optEl, optIdx) => {
+                        const teksOpsi = optEl.querySelector('.opsi-teks').value;
+                        const optPrev = optEl.querySelector('.opsi-media-preview-container');
+                        const hasOptMedia = (optPrev && !optPrev.classList.contains('d-none')) ? '1' : '0';
+
+                        soalObj.opsi_jawaban.push(teksOpsi);
+                        soalObj.has_opsi_media.push(hasOptMedia);
+
+                        if (tipe === 'pg') {
+                            const r = optEl.querySelector('.kunci-radio');
+                            if (r && r.checked) {
+                                soalObj.kunci_jawaban.push(String(optIdx));
+                            }
+                        } else {
+                            const c = optEl.querySelector('.kunci-checkbox');
+                            if (c && c.checked) {
+                                soalObj.kunci_jawaban.push(String(optIdx));
+                            }
+                        }
+                    });
+                }
+
+                payloadSoals.push(soalObj);
+            });
+
+            const originalHtml = btnExportSoalExcel.innerHTML;
+            btnExportSoalExcel.disabled = true;
+            btnExportSoalExcel.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Mengekspor...';
+
+            try {
+                const kodeUjiVal = inputKodeUji ? inputKodeUji.value.trim() : '';
+                const response = await fetch("{{ route('sba.soal.export') }}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json'
+                    },
+                    body: JSON.stringify({
+                        kode_uji: kodeUjiVal,
+                        soals: payloadSoals
+                    })
+                });
+
+                if (!response.ok) {
+                    let errMsg = 'Gagal mengekspor soal ke Excel.';
+                    try {
+                        const errData = await response.json();
+                        if (errData && errData.message) errMsg = errData.message;
+                    } catch (_) {}
+                    throw new Error(errMsg);
+                }
+
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = kodeUjiVal !== ''
+                    ? `Export_Soal_SBA_${kodeUjiVal}.xlsx`
+                    : 'Export_Soal_SBA.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+            } catch (err) {
+                alert(err.message || 'Terjadi kesalahan saat mengekspor soal.');
+            } finally {
+                btnExportSoalExcel.disabled = false;
+                btnExportSoalExcel.innerHTML = originalHtml;
+            }
+        });
     }
 
     // ========================================================================
@@ -939,7 +1469,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateSoalNames();
                 updateSummary();
 
-                // Reset input file & tutup modal
                 inputExcelSoal.value = '';
                 const modalEl = document.getElementById('modalImportSoalExcel');
                 const modalInstance = bootstrap.Modal.getInstance(modalEl);
@@ -947,7 +1476,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     modalInstance.hide();
                 }
 
-                // Tampilkan banner sukses sementara
                 alertImportSuccessText.innerHTML = `<strong>Berhasil Dimuat!</strong> ${data.message}`;
                 alertImportSuccess.classList.remove('d-none');
                 container.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1032,40 +1560,151 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ========================================================================
-    // INTERCEPT SUBMIT FORM: MODAL PERINGATAN JIKA TOTAL BOBOT != 100
+    // INTERCEPT SUBMIT FORM: MODAL BOBOT & SIMPAN VIA AJAX (ZERO PAGE RELOAD)
     // ========================================================================
     const formUjianSba = document.getElementById('form-ujian-sba');
     const modalBobotEl = document.getElementById('modalPeringatanBobot');
     const btnModalSesuaikanBobot = document.getElementById('btn-modal-sesuaikan-bobot');
     const btnModalTetapSimpan = document.getElementById('btn-modal-tetap-simpan');
-    let bypassBobotCheck = false;
+    const ajaxErrorAlert = document.getElementById('ajax-error-alert');
+    const ajaxErrorTitle = document.getElementById('ajax-error-title');
+    const ajaxErrorList = document.getElementById('ajax-error-list');
+    const submitButtons = document.querySelectorAll('.btn-submit-sba');
+    let isSubmitting = false;
+
+    function formatErrorKeyLabel(key) {
+        const matchSoal = key.match(/^soals\.(\d+)\.(.+)$/);
+        if (matchSoal) {
+            const nomorSoal = parseInt(matchSoal[1], 10) + 1;
+            return `Soal #${nomorSoal}`;
+        }
+        return null;
+    }
+
+    function tampilkanErrorAjax(title, messages = []) {
+        ajaxErrorTitle.textContent = title;
+        ajaxErrorList.innerHTML = '';
+
+        if (messages.length > 0) {
+            messages.forEach(msg => {
+                const li = document.createElement('li');
+                li.textContent = msg;
+                ajaxErrorList.appendChild(li);
+            });
+        } else {
+            const li = document.createElement('li');
+            li.textContent = 'Periksa kembali isian formulir Anda.';
+            ajaxErrorList.appendChild(li);
+        }
+
+        ajaxErrorAlert.classList.remove('d-none');
+        ajaxErrorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    async function kirimFormViaAjax() {
+        if (isSubmitting) return;
+        isSubmitting = true;
+
+        ajaxErrorAlert.classList.add('d-none');
+        updateSoalNames();
+
+        const originalButtonHtmls = [];
+        submitButtons.forEach((btn, idx) => {
+            originalButtonHtmls[idx] = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Menyimpan...';
+        });
+
+        try {
+            const formData = new FormData(formUjianSba);
+
+            const response = await fetch(formUjianSba.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            });
+
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (_) {
+                data = null;
+            }
+
+            if (response.ok && data && data.status === 'success') {
+                window.location.href = data.redirect || "{{ route('sba.index') }}";
+                return;
+            }
+
+            if (response.status === 422 && data && data.errors) {
+                const formattedMessages = [];
+                Object.entries(data.errors).forEach(([field, msgs]) => {
+                    if (field === 'kode_uji' && inputKodeUji) {
+                        inputKodeUji.classList.add('is-invalid');
+                    }
+                    const prefix = formatErrorKeyLabel(field);
+                    (Array.isArray(msgs) ? msgs : [msgs]).forEach(m => {
+                        formattedMessages.push(prefix ? `${prefix}: ${m}` : m);
+                    });
+                });
+
+                tampilkanErrorAjax(
+                    'Gagal Menyimpan! Terdapat data yang belum sesuai:',
+                    formattedMessages
+                );
+            } else if (response.status === 419) {
+                tampilkanErrorAjax(
+                    'Sesi Keamanan (CSRF) Berakhir',
+                    ['Silakan buka tab baru untuk login ulang jika diperlukan, lalu tekan kembali tombol Simpan Asesmen tanpa me-refresh halaman ini agar soal tidak hilang.']
+                );
+            } else if (response.status === 413) {
+                tampilkanErrorAjax(
+                    'Ukuran File Terlalu Besar',
+                    ['Total ukuran gambar soal dan pilihan jawaban yang diunggah melebihi batas server. Silakan perkecil ukuran gambar (maksimal 2MB per gambar) lalu coba simpan kembali.']
+                );
+            } else {
+                tampilkanErrorAjax(
+                    'Gagal Menyimpan Asesmen!',
+                    [(data && data.message) ? data.message : `Terjadi kesalahan pada server (Kode HTTP ${response.status}).`]
+                );
+            }
+        } catch (networkErr) {
+            tampilkanErrorAjax(
+                'Koneksi Terputus!',
+                ['Gagal terhubung ke server. Periksa koneksi internet Anda lalu klik tombol Simpan kembali.']
+            );
+        } finally {
+            isSubmitting = false;
+            submitButtons.forEach((btn, idx) => {
+                btn.disabled = false;
+                btn.innerHTML = originalButtonHtmls[idx];
+            });
+        }
+    }
 
     function submitFormSetelahKonfirmasi() {
-        bypassBobotCheck = true;
-
         const bsModalBobot = bootstrap.Modal.getInstance(modalBobotEl);
         if (bsModalBobot) {
             bsModalBobot.hide();
         }
-
-        if (typeof formUjianSba.requestSubmit === 'function') {
-            formUjianSba.requestSubmit();
-        } else {
-            formUjianSba.submit();
-        }
+        kirimFormViaAjax();
     }
 
     if (formUjianSba && modalBobotEl) {
         formUjianSba.addEventListener('submit', function(e) {
-            if (bypassBobotCheck) {
+            e.preventDefault();
+
+            if (!formUjianSba.checkValidity()) {
+                formUjianSba.reportValidity();
                 return;
             }
 
             const { jumlahSoal, totalPoin } = hitungStatistikSoal();
 
             if (totalPoin !== 100) {
-                e.preventDefault();
-
                 document.getElementById('modal-bobot-jumlah-soal').innerText = jumlahSoal;
                 document.getElementById('modal-bobot-total-poin').innerText = totalPoin + ' Poin';
 
@@ -1080,15 +1719,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const bsModalBobot = bootstrap.Modal.getOrCreateInstance(modalBobotEl);
                 bsModalBobot.show();
+                return;
             }
+
+            kirimFormViaAjax();
         });
 
-        // Opsi 1 (Urutan 2): Tetap Simpan meskipun total bobot != 100
         btnModalTetapSimpan?.addEventListener('click', function() {
             submitFormSetelahKonfirmasi();
         });
 
-        // Opsi 2 (Urutan 3): Sesuaikan Bobot ke 100 lalu langsung Simpan
         btnModalSesuaikanBobot?.addEventListener('click', function() {
             sesuaikanBobotOtomatis();
             submitFormSetelahKonfirmasi();

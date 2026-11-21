@@ -36,11 +36,12 @@
     
     <style>
         :root {
-            --sba-primary: #5e72e4;
+            --sba-primary: #6f42c1;
             --sba-secondary: #8392ab;
             --sba-dark: #172b4d;
             --sba-light: #f7fafc;
             --sba-purple: #6f42c1;
+            --sba-purple-light: #f6f2ff;
         }
 
         body {
@@ -51,10 +52,10 @@
             min-height: 100vh;
         }
 
-        /* Header Navbar Modern */
+        /* Header Navbar & Banner Ungu Gradasi */
         .navbar-cbt {
-            background: linear-gradient(135deg, #11cdef 0%, #1171ef 100%);
-            box-shadow: 0 4px 15px rgba(17, 113, 239, 0.15);
+            background: linear-gradient(135deg, #6f42c1 0%, #825ee4 100%);
+            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.22);
         }
 
         /* Card Styling */
@@ -66,16 +67,37 @@
         }
 
         .header-gradient {
-            background: linear-gradient(135deg, #5e72e4 0%, #825ee4 100%);
+            background: linear-gradient(135deg, #6f42c1 0%, #825ee4 100%);
             color: white;
             border-top-left-radius: 16px;
             border-top-right-radius: 16px;
         }
 
+        .text-sba-purple {
+            color: #6f42c1 !important;
+        }
+
+        .badge-sba-purple {
+            background-color: rgba(111, 66, 193, 0.12) !important;
+            color: #6f42c1 !important;
+        }
+
+        .btn-sba-purple {
+            background-color: #6f42c1 !important;
+            border-color: #6f42c1 !important;
+            color: #ffffff !important;
+        }
+
+        .btn-sba-purple:hover {
+            background-color: #59339d !important;
+            border-color: #59339d !important;
+            color: #ffffff !important;
+        }
+
         /* Styling Media / Gambar Soal */
         .soal-media-wrapper {
-            background-color: #f8f9fe;
-            border: 1px solid #e9ecef;
+            background-color: #f8f6fc;
+            border: 1px solid #e9e3f5;
             border-radius: 12px;
             padding: 12px;
             margin-bottom: 20px;
@@ -90,7 +112,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
 
-        /* Custom Radio & Checkbox Opsi Jawaban */
+        /* Custom Radio & Checkbox Opsi Jawaban (Ungu Konsisten) */
         .option-card {
             border: 2px solid #e9ecef;
             border-radius: 12px;
@@ -102,15 +124,15 @@
         }
 
         .option-card:hover {
-            border-color: #5e72e4;
-            background-color: #f8f9fe;
+            border-color: #6f42c1;
+            background-color: #faf7ff;
             transform: translateY(-1px);
         }
 
         .option-card.selected-option {
-            border-color: #5e72e4 !important;
-            background-color: #f4f5ff !important;
-            box-shadow: 0 3px 10px rgba(94, 114, 228, 0.12);
+            border-color: #6f42c1 !important;
+            background-color: #f6f2ff !important;
+            box-shadow: 0 3px 10px rgba(111, 66, 193, 0.14);
         }
 
         .option-badge {
@@ -130,7 +152,78 @@
         }
 
         .selected-option .option-badge {
-            background-color: #5e72e4;
+            background-color: #6f42c1;
+            color: #ffffff;
+        }
+
+        .option-media-img {
+            max-height: 190px;
+            max-width: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            background-color: #fff;
+            padding: 3px;
+        }
+
+        /* Styling Pernyataan Benar / Salah (Satu Warna Ungu Netral + Ikon Radio) */
+        .bs-statement-row {
+            border: 2px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            background-color: #ffffff;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .bs-statement-row.bs-answered {
+            border-color: #6f42c1;
+            background-color: #f6f2ff;
+            box-shadow: 0 3px 10px rgba(111, 66, 193, 0.12);
+        }
+
+        .bs-choice-btn {
+            min-width: 104px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 8px 14px;
+            cursor: pointer;
+            border: 2px solid #cbd5e1;
+            background-color: #ffffff;
+            color: #495057;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .bs-choice-btn:hover {
+            border-color: #6f42c1;
+            background-color: #faf7ff;
+            color: #6f42c1;
+        }
+
+        .bs-choice-btn .bs-radio-icon {
+            font-size: 0.95rem;
+            color: #8392ab;
+            transition: color 0.15s ease;
+        }
+
+        .bs-choice-btn:hover .bs-radio-icon {
+            color: #6f42c1;
+        }
+
+        .radio-bs:checked + .bs-choice-btn {
+            background-color: #6f42c1;
+            border-color: #6f42c1;
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(111, 66, 193, 0.28);
+        }
+
+        .radio-bs:checked + .bs-choice-btn .bs-radio-icon {
             color: #ffffff;
         }
 
@@ -151,19 +244,25 @@
         }
 
         .nav-grid-btn:hover {
-            border-color: #5e72e4;
-            color: #5e72e4;
+            border-color: #6f42c1;
+            color: #6f42c1;
         }
 
         .nav-grid-btn.active-grid {
-            border-color: #5e72e4 !important;
-            box-shadow: 0 0 0 3px rgba(94, 114, 228, 0.25);
+            border-color: #6f42c1 !important;
+            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.25);
         }
 
         .nav-grid-btn.btn-answered {
             background-color: #2dce89 !important;
             border-color: #2dce89 !important;
             color: #ffffff !important;
+        }
+
+        .nav-grid-btn.btn-partial {
+            background-color: #f3ebff !important;
+            border-color: #825ee4 !important;
+            color: #6f42c1 !important;
         }
 
         .nav-grid-btn.btn-ragu {
@@ -200,16 +299,16 @@
                     <div class="card-body p-4 p-md-5">
                         <div class="bg-light border rounded-3 p-3 mb-4">
                             <div class="d-flex justify-content-between mb-2 border-bottom pb-2">
-                                <span class="text-muted small"><i class="fas fa-user text-primary me-2"></i>Nama Peserta:</span>
+                                <span class="text-muted small"><i class="fas fa-user text-sba-purple me-2"></i>Nama Peserta:</span>
                                 <span class="fw-bold text-dark">{{ $namaPeserta }}</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2 border-bottom pb-2">
-                                <span class="text-muted small"><i class="fas fa-book-open text-primary me-2"></i>Judul Asesmen:</span>
+                                <span class="text-muted small"><i class="fas fa-book-open text-sba-purple me-2"></i>Judul Asesmen:</span>
                                 <span class="fw-bold text-dark text-end">{{ $uji->judul }}</span>
                             </div>
                             <div class="d-flex justify-content-between {{ $uji->waktu_selesai ? 'mb-2 border-bottom pb-2' : '' }}">
-                                <span class="text-muted small"><i class="fas fa-hourglass-half text-primary me-2"></i>Durasi Ujian:</span>
-                                <span class="fw-bold text-primary">
+                                <span class="text-muted small"><i class="fas fa-hourglass-half text-sba-purple me-2"></i>Durasi Ujian:</span>
+                                <span class="fw-bold text-sba-purple">
                                     {{ $uji->durasi_menit > 0 ? $uji->durasi_menit . ' Menit' : 'Tanpa Batas Waktu' }}
                                 </span>
                             </div>
@@ -233,12 +332,24 @@
                         @endif
 
                         @if(isset($jawabanTersimpan) && $jawabanTersimpan->count() > 0)
-                            <div class="alert alert-info border-0 rounded-3 p-3 mb-4 bg-opacity-10" style="background-color: #e3f2fd;">
-                                <div class="d-flex align-items-center text-primary small">
+                            <div class="alert border-0 rounded-3 p-3 mb-4" style="background-color: #f3ebff;">
+                                <div class="d-flex align-items-center text-sba-purple small">
                                     <i class="fas fa-history fs-5 me-3"></i>
                                     <div>
                                         <strong>Melanjutkan Sesi Sebelumnya:</strong> Sebanyak <strong>{{ $jawabanTersimpan->count() }} jawaban</strong> Anda telah dipulihkan otomatis. Sisa waktu mengikuti waktu mulai awal dan jadwal ujian.
                                     </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        {{-- CARD DESKRIPSI ASESMEN (Tampil jika terisi > 10 karakter) --}}
+                        @if(!empty($uji->deskripsi) && mb_strlen(trim($uji->deskripsi)) > 10)
+                            <div class="card border rounded-3 p-3 mb-4 bg-white shadow-none">
+                                <h6 class="fw-bold text-dark mb-2 small">
+                                    <i class="fas fa-align-left text-sba-purple me-2"></i>Informasi Asesmen
+                                </h6>
+                                <div class="text-dark small mb-0" style="line-height: 1.6;">
+                                    {!! nl2br(e($uji->deskripsi)) !!}
                                 </div>
                             </div>
                         @endif
@@ -264,7 +375,7 @@
                             </div>
                         @else
                             <h6 class="fw-bold text-danger mb-3">
-                                <i class="fas fa-exclamation-triangle me-2"></i>Peraturan Strict Mode & Keamanan
+                                <i class="fas fa-exclamation-triangle me-2"></i>Peraturan & Keamanan
                             </h6>
                             
                             <div class="alert alert-danger border-0 rounded-3 p-3 mb-4 bg-opacity-10" style="background-color: #fce8e6;">
@@ -299,11 +410,11 @@
     {{-- ====================================================================== --}}
     <div id="section-ujian" class="d-none d-flex flex-column min-vh-100 w-100">
         
-        <!-- NAVBAR HEAD -->
+        <!-- NAVBAR HEAD (UNGU GRADASI) -->
         <nav class="navbar navbar-expand navbar-cbt px-4 py-3 shadow-sm sticky-top">
             <div class="container-fluid">
                 <div class="d-flex align-items-center">
-                    <div class="bg-white text-primary rounded-circle p-2 me-3 d-none d-md-block" style="width:40px; height:40px; text-align:center;">
+                    <div class="bg-white text-sba-purple rounded-circle p-2 me-3 d-none d-md-block" style="width:40px; height:40px; text-align:center;">
                         <i class="fas fa-laptop-code"></i>
                     </div>
                     <div>
@@ -321,7 +432,7 @@
                         <i class="fas fa-clock text-danger me-2"></i><span id="timer-countdown">--:--:--</span>
                     </div>
                     <button type="button" class="btn btn-light btn-sm rounded-circle p-2" id="btnFullscreen" title="Mode Layar Penuh" style="width:38px; height:38px;">
-                        <i class="fas fa-expand text-primary"></i>
+                        <i class="fas fa-expand text-sba-purple"></i>
                     </button>
                 </div>
             </div>
@@ -340,15 +451,28 @@
                                 $savedItem = isset($jawabanTersimpan) ? $jawabanTersimpan->get($soal->id) : null;
                                 $savedVal = $savedItem ? $savedItem->jawaban : null;
                                 $isSavedRagu = $savedItem ? (bool) $savedItem->ragu_ragu : false;
-                                $savedArr = ($soal->tipe === 'pg_kompleks' && $savedVal) ? (json_decode($savedVal, true) ?? []) : [];
+                                $savedArr = (in_array($soal->tipe, ['pg_kompleks', 'benar_salah']) && $savedVal)
+                                    ? (is_array($savedVal) ? $savedVal : (json_decode((string) $savedVal, true) ?? []))
+                                    : [];
+
+                                $opsiTeksList = is_array($soal->opsi_jawaban) ? $soal->opsi_jawaban : [];
+                                $opsiMediaList = is_array($soal->opsi_media) ? $soal->opsi_media : [];
+                                $jumlahSlotOpsi = max(count($opsiTeksList), count($opsiMediaList));
                             @endphp
 
-                            <div class="card card-custom soal-item-pane mb-4 {{ $index === 0 ? '' : 'd-none' }}" data-index="{{ $index }}" data-soal-id="{{ $soal->id }}">
+                            <div class="card card-custom soal-item-pane mb-4 {{ $index === 0 ? '' : 'd-none' }}" data-index="{{ $index }}" data-soal-id="{{ $soal->id }}" data-soal-tipe="{{ $soal->tipe }}">
                                 
                                 <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
-                                    <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-3 py-2 rounded-pill" style="font-size: 0.85rem;">
-                                        Soal Nomor {{ $index + 1 }}
-                                    </span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge badge-sba-purple fw-bold px-3 py-2 rounded-pill" style="font-size: 0.85rem;">
+                                            Soal Nomor {{ $index + 1 }}
+                                        </span>
+                                        @if($soal->tipe === 'benar_salah')
+                                            <span class="badge badge-sba-purple fw-bold px-3 py-2 rounded-pill" style="font-size: 0.8rem;">
+                                                Pernyataan Benar / Salah
+                                            </span>
+                                        @endif
+                                    </div>
                                     <span class="text-muted small">Bobot: <strong class="text-dark">{{ $soal->bobot_nilai }} Poin</strong></span>
                                 </div>
                                 
@@ -361,16 +485,20 @@
                                         </div>
                                     @endif
 
-                                    {{-- 2. TEKS PERTANYAAN SOAL --}}
+                                    {{-- 2. TEKS PERTANYAAN / STIMULUS BACAAN --}}
                                     <div class="mb-4 text-dark fs-6" style="line-height: 1.7; font-weight: 500;">
                                         {!! nl2br(e($soal->pertanyaan)) !!}
                                     </div>
 
-                                    {{-- 3. OPSI JAWABAN (DENGAN PEMULIHAN JAWABAN TERSIMPAN) --}}
+                                    {{-- 3. OPSI JAWABAN (TEKS &/ATAU GAMBAR + PEMULIHAN JAWABAN TERSIMPAN) --}}
                                     <div class="options-container">
                                         @if($soal->tipe === 'pg')
-                                            @foreach($soal->opsi_jawaban as $optIndex => $opsiTeks)
-                                                @if(!empty(trim($opsiTeks)))
+                                            @for($optIndex = 0; $optIndex < $jumlahSlotOpsi; $optIndex++)
+                                                @php
+                                                    $opsiTeks = trim((string) ($opsiTeksList[$optIndex] ?? ''));
+                                                    $opsiMediaPath = $opsiMediaList[$optIndex] ?? null;
+                                                @endphp
+                                                @if($opsiTeks !== '' || !empty($opsiMediaPath))
                                                     @php
                                                         $isChecked = ($savedVal !== null && (string) $savedVal === (string) $optIndex);
                                                     @endphp
@@ -378,18 +506,31 @@
                                                         <input class="form-check-input d-none radio-jawaban" type="radio" name="jawaban_{{ $soal->id }}" value="{{ $optIndex }}" id="opt_{{ $soal->id }}_{{ $optIndex }}" data-soal-id="{{ $soal->id }}" {{ $isChecked ? 'checked' : '' }}>
                                                         <label class="w-100 d-flex align-items-center m-0 cursor-pointer text-dark" for="opt_{{ $soal->id }}_{{ $optIndex }}">
                                                             <div class="option-badge">{{ chr(65 + $optIndex) }}</div>
-                                                            <div class="flex-grow-1">{{ $opsiTeks }}</div>
+                                                            <div class="flex-grow-1">
+                                                                @if($opsiTeks !== '')
+                                                                    <div style="line-height: 1.5;">{!! nl2br(e($opsiTeks)) !!}</div>
+                                                                @endif
+                                                                @if(!empty($opsiMediaPath))
+                                                                    <div class="{{ $opsiTeks !== '' ? 'mt-2' : '' }}">
+                                                                        <img src="{{ asset('storage/' . $opsiMediaPath) }}" alt="Gambar Opsi {{ chr(65 + $optIndex) }}" class="option-media-img">
+                                                                    </div>
+                                                                @endif
+                                                            </div>
                                                         </label>
                                                     </div>
                                                 @endif
-                                            @endforeach
+                                            @endfor
 
                                         @elseif($soal->tipe === 'pg_kompleks')
-                                            <div class="alert alert-info py-2 px-3 text-xs mb-3 border-0 bg-info bg-opacity-10 text-info fw-bold">
+                                            <div class="alert py-2 px-3 text-xs mb-3 border-0 text-sba-purple fw-bold" style="background-color: #f3ebff;">
                                                 <i class="fas fa-info-circle me-1"></i> Jawaban kompleks: Pilih satu atau lebih pilihan yang menurut Anda benar.
                                             </div>
-                                            @foreach($soal->opsi_jawaban as $optIndex => $opsiTeks)
-                                                @if(!empty(trim($opsiTeks)))
+                                            @for($optIndex = 0; $optIndex < $jumlahSlotOpsi; $optIndex++)
+                                                @php
+                                                    $opsiTeks = trim((string) ($opsiTeksList[$optIndex] ?? ''));
+                                                    $opsiMediaPath = $opsiMediaList[$optIndex] ?? null;
+                                                @endphp
+                                                @if($opsiTeks !== '' || !empty($opsiMediaPath))
                                                     @php
                                                         $isChecked = in_array((string) $optIndex, array_map('strval', $savedArr));
                                                     @endphp
@@ -397,11 +538,88 @@
                                                         <input class="form-check-input me-3 checkbox-jawaban" type="checkbox" name="jawaban_{{ $soal->id }}[]" value="{{ $optIndex }}" id="opt_{{ $soal->id }}_{{ $optIndex }}" data-soal-id="{{ $soal->id }}" style="transform: scale(1.2);" {{ $isChecked ? 'checked' : '' }}>
                                                         <label class="w-100 d-flex align-items-center m-0 cursor-pointer text-dark" for="opt_{{ $soal->id }}_{{ $optIndex }}">
                                                             <div class="option-badge">{{ chr(65 + $optIndex) }}</div>
-                                                            <div class="flex-grow-1">{{ $opsiTeks }}</div>
+                                                            <div class="flex-grow-1">
+                                                                @if($opsiTeks !== '')
+                                                                    <div style="line-height: 1.5;">{!! nl2br(e($opsiTeks)) !!}</div>
+                                                                @endif
+                                                                @if(!empty($opsiMediaPath))
+                                                                    <div class="{{ $opsiTeks !== '' ? 'mt-2' : '' }}">
+                                                                        <img src="{{ asset('storage/' . $opsiMediaPath) }}" alt="Gambar Opsi {{ chr(65 + $optIndex) }}" class="option-media-img">
+                                                                    </div>
+                                                                @endif
+                                                            </div>
                                                         </label>
                                                     </div>
                                                 @endif
-                                            @endforeach
+                                            @endfor
+
+                                        @elseif($soal->tipe === 'benar_salah')
+                                            @php
+                                                $pernyataanList = is_array($soal->opsi_jawaban) ? $soal->opsi_jawaban : [];
+                                                $totalPernyataan = count($pernyataanList);
+                                            @endphp
+                                            <div class="alert py-2 px-3 small mb-3 border-0 text-sba-purple fw-bold d-flex justify-content-between align-items-center flex-wrap gap-2" style="background-color: #f3ebff;">
+                                                <span>
+                                                    <i class="fas fa-check-double me-1"></i> Tentukan <strong>Benar</strong> atau <strong>Salah</strong> untuk setiap pernyataan di bawah ini.
+                                                </span>
+                                                <span class="badge text-white bs-progress-badge" style="background-color: #6f42c1;" data-soal-id="{{ $soal->id }}">
+                                                    Terjawab: 0 / {{ $totalPernyataan }} pernyataan
+                                                </span>
+                                            </div>
+
+                                            <div class="bs-statements-container" data-soal-id="{{ $soal->id }}" data-total-statements="{{ $totalPernyataan }}">
+                                                @foreach($pernyataanList as $stmtIndex => $stmtItem)
+                                                    @php
+                                                        $teksPernyataan = is_array($stmtItem) ? ($stmtItem['teks'] ?? '') : (string) $stmtItem;
+                                                        $savedChoice = strtolower(trim((string) ($savedArr[$stmtIndex] ?? '')));
+                                                        $isAnsweredRow = in_array($savedChoice, ['benar', 'salah'], true);
+                                                    @endphp
+                                                    <div class="bs-statement-row {{ $isAnsweredRow ? 'bs-answered' : '' }}" data-stmt-index="{{ $stmtIndex }}">
+                                                        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                                                            <div class="d-flex align-items-start flex-grow-1">
+                                                                <span class="badge bg-secondary bg-opacity-10 text-dark fw-bold me-3 mt-1 px-2 py-1" style="min-width: 28px;">
+                                                                    {{ $stmtIndex + 1 }}.
+                                                                </span>
+                                                                <div class="text-dark" style="line-height: 1.6;">
+                                                                    {!! nl2br(e($teksPernyataan)) !!}
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="d-flex align-items-center gap-2 flex-shrink-0 justify-content-end">
+                                                                <div>
+                                                                    <input type="radio"
+                                                                           class="d-none radio-bs radio-bs-benar"
+                                                                           name="bs_{{ $soal->id }}_{{ $stmtIndex }}"
+                                                                           id="bs_{{ $soal->id }}_{{ $stmtIndex }}_benar"
+                                                                           value="benar"
+                                                                           data-soal-id="{{ $soal->id }}"
+                                                                           data-stmt-index="{{ $stmtIndex }}"
+                                                                           {{ $savedChoice === 'benar' ? 'checked' : '' }}>
+                                                                    <label class="bs-choice-btn bs-choice-btn-benar mb-0" for="bs_{{ $soal->id }}_{{ $stmtIndex }}_benar">
+                                                                        <i class="{{ $savedChoice === 'benar' ? 'fas fa-dot-circle' : 'far fa-circle' }} bs-radio-icon"></i>
+                                                                        <span>Benar</span>
+                                                                    </label>
+                                                                </div>
+
+                                                                <div>
+                                                                    <input type="radio"
+                                                                           class="d-none radio-bs radio-bs-salah"
+                                                                           name="bs_{{ $soal->id }}_{{ $stmtIndex }}"
+                                                                           id="bs_{{ $soal->id }}_{{ $stmtIndex }}_salah"
+                                                                           value="salah"
+                                                                           data-soal-id="{{ $soal->id }}"
+                                                                           data-stmt-index="{{ $stmtIndex }}"
+                                                                           {{ $savedChoice === 'salah' ? 'checked' : '' }}>
+                                                                    <label class="bs-choice-btn bs-choice-btn-salah mb-0" for="bs_{{ $soal->id }}_{{ $stmtIndex }}_salah">
+                                                                        <i class="{{ $savedChoice === 'salah' ? 'fas fa-dot-circle' : 'far fa-circle' }} bs-radio-icon"></i>
+                                                                        <span>Salah</span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            </div>
 
                                         @elseif($soal->tipe === 'esai')
                                             <div class="form-group">
@@ -425,7 +643,7 @@
                                     </div>
 
                                     @if($index < count($soals) - 1)
-                                        <button type="button" class="btn btn-primary px-4 rounded-3 btn-next" style="background-color: #5e72e4; border-color: #5e72e4;">
+                                        <button type="button" class="btn btn-sba-purple px-4 rounded-3 btn-next">
                                             Selanjutnya <i class="fas fa-chevron-right ms-2"></i>
                                         </button>
                                     @else
@@ -444,7 +662,7 @@
                     <div class="sticky-sidebar">
                         <div class="card card-custom mb-3">
                             <div class="card-header bg-white py-3 px-4 border-bottom">
-                                <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-th me-2 text-primary"></i> Navigasi Soal</h6>
+                                <h6 class="fw-bold mb-0 text-dark"><i class="fas fa-th me-2 text-sba-purple"></i> Navigasi Soal</h6>
                             </div>
                             <div class="card-body p-3">
                                 <div class="d-flex flex-wrap gap-2 justify-content-center" id="nav-grid-container">
@@ -455,8 +673,9 @@
                                     @endforeach
                                 </div>
                                 <hr class="my-3 opacity-2">
-                                <div class="d-flex justify-content-between text-xs text-muted px-2">
+                                <div class="d-flex flex-wrap justify-content-between gap-2 text-xs text-muted px-2">
                                     <div><span class="badge bg-success rounded-circle p-1 me-1">&nbsp;</span> Terjawab</div>
+                                    <div><span class="badge rounded-circle p-1 me-1" style="background-color: #825ee4;">&nbsp;</span> Sebagian</div>
                                     <div><span class="badge bg-warning rounded-circle p-1 me-1">&nbsp;</span> Ragu-Ragu</div>
                                     <div><span class="badge bg-light text-dark border rounded-circle p-1 me-1">&nbsp;</span> Belum</div>
                                 </div>
@@ -572,14 +791,12 @@
             
             const isOpenBook = {{ $uji->open_book ? 'true' : 'false' }};
             let isUjianDimulai = false;
-            let isLockedGagal = false; // Flag pengunci jika diskualifikasi
+            let isLockedGagal = false;
             let isSubmittingFinal = false;
 
-            // Sinkronisasi sisa waktu langsung dari waktu server saat halaman dimuat
             const initialRemainingSeconds = {{ $sisaDetikAwal !== null ? (int) $sisaDetikAwal : 'null' }};
             const clientPageLoadTimestamp = Date.now();
 
-            // Deteksi perangkat iOS (iPhone / iPad) & dukungan Fullscreen API browser
             const docEl = document.documentElement;
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -588,7 +805,6 @@
                 (document.fullscreenEnabled || document.webkitFullscreenEnabled || document.msFullscreenEnabled)
             );
 
-            // Penyesuaian UI untuk perangkat non-fullscreen (seperti iPhone/iPad)
             if (!supportsFullscreen) {
                 if (btnFullscreen) {
                     btnFullscreen.classList.add('d-none');
@@ -621,7 +837,7 @@
                 if(this.checked) {
                     btnMulaiUji.removeAttribute('disabled');
                     btnMulaiUji.classList.remove('btn-secondary');
-                    btnMulaiUji.style.backgroundColor = '#5e72e4';
+                    btnMulaiUji.style.backgroundColor = '#6f42c1';
                 } else {
                     btnMulaiUji.setAttribute('disabled', 'true');
                     btnMulaiUji.classList.add('btn-secondary');
@@ -663,7 +879,7 @@
             // --- 4. SYSTEM DETEKSI PELANGGARAN STRICT MODE ---
             let sedangMelapor = false;
             let waktuPelanggaranTerakhir = 0;
-            const jedaPelanggaranMs = 2500; // Cooldown anti-cascading
+            const jedaPelanggaranMs = 2500;
 
             const modalPelanggaranEl = document.getElementById('modalPelanggaran');
             const bsModalPelanggaran = new bootstrap.Modal(modalPelanggaranEl);
@@ -683,12 +899,10 @@
             }
 
             function laporkanPelanggaran(tipeSpesifik = '') {
-                // Abaikan seluruh pelanggaran jika mode Open Book aktif
                 if (isOpenBook) return;
 
                 const sekarang = new Date().getTime();
 
-                // Jangan laporkan jika ujian belum mulai, sedang finalisasi, sedang gagal/terkunci, sedang melapor, atau masih dalam jeda cooldown
                 if (!isUjianDimulai || isSubmittingFinal || isLockedGagal || sedangMelapor || (sekarang - waktuPelanggaranTerakhir < jedaPelanggaranMs)) {
                     return;
                 }
@@ -736,16 +950,13 @@
                 window.location.href = "{{ route('sba.portal') }}";
             });
 
-            // Event Listeners Pelanggaran (Hanya berjalan jika BUKAN mode Open Book)
             if (!isOpenBook) {
-                // Berlaku di semua perangkat (PC, Android, maupun iPhone/iPad) saat pindah tab / aplikasi / Home Screen
                 document.addEventListener("visibilitychange", function() {
                     if (document.hidden) {
                         laporkanPelanggaran('pindah_tab');
                     }
                 });
 
-                // Khusus perangkat desktop / browser yang mendukung fullscreen penuh
                 if (supportsFullscreen) {
                     window.addEventListener('blur', function() {
                         if (!document.hidden) {
@@ -767,7 +978,6 @@
                 }
             }
 
-            // Mencegat submit manual finalisasi jika user terkena diskualifikasi
             document.getElementById('form-finalisasi')?.addEventListener('submit', function(e) {
                 if (isLockedGagal) {
                     e.preventDefault();
@@ -786,7 +996,6 @@
             function switchSoal(targetIndex) {
                 if (isLockedGagal) return;
 
-                // PENGECEKAN FULLSCREEN SETIAP PERPINDAHAN SOAL
                 if (!isOpenBook && supportsFullscreen && isUjianDimulai && !isSedangFullscreen()) {
                     laporkanPelanggaran('ganti_soal_non_fullscreen');
                 }
@@ -804,7 +1013,6 @@
             document.querySelectorAll('.btn-next').forEach(btn => btn.addEventListener('click', () => { if(currentIndex < totalSoal - 1) switchSoal(currentIndex + 1); }));
             document.querySelectorAll('.btn-prev').forEach(btn => btn.addEventListener('click', () => { if(currentIndex > 0) switchSoal(currentIndex - 1); }));
 
-            // Highlight visual pilihan jawaban PG
             function highlightRadioSelection() {
                 document.querySelectorAll('.option-card').forEach(card => {
                     const input = card.querySelector('input');
@@ -814,9 +1022,46 @@
                         card.classList.remove('selected-option');
                     }
                 });
+
+                document.querySelectorAll('.bs-statement-row').forEach(row => {
+                    const checkedBs = row.querySelector('.radio-bs:checked');
+                    row.classList.toggle('bs-answered', Boolean(checkedBs));
+
+                    row.querySelectorAll('.radio-bs').forEach(radio => {
+                        const icon = radio.nextElementSibling?.querySelector('.bs-radio-icon');
+                        if (!icon) return;
+                        if (radio.checked) {
+                            icon.classList.remove('far', 'fa-circle');
+                            icon.classList.add('fas', 'fa-dot-circle');
+                        } else {
+                            icon.classList.remove('fas', 'fa-dot-circle');
+                            icon.classList.add('far', 'fa-circle');
+                        }
+                    });
+                });
             }
 
-            // AJAX Simpan Jawaban
+            function collectBenarSalahValues(soalId) {
+                const container = document.querySelector(`.bs-statements-container[data-soal-id="${soalId}"]`);
+                if (!container) return null;
+
+                const totalStatements = parseInt(container.dataset.totalStatements || '0', 10);
+                const result = [];
+                let anyAnswered = false;
+
+                for (let i = 0; i < totalStatements; i++) {
+                    const checked = container.querySelector(`input[name="bs_${soalId}_${i}"]:checked`);
+                    if (checked) {
+                        result.push(checked.value);
+                        anyAnswered = true;
+                    } else {
+                        result.push('');
+                    }
+                }
+
+                return anyAnswered ? result : null;
+            }
+
             function simpanKeServer(soalId, jawabanVal, raguVal) {
                 if (isLockedGagal || isSubmittingFinal) return;
 
@@ -863,6 +1108,17 @@
                 });
             });
 
+            document.querySelectorAll('.radio-bs').forEach(rb => {
+                rb.addEventListener('change', function() {
+                    highlightRadioSelection();
+                    updateGridStatus();
+                    const sId = this.dataset.soalId;
+                    const vals = collectBenarSalahValues(sId);
+                    const ragu = document.getElementById(`ragu_${sId}`).checked;
+                    simpanKeServer(sId, vals, ragu);
+                });
+            });
+
             document.querySelectorAll('.text-area-esai').forEach(t => {
                 t.addEventListener('blur', function() {
                     const sId = this.dataset.soalId;
@@ -875,13 +1131,19 @@
                 chk.addEventListener('change', function() {
                     const sId = this.dataset.soalId;
                     const pane = this.closest('.soal-item-pane');
+                    const tipe = pane.dataset.soalTipe;
                     let currentVal = null;
-                    const r = pane.querySelector('.radio-jawaban:checked');
-                    if(r) currentVal = r.value;
-                    const cb = pane.querySelectorAll('.checkbox-jawaban:checked');
-                    if(cb.length > 0) { currentVal = []; cb.forEach(b => currentVal.push(b.value)); }
-                    const es = pane.querySelector('.text-area-esai');
-                    if(es && es.value) currentVal = es.value;
+
+                    if (tipe === 'benar_salah') {
+                        currentVal = collectBenarSalahValues(sId);
+                    } else {
+                        const r = pane.querySelector('.radio-jawaban:checked');
+                        if(r) currentVal = r.value;
+                        const cb = pane.querySelectorAll('.checkbox-jawaban:checked');
+                        if(cb.length > 0) { currentVal = []; cb.forEach(b => currentVal.push(b.value)); }
+                        const es = pane.querySelector('.text-area-esai');
+                        if(es && es.value) currentVal = es.value;
+                    }
 
                     simpanKeServer(sId, currentVal, this.checked);
                 });
@@ -892,19 +1154,41 @@
                 panes.forEach((pane, idx) => {
                     const btnGrid = document.getElementById(`grid_btn_${idx}`);
                     const isRagu = pane.querySelector('.check-ragu').checked;
+                    const tipe = pane.dataset.soalTipe;
+                    const sId = pane.dataset.soalId;
 
-                    let hasAnswer = false;
-                    if(pane.querySelector('.radio-jawaban:checked')) hasAnswer = true;
-                    if(pane.querySelectorAll('.checkbox-jawaban:checked').length > 0) hasAnswer = true;
-                    const es = pane.querySelector('.text-area-esai');
-                    if(es && es.value.trim() !== '') hasAnswer = true;
+                    let hasFullAnswer = false;
+                    let hasPartialAnswer = false;
+
+                    if (tipe === 'benar_salah') {
+                        const totalStatements = pane.querySelectorAll('.bs-statement-row').length;
+                        const answeredStatements = pane.querySelectorAll('.radio-bs:checked').length;
+
+                        const badgeProgress = pane.querySelector(`.bs-progress-badge[data-soal-id="${sId}"]`);
+                        if (badgeProgress) {
+                            badgeProgress.innerText = `Terjawab: ${answeredStatements} / ${totalStatements} pernyataan`;
+                        }
+
+                        if (totalStatements > 0 && answeredStatements === totalStatements) {
+                            hasFullAnswer = true;
+                        } else if (answeredStatements > 0) {
+                            hasPartialAnswer = true;
+                        }
+                    } else {
+                        if(pane.querySelector('.radio-jawaban:checked')) hasFullAnswer = true;
+                        if(pane.querySelectorAll('.checkbox-jawaban:checked').length > 0) hasFullAnswer = true;
+                        const es = pane.querySelector('.text-area-esai');
+                        if(es && es.value.trim() !== '') hasFullAnswer = true;
+                    }
 
                     btnGrid.className = "nav-grid-btn " + (idx === currentIndex ? "active-grid " : "");
                     if(isRagu) {
                         btnGrid.classList.add('btn-ragu');
-                    } else if(hasAnswer) {
+                    } else if(hasFullAnswer) {
                         btnGrid.classList.add('btn-answered');
                         terjawabCount++;
+                    } else if(hasPartialAnswer) {
+                        btnGrid.classList.add('btn-partial');
                     }
                 });
 
@@ -912,7 +1196,10 @@
                 document.getElementById('stat-belum').innerText = totalSoal - terjawabCount;
             }
 
-            // --- 6. TIMER (MENGIKUTI BATAS TERCEPAT: DURASI UJIAN VS JADWAL SELESAI) ---
+            updateGridStatus();
+            highlightRadioSelection();
+
+            // --- 6. TIMER ---
             function renderCountdown(timeLeft) {
                 let safeSeconds = Math.max(0, timeLeft);
                 let hours = Math.floor(safeSeconds / 3600);

@@ -12,6 +12,8 @@ class Uji extends Model
     protected $fillable = [
         'kode_uji',
         'judul',
+        'kategori_uji',
+        'id_mapel',
         'deskripsi',
         'user_id',
         'waktu_mulai',
@@ -28,6 +30,7 @@ class Uji extends Model
     ];
 
     protected $casts = [
+        'id_mapel' => 'integer',
         'waktu_mulai' => 'datetime',
         'waktu_selesai' => 'datetime',
         'acak_soal' => 'boolean',
@@ -64,6 +67,12 @@ class Uji extends Model
     public function author()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    // Relasi Eloquent opsional ke MataPelajaran (tanpa foreign key DB)
+    public function mapel()
+    {
+        return $this->belongsTo(MataPelajaran::class, 'id_mapel', 'id_mapel');
     }
 
     /**

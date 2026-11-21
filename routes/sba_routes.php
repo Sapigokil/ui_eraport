@@ -26,6 +26,7 @@ Route::middleware(['auth', 'can:sba.menu'])->group(function () {
         // ----------------------------------------------------------------------
         Route::get('/', [SbaController::class, 'index'])->name('index');
         Route::get('/get-mapel-by-guru/{guru_id}', [SbaController::class, 'getMapelByGuru'])->name('get-mapel-by-guru');
+        Route::get('/check-kode', [SbaController::class, 'checkKode'])->name('check_kode');
 
         // ----------------------------------------------------------------------
         // B. MANAJEMEN UJIAN & BANK SOAL (CRUD)
@@ -38,6 +39,7 @@ Route::middleware(['auth', 'can:sba.menu'])->group(function () {
         Route::post('/{id}/duplicate', [SbaController::class, 'duplicate'])->name('duplicate');
         Route::get('/template-soal', [SbaController::class, 'downloadTemplateSoal'])->name('soal.template');
         Route::post('/import-soal-preview', [SbaController::class, 'importSoalPreview'])->name('soal.import_preview');
+        Route::post('/soal/export-excel', [SbaController::class, 'exportSoalExcel'])->name('soal.export');
 
         // Endpoint AJAX Hapus Single Soal + Gambar Media
         Route::delete('/soal/{soal_id}', [SbaController::class, 'destroySoal'])->name('soal.destroy');

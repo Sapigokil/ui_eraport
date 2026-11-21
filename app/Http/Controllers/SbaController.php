@@ -7,7 +7,11 @@ use App\Models\Uji;
 use App\Models\UjiSoal;
 use App\Models\UjiHasil;
 use App\Models\UjiJawaban;
+use App\Models\MataPelajaran;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class SbaController extends Controller
 {
@@ -21,12 +25,220 @@ class SbaController extends Controller
         }
     }
 
+    /**
+     * Helper Private: Ambil daftar Mata Pelajaran aktif (is_active = 1)
+     */
+    private function getActiveMapels()
+    {
+        return MataPelajaran::where('is_active', 1)
+            ->orderBy('urutan')
+            ->orderBy('nama_mapel')
+            ->get(['id_mapel', 'nama_mapel', 'nama_singkat', 'id_guru']);
+    }
+
+    /**
+     * AJAX Endpoint: Cek ketersediaan Kode Asesmen secara real-time
+     */
+    public function checkKode(Request $request)
+    {
+        $kode = strtoupper(trim((string) $request->query('kode', '')));
+        $ignoreId = $request->query('ignore_id');
+
+        if ($kode === '') {
+            return response()->json([
+                'available' => false,
+                'message'   => 'Kode Asesmen wajib diisi.',
+            ]);
+        }
+
+        if (!preg_match('/^[A-Z0-9]{1,12}$/', $kode)) {
+            return response()->json([
+                'available' => false,
+                'message'   => 'Kode hanya boleh huruf A-Z dan angka 0-9 (maksimal 12 karakter).',
+            ]);
+        }
+
+        $query = Uji::where('kode_uji', $kode);
+        if (!empty($ignoreId)) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        $exists = $query->exists();
+
+        return response()->json([
+            'available' => !$exists,
+            'message'   => $exists
+                ? "Kode \"{$kode}\" sudah digunakan oleh ujian lain."
+                : "Kode \"{$kode}\" tersedia dan dapat digunakan.",
+        ]);
+    }
+
+    /**
+     * Helper Private: Normalisasi & Validasi Payload Soal (termasuk tipe benar_salah & opsi gambar)
+     */
+    private function normalizeSoalPayload(
+        Request $request,
+        array $soalData,
+        int $index,
+        ?UjiSoal $existingSoal = null
+    ): array {
+        $nomorSoal = $index + 1;
+        $tipe = $soalData['tipe'];
+
+        if ($tipe === 'benar_salah') {
+            $rawPernyataan = $soalData['pernyataan_bs'] ?? [];
+            if (!is_array($rawPernyataan) || count($rawPernyataan) === 0) {
+                throw ValidationException::withMessages([
+                    "soals.{$index}.pernyataan_bs" => ["Soal #{$nomorSoal}: Minimal harus terdapat 1 pernyataan Benar/Salah."],
+                ]);
+            }
+
+            $opsiNormalized = [];
+            $kunciNormalized = [];
+            $totalBobot = 0;
+
+            foreach (array_values($rawPernyataan) as $pIdx => $item) {
+                $noPernyataan = $pIdx + 1;
+                $teks = trim((string) ($item['teks'] ?? ''));
+                $kunci = strtolower(trim((string) ($item['kunci'] ?? '')));
+                $bobot = isset($item['bobot']) && is_numeric($item['bobot']) ? (int) $item['bobot'] : 0;
+
+                if ($teks === '') {
+                    throw ValidationException::withMessages([
+                        "soals.{$index}.pernyataan_bs" => ["Soal #{$nomorSoal}: Teks pernyataan ke-{$noPernyataan} wajib diisi."],
+                    ]);
+                }
+
+                if (!in_array($kunci, ['benar', 'salah'], true)) {
+                    throw ValidationException::withMessages([
+                        "soals.{$index}.pernyataan_bs" => ["Soal #{$nomorSoal}: Kunci jawaban pernyataan ke-{$noPernyataan} wajib dipilih (Benar atau Salah)."],
+                    ]);
+                }
+
+                if ($bobot < 0) {
+                    $bobot = 0;
+                }
+
+                $opsiNormalized[] = [
+                    'teks'  => $teks,
+                    'bobot' => $bobot,
+                ];
+                $kunciNormalized[] = $kunci;
+                $totalBobot += $bobot;
+            }
+
+            return [
+                'opsi_jawaban'  => $opsiNormalized,
+                'kunci_jawaban' => $kunciNormalized,
+                'bobot_nilai'   => $totalBobot,
+            ];
+        }
+
+        if (in_array($tipe, ['pg', 'pg_kompleks'], true)) {
+            $rawOpsi = $soalData['opsi_jawaban'] ?? [];
+            $existingOpsiMedia = ($existingSoal && is_array($existingSoal->opsi_media))
+                ? $existingSoal->opsi_media
+                : [];
+            $removeOpsiMedia = $soalData['remove_opsi_media'] ?? [];
+
+            $opsiNormalized = [];
+            $opsiTerisiCount = 0;
+
+            for ($optIdx = 0; $optIdx < 5; $optIdx++) {
+                $teksOpsi = isset($rawOpsi[$optIdx]) ? trim((string) $rawOpsi[$optIdx]) : '';
+                $opsiNormalized[$optIdx] = $teksOpsi;
+
+                $isRemoved = isset($removeOpsiMedia[$optIdx]) && (string) $removeOpsiMedia[$optIdx] === '1';
+                $hasExistingImg = !$isRemoved && !empty($existingOpsiMedia[$optIdx]);
+                $hasNewImg = $request->hasFile("soals.{$index}.opsi_media.{$optIdx}");
+
+                if ($teksOpsi !== '' || $hasExistingImg || $hasNewImg) {
+                    $opsiTerisiCount++;
+                }
+            }
+
+            if ($opsiTerisiCount < 2) {
+                throw ValidationException::withMessages([
+                    "soals.{$index}.opsi_jawaban" => ["Soal #{$nomorSoal}: Minimal harus mengisi 2 pilihan jawaban (berupa teks atau gambar)."],
+                ]);
+            }
+
+            return [
+                'opsi_jawaban'  => $opsiNormalized,
+                'kunci_jawaban' => isset($soalData['kunci_jawaban']) ? array_values((array) $soalData['kunci_jawaban']) : null,
+                'bobot_nilai'   => isset($soalData['bobot_nilai']) && is_numeric($soalData['bobot_nilai']) ? (int) $soalData['bobot_nilai'] : 10,
+            ];
+        }
+
+        // Esai
+        return [
+            'opsi_jawaban'  => null,
+            'kunci_jawaban' => null,
+            'bobot_nilai'   => isset($soalData['bobot_nilai']) && is_numeric($soalData['bobot_nilai']) ? (int) $soalData['bobot_nilai'] : 10,
+        ];
+    }
+
+    /**
+     * Helper Private: Proses Simpan / Ganti / Hapus File Gambar per Opsi Jawaban (A-E)
+     */
+    private function processOpsiMediaFiles(
+        Request $request,
+        array $soalData,
+        int $index,
+        ?UjiSoal $existingSoal = null
+    ): ?array {
+        $tipe = $soalData['tipe'];
+        $existingOpsiMedia = ($existingSoal && is_array($existingSoal->opsi_media))
+            ? $existingSoal->opsi_media
+            : [];
+
+        // Jika bukan PG / PG Kompleks, bersihkan file gambar opsi lama bila ada
+        if (!in_array($tipe, ['pg', 'pg_kompleks'], true)) {
+            foreach ($existingOpsiMedia as $oldPath) {
+                if (!empty($oldPath) && Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+            return null;
+        }
+
+        $removeOpsiMedia = $soalData['remove_opsi_media'] ?? [];
+        $resultPaths = [];
+        $hasAnyImage = false;
+
+        for ($optIdx = 0; $optIdx < 5; $optIdx++) {
+            $currentPath = $existingOpsiMedia[$optIdx] ?? null;
+            $isRemoved = isset($removeOpsiMedia[$optIdx]) && (string) $removeOpsiMedia[$optIdx] === '1';
+
+            if ($isRemoved) {
+                if (!empty($currentPath) && Storage::disk('public')->exists($currentPath)) {
+                    Storage::disk('public')->delete($currentPath);
+                }
+                $currentPath = null;
+            }
+
+            if ($request->hasFile("soals.{$index}.opsi_media.{$optIdx}")) {
+                if (!empty($currentPath) && Storage::disk('public')->exists($currentPath)) {
+                    Storage::disk('public')->delete($currentPath);
+                }
+                $currentPath = $request->file("soals.{$index}.opsi_media.{$optIdx}")
+                    ->store('soal-images/opsi', 'public');
+            }
+
+            $resultPaths[$optIdx] = $currentPath;
+            if (!empty($currentPath)) {
+                $hasAnyImage = true;
+            }
+        }
+
+        return $hasAnyImage ? $resultPaths : null;
+    }
+
     public function index(Request $request)
     {
         $canViewAll = auth()->user()->can('sba.view_all');
         $currentUserId = (string) auth()->id();
 
-        // 1. Daftar Author (hanya dimuat jika memiliki permission sba.view_all)
         if ($canViewAll) {
             $authorIds = Uji::select('user_id')->distinct()->pluck('user_id')->toArray();
             if (!in_array((int) $currentUserId, array_map('intval', $authorIds), true)) {
@@ -36,7 +248,6 @@ class SbaController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name']);
 
-            // Default pertama kali buka halaman adalah milik sendiri; jika memilih "Semua Author" (?user_id=), nilai menjadi ''
             $selectedAuthorId = $request->has('user_id')
                 ? (string) $request->input('user_id', '')
                 : $currentUserId;
@@ -45,11 +256,11 @@ class SbaController extends Controller
             $selectedAuthorId = $currentUserId;
         }
 
-        // 2. Query Utama Uji (memuat soals & count hasil berstatus 'selesai' untuk deteksi antrean penilaian)
-        $query = Uji::with(['author', 'soals'])
+        $mapels = $this->getActiveMapels();
+
+        $query = Uji::with(['author', 'mapel', 'soals'])
             ->withCount(['hasils', 'hasilsSelesai']);
 
-        // Filter Search (Kode Uji, Judul, Deskripsi)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -59,7 +270,18 @@ class SbaController extends Controller
             });
         }
 
-        // Filter Author (jika punya sba.view_all, filter mengikuti $selectedAuthorId; jika tidak, dikunci ke auth()->id())
+        if ($request->filled('kategori_uji')) {
+            $query->where('kategori_uji', $request->kategori_uji);
+        }
+
+        if ($request->filled('id_mapel')) {
+            if ($request->id_mapel === 'none') {
+                $query->whereNull('id_mapel');
+            } else {
+                $query->where('id_mapel', $request->id_mapel);
+            }
+        }
+
         if ($canViewAll) {
             if ($selectedAuthorId !== '') {
                 $query->where('user_id', $selectedAuthorId);
@@ -68,10 +290,9 @@ class SbaController extends Controller
             $query->where('user_id', $currentUserId);
         }
 
-        // Sorting Kolom (Default: id DESC / Latest)
         $sortBy = $request->get('sort_by', 'id');
         $sortOrder = $request->get('sort_order', 'desc');
-        $allowedSorts = ['id', 'kode_uji', 'judul', 'user_id', 'waktu_mulai', 'status'];
+        $allowedSorts = ['id', 'kode_uji', 'judul', 'kategori_uji', 'id_mapel', 'user_id', 'waktu_mulai', 'status'];
 
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortOrder === 'asc' ? 'asc' : 'desc');
@@ -79,16 +300,26 @@ class SbaController extends Controller
             $query->latest('id');
         }
 
-        // Per Page Pagination (Default: 10)
         $perPage = (int) $request->get('per_page', 10);
         $ujis = $query->paginate($perPage)->withQueryString();
 
-        return view('sba.index', compact('ujis', 'authors', 'canViewAll', 'selectedAuthorId'));
+        return view('sba.index', compact('ujis', 'authors', 'mapels', 'canViewAll', 'selectedAuthorId'));
     }
 
     public function create()
     {
-        return view('sba.form');
+        $mapels = $this->getActiveMapels();
+        $defaultMapelId = null;
+
+        $idGuru = auth()->user()->id_guru ?? null;
+        if (!empty($idGuru)) {
+            $mapelGuru = $mapels->firstWhere('id_guru', (int) $idGuru);
+            if ($mapelGuru) {
+                $defaultMapelId = $mapelGuru->id_mapel;
+            }
+        }
+
+        return view('sba.form', compact('mapels', 'defaultMapelId'));
     }
 
     public function edit(Uji $uji)
@@ -96,73 +327,118 @@ class SbaController extends Controller
         $this->authorizeUjiAccess($uji);
 
         $uji->load('soals');
-        return view('sba.form', compact('uji'));
+        $mapels = $this->getActiveMapels();
+        $defaultMapelId = $uji->id_mapel;
+
+        return view('sba.form', compact('uji', 'mapels', 'defaultMapelId'));
     }
 
     public function store(Request $request)
     {
         $request->merge([
             'kode_uji' => strtoupper(trim((string) $request->kode_uji)),
+            'id_mapel' => $request->filled('id_mapel') ? $request->id_mapel : null,
         ]);
 
         $request->validate([
             'judul'                 => 'required|string|max:255',
+            'kategori_uji'          => 'required|in:PSTS,PSAS,Sumatif,Umum',
+            'id_mapel'              => 'nullable|integer|exists:mata_pelajaran,id_mapel',
             'kode_uji'              => ['required', 'string', 'max:12', 'regex:/^[A-Z0-9]+$/', 'unique:ujis,kode_uji'],
             'durasi_menit'          => 'required|integer|min:0',
-            'toleransi_pelanggaran' => 'required|integer|min:1',
+            'toleransi_pelanggaran' => 'required|integer|min:0',
             'waktu_mulai'           => 'nullable|date',
             'waktu_selesai'         => 'nullable|date|after_or_equal:waktu_mulai',
             'maksimal_percobaan'    => 'nullable|integer|min:1',
             'soals'                 => 'required|array|min:1',
             'soals.*.pertanyaan'    => 'required|string',
-            'soals.*.tipe'          => 'required|in:pg,pg_kompleks,esai',
+            'soals.*.tipe'          => 'required|in:pg,pg_kompleks,benar_salah,esai',
             'soals.*.media'         => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'soals.*.opsi_media.*'  => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ], [
-            'kode_uji.required' => 'Kode Asesmen wajib diisi.',
-            'kode_uji.max'      => 'Kode Asesmen maksimal 12 karakter.',
-            'kode_uji.regex'    => 'Kode Asesmen hanya boleh berisi huruf (A-Z) dan angka (0-9) tanpa spasi atau simbol.',
-            'kode_uji.unique'   => 'Kode Asesmen sudah digunakan oleh ujian lain. Silakan gunakan kode lain.',
+            'judul.required'                 => 'Judul Asesmen wajib diisi.',
+            'kategori_uji.required'          => 'Kategori Uji wajib dipilih.',
+            'kategori_uji.in'                => 'Kategori Uji harus salah satu dari PSTS, PSAS, Sumatif, atau Umum.',
+            'id_mapel.exists'                => 'Mata Pelajaran yang dipilih tidak valid.',
+            'kode_uji.required'              => 'Kode Asesmen wajib diisi.',
+            'kode_uji.max'                   => 'Kode Asesmen maksimal 12 karakter.',
+            'kode_uji.regex'                 => 'Kode Asesmen hanya boleh berisi huruf (A-Z) dan angka (0-9) tanpa spasi atau simbol.',
+            'kode_uji.unique'                => 'Kode Asesmen sudah digunakan oleh ujian lain. Silakan gunakan kode lain.',
+            'durasi_menit.required'          => 'Durasi pengerjaan wajib diisi (isi 0 jika tanpa batas).',
+            'waktu_selesai.after_or_equal'   => 'Waktu Selesai tidak boleh lebih awal dari Waktu Mulai.',
+            'soals.required'                 => 'Minimal harus terdapat 1 butir soal.',
+            'soals.*.pertanyaan.required'    => 'Teks pertanyaan pada butir soal wajib diisi.',
+            'soals.*.media.image'            => 'Lampiran soal harus berupa file gambar.',
+            'soals.*.media.mimes'            => 'Format gambar soal harus JPEG, PNG, JPG, GIF, atau WEBP.',
+            'soals.*.media.max'              => 'Ukuran file gambar soal maksimal 2MB.',
+            'soals.*.opsi_media.*.image'     => 'Lampiran pilihan jawaban harus berupa file gambar.',
+            'soals.*.opsi_media.*.mimes'     => 'Format gambar pilihan jawaban harus JPEG, PNG, JPG, GIF, atau WEBP.',
+            'soals.*.opsi_media.*.max'       => 'Ukuran file gambar pilihan jawaban maksimal 2MB.',
         ]);
 
-        // 1. Buat Ujian Utama
-        $uji = Uji::create([
-            'user_id'               => auth()->id(),
-            'kode_uji'              => $request->kode_uji,
-            'judul'                 => $request->judul,
-            'deskripsi'             => $request->deskripsi,
-            'waktu_mulai'           => $request->waktu_mulai,
-            'waktu_selesai'         => $request->waktu_selesai,
-            'durasi_menit'          => $request->durasi_menit,
-            'acak_soal'             => $request->boolean('acak_soal'),
-            'open_book'             => $request->boolean('open_book'),
-            'tampilkan_nilai'       => $request->boolean('tampilkan_nilai'),
-            'buka_untuk_umum'       => $request->boolean('buka_untuk_umum'),
-            'toleransi_pelanggaran' => $request->toleransi_pelanggaran,
-            'maksimal_percobaan'    => $request->maksimal_percobaan ?? 1,
-            'ulangi_jika_gagal'     => $request->boolean('ulangi_jika_gagal'),
-            'status'                => $request->status ?? 'draft',
-        ]);
-
-        // 2. Simpan Setiap Soal & File Media (Jika Ada)
+        // Validasi & Normalisasi payload tiap soal sebelum masuk transaksi DB
+        $normalizedSoals = [];
         foreach ($request->soals as $index => $soalData) {
-            $pathMedia = null;
+            $normalizedSoals[$index] = $this->normalizeSoalPayload($request, $soalData, (int) $index);
+        }
 
-            if ($request->hasFile("soals.{$index}.media")) {
-                $pathMedia = $request->file("soals.{$index}.media")->store('soal-images', 'public');
+        $uji = DB::transaction(function () use ($request, $normalizedSoals) {
+            $uji = Uji::create([
+                'user_id'               => auth()->id(),
+                'kode_uji'              => $request->kode_uji,
+                'judul'                 => $request->judul,
+                'kategori_uji'          => $request->kategori_uji ?? 'Umum',
+                'id_mapel'              => $request->id_mapel,
+                'deskripsi'             => $request->deskripsi,
+                'waktu_mulai'           => $request->waktu_mulai,
+                'waktu_selesai'         => $request->waktu_selesai,
+                'durasi_menit'          => $request->durasi_menit,
+                'acak_soal'             => $request->boolean('acak_soal'),
+                'open_book'             => $request->boolean('open_book'),
+                'tampilkan_nilai'       => $request->boolean('tampilkan_nilai'),
+                'buka_untuk_umum'       => $request->boolean('buka_untuk_umum'),
+                'toleransi_pelanggaran' => $request->toleransi_pelanggaran,
+                'maksimal_percobaan'    => $request->maksimal_percobaan ?? 1,
+                'ulangi_jika_gagal'     => $request->boolean('ulangi_jika_gagal'),
+                'status'                => $request->status ?? 'draft',
+            ]);
+
+            foreach ($request->soals as $index => $soalData) {
+                $pathMedia = null;
+                if ($request->hasFile("soals.{$index}.media")) {
+                    $pathMedia = $request->file("soals.{$index}.media")->store('soal-images', 'public');
+                }
+
+                $opsiMediaPaths = $this->processOpsiMediaFiles($request, $soalData, (int) $index, null);
+                $norm = $normalizedSoals[$index];
+
+                UjiSoal::create([
+                    'uji_id'        => $uji->id,
+                    'tipe'          => $soalData['tipe'],
+                    'pertanyaan'    => $soalData['pertanyaan'],
+                    'media'         => $pathMedia,
+                    'opsi_jawaban'  => $norm['opsi_jawaban'],
+                    'opsi_media'    => $opsiMediaPaths,
+                    'kunci_jawaban' => $norm['kunci_jawaban'],
+                    'bobot_nilai'   => $norm['bobot_nilai'],
+                ]);
             }
 
-            UjiSoal::create([
-                'uji_id'        => $uji->id,
-                'tipe'          => $soalData['tipe'],
-                'pertanyaan'    => $soalData['pertanyaan'],
-                'media'         => $pathMedia,
-                'opsi_jawaban'  => isset($soalData['opsi_jawaban']) ? array_values($soalData['opsi_jawaban']) : null,
-                'kunci_jawaban' => isset($soalData['kunci_jawaban']) ? (array) $soalData['kunci_jawaban'] : null,
-                'bobot_nilai'   => $soalData['bobot_nilai'] ?? 10,
+            return $uji;
+        });
+
+        $successMessage = 'Ujian dan soal berhasil dibuat dengan kode: ' . $uji->kode_uji;
+
+        if ($request->expectsJson()) {
+            session()->flash('success', $successMessage);
+            return response()->json([
+                'status'   => 'success',
+                'message'  => $successMessage,
+                'redirect' => route('sba.index'),
             ]);
         }
 
-        return redirect()->route('sba.index')->with('success', 'Ujian dan soal berhasil dibuat dengan kode: ' . $uji->kode_uji);
+        return redirect()->route('sba.index')->with('success', $successMessage);
     }
 
     public function update(Request $request, $id)
@@ -172,83 +448,149 @@ class SbaController extends Controller
 
         $request->merge([
             'kode_uji' => strtoupper(trim((string) $request->kode_uji)),
+            'id_mapel' => $request->filled('id_mapel') ? $request->id_mapel : null,
         ]);
 
         $request->validate([
             'judul'                 => 'required|string|max:255',
+            'kategori_uji'          => 'required|in:PSTS,PSAS,Sumatif,Umum',
+            'id_mapel'              => 'nullable|integer|exists:mata_pelajaran,id_mapel',
             'kode_uji'              => ['required', 'string', 'max:12', 'regex:/^[A-Z0-9]+$/', 'unique:ujis,kode_uji,' . $uji->id],
             'durasi_menit'          => 'required|integer|min:0',
-            'toleransi_pelanggaran' => 'required|integer|min:1',
+            'toleransi_pelanggaran' => 'required|integer|min:0',
             'waktu_mulai'           => 'nullable|date',
             'waktu_selesai'         => 'nullable|date|after_or_equal:waktu_mulai',
             'maksimal_percobaan'    => 'nullable|integer|min:1',
             'soals'                 => 'required|array|min:1',
             'soals.*.pertanyaan'    => 'required|string',
+            'soals.*.tipe'          => 'required|in:pg,pg_kompleks,benar_salah,esai',
             'soals.*.media'         => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'soals.*.opsi_media.*'  => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ], [
-            'kode_uji.required' => 'Kode Asesmen wajib diisi.',
-            'kode_uji.max'      => 'Kode Asesmen maksimal 12 karakter.',
-            'kode_uji.regex'    => 'Kode Asesmen hanya boleh berisi huruf (A-Z) dan angka (0-9) tanpa spasi atau simbol.',
-            'kode_uji.unique'   => 'Kode Asesmen sudah digunakan oleh ujian lain. Silakan gunakan kode lain.',
+            'judul.required'                 => 'Judul Asesmen wajib diisi.',
+            'kategori_uji.required'          => 'Kategori Uji wajib dipilih.',
+            'kategori_uji.in'                => 'Kategori Uji harus salah satu dari PSTS, PSAS, Sumatif, atau Umum.',
+            'id_mapel.exists'                => 'Mata Pelajaran yang dipilih tidak valid.',
+            'kode_uji.required'              => 'Kode Asesmen wajib diisi.',
+            'kode_uji.max'                   => 'Kode Asesmen maksimal 12 karakter.',
+            'kode_uji.regex'                 => 'Kode Asesmen hanya boleh berisi huruf (A-Z) dan angka (0-9) tanpa spasi atau simbol.',
+            'kode_uji.unique'                => 'Kode Asesmen sudah digunakan oleh ujian lain. Silakan gunakan kode lain.',
+            'durasi_menit.required'          => 'Durasi pengerjaan wajib diisi (isi 0 jika tanpa batas).',
+            'waktu_selesai.after_or_equal'   => 'Waktu Selesai tidak boleh lebih awal dari Waktu Mulai.',
+            'soals.required'                 => 'Minimal harus terdapat 1 butir soal.',
+            'soals.*.pertanyaan.required'    => 'Teks pertanyaan pada butir soal wajib diisi.',
+            'soals.*.media.image'            => 'Lampiran soal harus berupa file gambar.',
+            'soals.*.media.mimes'            => 'Format gambar soal harus JPEG, PNG, JPG, GIF, atau WEBP.',
+            'soals.*.media.max'              => 'Ukuran file gambar soal maksimal 2MB.',
+            'soals.*.opsi_media.*.image'     => 'Lampiran pilihan jawaban harus berupa file gambar.',
+            'soals.*.opsi_media.*.mimes'     => 'Format gambar pilihan jawaban harus JPEG, PNG, JPG, GIF, atau WEBP.',
+            'soals.*.opsi_media.*.max'       => 'Ukuran file gambar pilihan jawaban maksimal 2MB.',
         ]);
 
-        // 1. Update Data Utama Ujian
-        $uji->update([
-            'kode_uji'              => $request->kode_uji,
-            'judul'                 => $request->judul,
-            'deskripsi'             => $request->deskripsi,
-            'waktu_mulai'           => $request->waktu_mulai,
-            'waktu_selesai'         => $request->waktu_selesai,
-            'durasi_menit'          => $request->durasi_menit,
-            'acak_soal'             => $request->boolean('acak_soal'),
-            'open_book'             => $request->boolean('open_book'),
-            'tampilkan_nilai'       => $request->boolean('tampilkan_nilai'),
-            'buka_untuk_umum'       => $request->boolean('buka_untuk_umum'),
-            'toleransi_pelanggaran' => $request->toleransi_pelanggaran,
-            'maksimal_percobaan'    => $request->maksimal_percobaan ?? 1,
-            'ulangi_jika_gagal'     => $request->boolean('ulangi_jika_gagal'),
-            'status'                => $request->status,
-        ]);
-
-        // 2. Hapus Soal di Database yang Dihapus oleh User di Form
-        $inputSoalIds = array_filter(array_column($request->soals, 'id'));
-        $uji->soals()->whereNotIn('id', $inputSoalIds)->delete();
-
-        // 3. Simpan / Update Soals
+        $existingSoalsMap = $uji->soals->keyBy('id');
+        $normalizedSoals = [];
         foreach ($request->soals as $index => $soalData) {
             $soalId = $soalData['id'] ?? null;
-            $soalEksis = $soalId ? UjiSoal::find($soalId) : new UjiSoal();
-
-            $pathMedia = $soalEksis->media;
-
-            // Cek jika ada request hapus gambar eksisting
-            if (isset($soalData['remove_media']) && $soalData['remove_media'] == '1') {
-                $pathMedia = null;
-            }
-
-            // Cek jika ada file gambar baru yang diunggah
-            if ($request->hasFile("soals.{$index}.media")) {
-                $pathMedia = $request->file("soals.{$index}.media")->store('soal-images', 'public');
-            }
-
-            $soalEksis->fill([
-                'uji_id'        => $uji->id,
-                'tipe'          => $soalData['tipe'],
-                'pertanyaan'    => $soalData['pertanyaan'],
-                'media'         => $pathMedia,
-                'opsi_jawaban'  => isset($soalData['opsi_jawaban']) ? array_values($soalData['opsi_jawaban']) : null,
-                'kunci_jawaban' => isset($soalData['kunci_jawaban']) ? (array) $soalData['kunci_jawaban'] : null,
-                'bobot_nilai'   => $soalData['bobot_nilai'] ?? 10,
-            ]);
-
-            $soalEksis->save();
+            $soalEksis = $soalId ? $existingSoalsMap->get((int) $soalId) : null;
+            $normalizedSoals[$index] = $this->normalizeSoalPayload($request, $soalData, (int) $index, $soalEksis);
         }
 
-        return redirect()->route('sba.index')->with('success', 'Perubahan ujian dan gambar soal berhasil disimpan!');
+        DB::transaction(function () use ($request, $uji, $normalizedSoals) {
+            $uji->update([
+                'kode_uji'              => $request->kode_uji,
+                'judul'                 => $request->judul,
+                'kategori_uji'          => $request->kategori_uji ?? 'Umum',
+                'id_mapel'              => $request->id_mapel,
+                'deskripsi'             => $request->deskripsi,
+                'waktu_mulai'           => $request->waktu_mulai,
+                'waktu_selesai'         => $request->waktu_selesai,
+                'durasi_menit'          => $request->durasi_menit,
+                'acak_soal'             => $request->boolean('acak_soal'),
+                'open_book'             => $request->boolean('open_book'),
+                'tampilkan_nilai'       => $request->boolean('tampilkan_nilai'),
+                'buka_untuk_umum'       => $request->boolean('buka_untuk_umum'),
+                'toleransi_pelanggaran' => $request->toleransi_pelanggaran,
+                'maksimal_percobaan'    => $request->maksimal_percobaan ?? 1,
+                'ulangi_jika_gagal'     => $request->boolean('ulangi_jika_gagal'),
+                'status'                => $request->status,
+            ]);
+
+            $inputSoalIds = array_filter(array_column($request->soals, 'id'));
+            $soalsToDelete = $uji->soals()->whereNotIn('id', $inputSoalIds)->get();
+            foreach ($soalsToDelete as $delSoal) {
+                if (is_array($delSoal->opsi_media)) {
+                    foreach ($delSoal->opsi_media as $oldOptPath) {
+                        if (!empty($oldOptPath) && Storage::disk('public')->exists($oldOptPath)) {
+                            Storage::disk('public')->delete($oldOptPath);
+                        }
+                    }
+                }
+                $delSoal->delete();
+            }
+
+            foreach ($request->soals as $index => $soalData) {
+                $soalId = $soalData['id'] ?? null;
+                $soalEksis = $soalId ? UjiSoal::where('uji_id', $uji->id)->find($soalId) : new UjiSoal();
+                if (!$soalEksis) {
+                    $soalEksis = new UjiSoal();
+                }
+
+                $pathMedia = $soalEksis->media;
+
+                if (isset($soalData['remove_media']) && $soalData['remove_media'] == '1') {
+                    if (!empty($pathMedia) && Storage::disk('public')->exists($pathMedia)) {
+                        Storage::disk('public')->delete($pathMedia);
+                    }
+                    $pathMedia = null;
+                }
+
+                if ($request->hasFile("soals.{$index}.media")) {
+                    if (!empty($pathMedia) && Storage::disk('public')->exists($pathMedia)) {
+                        Storage::disk('public')->delete($pathMedia);
+                    }
+                    $pathMedia = $request->file("soals.{$index}.media")->store('soal-images', 'public');
+                }
+
+                $opsiMediaPaths = $this->processOpsiMediaFiles(
+                    $request,
+                    $soalData,
+                    (int) $index,
+                    $soalEksis->exists ? $soalEksis : null
+                );
+
+                $norm = $normalizedSoals[$index];
+
+                $soalEksis->fill([
+                    'uji_id'        => $uji->id,
+                    'tipe'          => $soalData['tipe'],
+                    'pertanyaan'    => $soalData['pertanyaan'],
+                    'media'         => $pathMedia,
+                    'opsi_jawaban'  => $norm['opsi_jawaban'],
+                    'opsi_media'    => $opsiMediaPaths,
+                    'kunci_jawaban' => $norm['kunci_jawaban'],
+                    'bobot_nilai'   => $norm['bobot_nilai'],
+                ]);
+
+                $soalEksis->save();
+            }
+        });
+
+        $successMessage = 'Perubahan ujian dan gambar soal berhasil disimpan!';
+
+        if ($request->expectsJson()) {
+            session()->flash('success', $successMessage);
+            return response()->json([
+                'status'   => 'success',
+                'message'  => $successMessage,
+                'redirect' => route('sba.index'),
+            ]);
+        }
+
+        return redirect()->route('sba.index')->with('success', $successMessage);
     }
 
     /**
-     * Hapus 1 Butir Soal Spesifik (Otomatis hapus file media via Model Event UjiSoal)
+     * Hapus 1 Butir Soal Spesifik (Otomatis hapus file media soal & gambar opsi jawaban)
      */
     public function destroySoal($soal_id)
     {
@@ -257,7 +599,14 @@ class SbaController extends Controller
             $this->authorizeUjiAccess($soal->uji);
         }
 
-        // Memanggil delete() akan memicu static::deleting pada Model UjiSoal untuk menghapus file fisik di storage
+        if (is_array($soal->opsi_media)) {
+            foreach ($soal->opsi_media as $optPath) {
+                if (!empty($optPath) && Storage::disk('public')->exists($optPath)) {
+                    Storage::disk('public')->delete($optPath);
+                }
+            }
+        }
+
         $soal->delete();
 
         return response()->json([
@@ -267,14 +616,23 @@ class SbaController extends Controller
     }
 
     /**
-     * Hapus Seluruh Ujian (Otomatis hapus seluruh file media soal-soalnya)
+     * Hapus Seluruh Ujian (Otomatis hapus seluruh file media soal & gambar opsi jawaban)
      */
     public function destroy($id)
     {
-        $uji = Uji::findOrFail($id);
+        $uji = Uji::with('soals')->findOrFail($id);
         $this->authorizeUjiAccess($uji);
 
-        // Memanggil delete() pada Uji akan memicu static::deleting di Model Uji yang menghapus seluruh UjiSoal beserta gambar fisiknya
+        foreach ($uji->soals as $soal) {
+            if (is_array($soal->opsi_media)) {
+                foreach ($soal->opsi_media as $optPath) {
+                    if (!empty($optPath) && Storage::disk('public')->exists($optPath)) {
+                        Storage::disk('public')->delete($optPath);
+                    }
+                }
+            }
+        }
+
         $uji->delete();
 
         return redirect()->route('sba.index')->with('success', 'Ujian beserta seluruh gambar soal berhasil dihapus!');
@@ -293,7 +651,6 @@ class SbaController extends Controller
             ? UjiHasil::where('uji_id', $uji->id)->where('status_pengerjaan', 'selesai')->count()
             : 0;
 
-        // Pemanggilan Query Utama
         $hasils = $this->getFilteredHasilQuery($request, $uji->id)
             ->paginate((int) $request->get('per_page', 10))
             ->withQueryString();
@@ -308,7 +665,6 @@ class SbaController extends Controller
     {
         $query = UjiHasil::where('uji_id', $uji_id)->with('asesi');
 
-        // Filter Search (Asesi ID, Nama Peserta Publik, Nama User)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -320,12 +676,10 @@ class SbaController extends Controller
             });
         }
 
-        // Filter Status Pengerjaan
         if ($request->filled('status_pengerjaan')) {
             $query->where('status_pengerjaan', $request->status_pengerjaan);
         }
 
-        // Filter Rentang Tanggal Pengumpulan (waktu_selesai / waktu_mulai)
         if ($request->filled('tgl_mulai')) {
             $query->whereDate('waktu_selesai', '>=', $request->tgl_mulai);
         }
@@ -333,7 +687,6 @@ class SbaController extends Controller
             $query->whereDate('waktu_selesai', '<=', $request->tgl_selesai);
         }
 
-        // Checkbox: Sembunyikan Identitas Ganda (Ambil Percobaan Terbaru)
         if ($request->has('hide_duplicates') && $request->hide_duplicates == '1') {
             $subLatestIds = UjiHasil::where('uji_id', $uji_id)
                 ->selectRaw('MAX(id) as max_id')
@@ -343,7 +696,6 @@ class SbaController extends Controller
             $query->whereIn('id', $subLatestIds);
         }
 
-        // Sorting Kolom (Default: total_skor DESC)
         $sortBy = $request->get('sort_by', 'total_skor');
         $sortOrder = $request->get('sort_order', 'desc');
         $allowedSorts = ['id', 'asesi_id', 'total_skor', 'waktu_mulai', 'status_pengerjaan'];
@@ -365,20 +717,16 @@ class SbaController extends Controller
         $uji = Uji::findOrFail($uji_id);
         $this->authorizeUjiAccess($uji);
 
-        $format = $request->get('format', 'excel'); // 'excel' atau 'pdf'
-
-        // Ambil data sesuai filter aktif tanpa pagination
+        $format = $request->get('format', 'excel');
         $dataHasils = $this->getFilteredHasilQuery($request, $uji->id)->get();
 
         if ($format === 'pdf') {
-            // Menggunakan DomPDF / Laravel PDF View
             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('sba.exports.hasil_pdf', compact('uji', 'dataHasils'))
                 ->setPaper('a4', 'landscape');
 
             return $pdf->download("Rekap_Hasil_{$uji->kode_uji}.pdf");
         }
 
-        // Export format Microsoft Excel (.xls) via HTML Spreadsheet Stream
         $fileName = "Rekap_Hasil_{$uji->kode_uji}.xls";
 
         $headers = [
@@ -389,7 +737,6 @@ class SbaController extends Controller
         ];
 
         $callback = function () use ($uji, $dataHasils) {
-            // Output format HTML Spreadsheet yang dibaca sempurna oleh Microsoft Excel (.xls)
             echo '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
             echo '<head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Hasil Ujian</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
             echo '<body>';
@@ -409,7 +756,6 @@ class SbaController extends Controller
             foreach ($dataHasils as $idx => $row) {
                 $nama = $row->asesi ? $row->asesi->name : ($row->nama_peserta_publik ?? 'Guest');
 
-                // Kalkulasi Durasi Eksplisit
                 $durasiText = '-';
                 if ($row->waktu_mulai && $row->waktu_selesai) {
                     $totalDetik = $row->waktu_mulai->diffInSeconds($row->waktu_selesai);
@@ -451,7 +797,6 @@ class SbaController extends Controller
 
         $ujiId = $hasil->uji_id;
 
-        // Jawaban peserta otomatis terhapus via CASCADE / Manual Delete
         $hasil->jawabans()->delete();
         $hasil->delete();
 
@@ -466,10 +811,59 @@ class SbaController extends Controller
         $hasil = UjiHasil::with(['uji.soals', 'jawabans', 'asesi'])->findOrFail($hasil_id);
         $this->authorizeUjiAccess($hasil->uji);
 
-        // Mapping jawaban siswa berdasarkan uji_soal_id agar mudah dipanggil di Blade
         $mapJawaban = $hasil->jawabans->keyBy('uji_soal_id');
 
         return view('sba.hasil_detail', compact('hasil', 'mapJawaban'));
+    }
+
+    /**
+     * Helper Private: Hitung Skor Satu Butir Soal Otomatis (PG, PG Kompleks, Benar/Salah)
+     */
+    private function evaluasiSkorSoalOtomatis(UjiSoal $soal, ?UjiJawaban $jawaban): float
+    {
+        if (!$jawaban || $jawaban->jawaban === null || $jawaban->jawaban === '') {
+            return 0.0;
+        }
+
+        $kunciArray = is_array($soal->kunci_jawaban) ? $soal->kunci_jawaban : [];
+
+        if ($soal->tipe === 'benar_salah') {
+            $pernyataanList = is_array($soal->opsi_jawaban) ? $soal->opsi_jawaban : [];
+            $jawabanSiswaArr = is_array($jawaban->jawaban)
+                ? $jawaban->jawaban
+                : (json_decode((string) $jawaban->jawaban, true) ?? []);
+
+            $skorSoal = 0.0;
+            foreach ($pernyataanList as $idx => $item) {
+                $kunciItem = strtolower(trim((string) ($kunciArray[$idx] ?? '')));
+                $jawabItem = strtolower(trim((string) ($jawabanSiswaArr[$idx] ?? '')));
+                $bobotItem = (float) ($item['bobot'] ?? 0);
+
+                if ($kunciItem !== '' && $jawabItem === $kunciItem) {
+                    $skorSoal += $bobotItem;
+                }
+            }
+            return $skorSoal;
+        }
+
+        $kunciFiltered = array_values(array_filter($kunciArray, fn($v) => $v !== null && $v !== ''));
+        if (empty($kunciFiltered)) {
+            return 0.0;
+        }
+
+        if ($soal->tipe === 'pg_kompleks') {
+            $jawabanSiswaArray = array_map('strval', json_decode((string) $jawaban->jawaban, true) ?? []);
+            $kunciStrArray = array_map('strval', $kunciFiltered);
+            sort($kunciStrArray);
+            sort($jawabanSiswaArray);
+
+            return ($kunciStrArray === $jawabanSiswaArray) ? (float) $soal->bobot_nilai : 0.0;
+        }
+
+        // PG
+        return in_array((string) $jawaban->jawaban, array_map('strval', $kunciFiltered), true)
+            ? (float) $soal->bobot_nilai
+            : 0.0;
     }
 
     /**
@@ -492,7 +886,6 @@ class SbaController extends Controller
             $isManualGraded = ($soal->tipe === 'esai') || (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray));
 
             if ($isManualGraded) {
-                // Pertahankan skor manual yang ada, namun pangkas jika melebihi bobot soal terbaru
                 if ($jawaban) {
                     $skorManualItem = (float) $jawaban->skor_didapat;
                     if ($skorManualItem > (float) $soal->bobot_nilai) {
@@ -502,31 +895,10 @@ class SbaController extends Controller
                     $skorManualTotal += $skorManualItem;
                 }
             } else {
-                // Evaluasi ulang soal otomatis (PG / PG Kompleks dengan kunci) sesuai bobot terbaru
-                $skorItemBaru = 0;
-
-                if ($jawaban && $jawaban->jawaban !== null && $jawaban->jawaban !== '') {
-                    $isBenar = false;
-
-                    if ($soal->tipe === 'pg_kompleks') {
-                        $jawabanSiswaArray = array_map('strval', json_decode($jawaban->jawaban, true) ?? []);
-                        $kunciStrArray = array_map('strval', $kunciArray);
-                        sort($kunciStrArray);
-                        sort($jawabanSiswaArray);
-                        $isBenar = ($kunciStrArray === $jawabanSiswaArray && !empty($kunciStrArray));
-                    } else {
-                        $isBenar = in_array((string) $jawaban->jawaban, array_map('strval', $kunciArray), true);
-                    }
-
-                    if ($isBenar) {
-                        $skorItemBaru = (float) $soal->bobot_nilai;
-                    }
-
+                $skorItemBaru = $this->evaluasiSkorSoalOtomatis($soal, $jawaban);
+                if ($jawaban) {
                     $jawaban->update(['skor_didapat' => $skorItemBaru]);
-                } elseif ($jawaban) {
-                    $jawaban->update(['skor_didapat' => 0]);
                 }
-
                 $skorOtomatisBaru += $skorItemBaru;
             }
         }
@@ -552,7 +924,6 @@ class SbaController extends Controller
         $skorManualTotal = 0;
         $skorOtomatisPg = 0;
 
-        // Ambil input skor manual dari form per uji_soal_id (mendukung 'skor_manual' maupun 'skor_esai')
         $skorInputs = $request->input('skor_manual', $request->input('skor_esai', []));
 
         foreach ($hasil->uji->soals as $soal) {
@@ -566,7 +937,6 @@ class SbaController extends Controller
             if ($isManualGraded) {
                 $skorDidapat = isset($skorInputs[$soal->id]) ? (float) $skorInputs[$soal->id] : ($jawaban ? (float) $jawaban->skor_didapat : 0);
 
-                // Batasi agar skor tidak kurang dari 0 atau melebihi bobot maksimal soal
                 if ($skorDidapat < 0) {
                     $skorDidapat = 0;
                 }
@@ -586,14 +956,12 @@ class SbaController extends Controller
                 }
                 $skorManualTotal += $skorDidapat;
             } else {
-                // Hitung kembali skor PG/PG Kompleks otomatis yang memiliki kunci
                 if ($jawaban) {
                     $skorOtomatisPg += (float) $jawaban->skor_didapat;
                 }
             }
         }
 
-        // Update Total Skor Akhir di UjiHasil & set status menjadi 'final'
         $totalSkorAkhir = $skorOtomatisPg + $skorManualTotal;
 
         $hasil->update([
@@ -651,24 +1019,8 @@ class SbaController extends Controller
                 continue;
             }
 
-            if (in_array($soal->tipe, ['pg', 'pg_kompleks'])) {
-                $kunciArray = $soal->kunci_jawaban ?? [];
-                $jawabanSiswaRaw = $jawabanSiswa->jawaban;
-                $skorItem = 0;
-
-                if ($soal->tipe === 'pg_kompleks') {
-                    $jawabanSiswaArray = json_decode($jawabanSiswaRaw, true) ?? [];
-                    sort($kunciArray);
-                    sort($jawabanSiswaArray);
-                    if ($kunciArray == $jawabanSiswaArray) {
-                        $skorItem = $soal->bobot_nilai;
-                    }
-                } else {
-                    if (in_array($jawabanSiswaRaw, $kunciArray)) {
-                        $skorItem = $soal->bobot_nilai;
-                    }
-                }
-
+            if (in_array($soal->tipe, ['pg', 'pg_kompleks', 'benar_salah'])) {
+                $skorItem = $this->evaluasiSkorSoalOtomatis($soal, $jawabanSiswa);
                 $totalSkorOtomatis += $skorItem;
                 $jawabanSiswa->update(['skor_didapat' => $skorItem]);
             }
@@ -718,7 +1070,6 @@ class SbaController extends Controller
         ]);
 
         try {
-            // Hapus data hasil ujian yang tercentang
             \App\Models\UjiHasil::where('uji_id', $uji_id)
                 ->whereIn('id', $request->ids)
                 ->delete();
@@ -730,20 +1081,18 @@ class SbaController extends Controller
     }
 
     /**
-     * Duplikat Ujian beserta Seluruh Butir Soal & Kunci Jawaban (Tanpa Hasil Peserta)
+     * Duplikat Ujian beserta Seluruh Butir Soal, Gambar Soal & Gambar Opsi (Tanpa Hasil Peserta)
      */
     public function duplicate($id)
     {
         $ujiAsli = Uji::with('soals')->findOrFail($id);
         $this->authorizeUjiAccess($ujiAsli);
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($ujiAsli) {
-            // 1. Generate Kode Uji 6 karakter yang benar-benar baru dan unik
+        return DB::transaction(function () use ($ujiAsli) {
             do {
                 $kodeBaru = strtoupper(\Illuminate\Support\Str::random(6));
             } while (Uji::where('kode_uji', $kodeBaru)->exists());
 
-            // 2. Generate Judul Baru dengan suffix _copy (otomatis increment jika sudah ada)
             $baseJudul = $ujiAsli->judul . '_copy';
             $judulBaru = $baseJudul;
             $counter = 2;
@@ -752,7 +1101,6 @@ class SbaController extends Controller
                 $counter++;
             }
 
-            // 3. Replikasi Data Ujian Utama
             $ujiBaru = $ujiAsli->replicate([
                 'kode_uji',
                 'judul',
@@ -765,10 +1113,9 @@ class SbaController extends Controller
             $ujiBaru->kode_uji = $kodeBaru;
             $ujiBaru->judul    = $judulBaru;
             $ujiBaru->user_id  = auth()->id() ?? $ujiAsli->user_id;
-            $ujiBaru->status   = 'draft'; // Diset draft agar dapat ditinjau dulu sebelum dipublikasikan
+            $ujiBaru->status   = 'draft';
             $ujiBaru->save();
 
-            // 4. Duplikat Seluruh Soal & Salin File Media Gambar (Agar Independen saat Soal Lama Dihapus)
             foreach ($ujiAsli->soals as $soalAsli) {
                 $pathMediaBaru = null;
 
@@ -779,12 +1126,33 @@ class SbaController extends Controller
                     $pathMediaBaru = $namaFileBaru;
                 }
 
+                $opsiMediaBaru = null;
+                if (is_array($soalAsli->opsi_media)) {
+                    $copiedOpsi = [];
+                    $hasCopied = false;
+                    foreach ($soalAsli->opsi_media as $optIdx => $optPath) {
+                        if (!empty($optPath) && Storage::disk('public')->exists($optPath)) {
+                            $extOpt = pathinfo($optPath, PATHINFO_EXTENSION);
+                            $namaOptBaru = 'soal-images/opsi/' . \Illuminate\Support\Str::random(40) . ($extOpt ? '.' . $extOpt : '');
+                            Storage::disk('public')->copy($optPath, $namaOptBaru);
+                            $copiedOpsi[$optIdx] = $namaOptBaru;
+                            $hasCopied = true;
+                        } else {
+                            $copiedOpsi[$optIdx] = null;
+                        }
+                    }
+                    if ($hasCopied) {
+                        $opsiMediaBaru = $copiedOpsi;
+                    }
+                }
+
                 UjiSoal::create([
                     'uji_id'        => $ujiBaru->id,
                     'tipe'          => $soalAsli->tipe,
                     'pertanyaan'    => $soalAsli->pertanyaan,
                     'media'         => $pathMediaBaru,
                     'opsi_jawaban'  => $soalAsli->opsi_jawaban,
+                    'opsi_media'    => $opsiMediaBaru,
                     'kunci_jawaban' => $soalAsli->kunci_jawaban,
                     'bobot_nilai'   => $soalAsli->bobot_nilai,
                 ]);
@@ -798,7 +1166,7 @@ class SbaController extends Controller
     }
 
     /**
-     * Unduh Template Excel (.xlsx) untuk Import Soal SBA
+     * Unduh Template Excel (.xlsx) untuk Import Soal SBA (Mendukung Kolom Dinamis opsi_a, opsi_b, ... opsi_f, dst.)
      */
     public function downloadTemplateSoal()
     {
@@ -806,7 +1174,7 @@ class SbaController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Soal SBA');
 
-        // 1. Header Kolom Wajib (Urutan Baku)
+        // 1. Header Kolom Standar (Kolom opsi_* dapat ditambah seperti opsi_f, opsi_g, dst. untuk benar_salah)
         $headers = [
             'no',
             'tipe_soal',
@@ -826,7 +1194,7 @@ class SbaController extends Controller
         $headerStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'fillType'   => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
                 'startColor' => ['rgb' => '5E72E4'],
             ],
             'alignment' => [
@@ -837,11 +1205,12 @@ class SbaController extends Controller
         $sheet->getStyle('A1:J1')->applyFromArray($headerStyle);
         $sheet->getRowDimension(1)->setRowHeight(24);
 
-        // 2. Contoh Pengisian 3 Tipe Soal (PG, PG Kompleks, Esai)
+        // 2. Contoh Pengisian 4 Tipe Soal (PG, PG Kompleks, Benar Salah, Esai)
         $contohData = [
             [1, 'pg', 'Ibu kota Provinsi Jawa Tengah adalah...', 'Bandung', 'Surabaya', 'Semarang', 'Surakarta', 'Yogyakarta', 'C', 10],
             [2, 'pg_kompleks', 'Manakah di bawah ini yang termasuk bilangan prima?', '2', '4', '5', '9', '11', 'A,C,E', 20],
-            [3, 'esai', 'Jelaskan secara singkat proses terjadinya siklus air!', '', '', '', '', '', '', 30],
+            [3, 'benar_salah', 'Perhatikan informasi berikut mengenai tata surya. Tentukan Benar (B) atau Salah (S) untuk setiap pernyataan di bawah ini!', 'Matahari adalah pusat tata surya', 'Bumi memiliki dua satelit alami', 'Planet terbesar di tata surya adalah Jupiter', '', '', 'B,S,B', '10,10,20'],
+            [4, 'esai', 'Jelaskan secara singkat proses terjadinya siklus air!', '', '', '', '', '', '', 30],
         ];
         $sheet->fromArray($contohData, null, 'A2');
 
@@ -852,12 +1221,13 @@ class SbaController extends Controller
             $validation->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_STOP);
             $validation->setAllowBlank(false);
             $validation->setShowDropDown(true);
-            $validation->setFormula1('"pg,pg_kompleks,esai"');
+            $validation->setFormula1('"pg,pg_kompleks,benar_salah,esai"');
         }
 
         // Auto-size kolom
-        foreach (range('A', 'J') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+        for ($colIdx = 1; $colIdx <= count($headers); $colIdx++) {
+            $colLetter = Coordinate::stringFromColumnIndex($colIdx);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
         }
 
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
@@ -866,13 +1236,193 @@ class SbaController extends Controller
         return response()->streamDownload(function () use ($writer) {
             $writer->save('php://output');
         }, $fileName, [
-            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Cache-Control'       => 'max-age=0',
+            'Content-Type'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
         ]);
     }
 
     /**
-     * AJAX Endpoint: Validasi Header & Parse File Excel Menjadi Array JSON Soal (Temporary to View)
+     * Export Daftar Soal dari Form ke Excel (.xlsx) dengan Kolom Dinamis Full Huruf (opsi_a..opsi_e, opsi_f, opsi_g, dst.)
+     * Soal/Opsi yang memiliki gambar otomatis ditandai dengan teks "(isi gambar)"
+     */
+    public function exportSoalExcel(Request $request)
+    {
+        $rawSoals = $request->input('soals', []);
+        if (!is_array($rawSoals) || count($rawSoals) === 0) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Tidak ada butir soal untuk di-export.',
+            ], 422);
+        }
+
+        // Hitung jumlah kolom opsi terbanyak (minimal 5 untuk opsi_a..opsi_e, bertambah dinamis jika pernyataan > 5)
+        $maxOpsiCount = 5;
+        foreach ($rawSoals as $soal) {
+            if (strtolower(trim((string) ($soal['tipe'] ?? ''))) === 'benar_salah') {
+                $jumlahPernyataan = is_array($soal['pernyataan_bs'] ?? null)
+                    ? count($soal['pernyataan_bs'])
+                    : 0;
+                if ($jumlahPernyataan > $maxOpsiCount) {
+                    $maxOpsiCount = $jumlahPernyataan;
+                }
+            }
+        }
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Soal SBA');
+
+        // 1. Susun Header Dinamis Full Huruf (no, tipe_soal, pertanyaan, opsi_a..opsi_e, opsi_f, opsi_g.., kunci_jawaban, bobot_nilai)
+        $headers = [
+            'no',
+            'tipe_soal',
+            'pertanyaan',
+        ];
+
+        for ($i = 0; $i < $maxOpsiCount; $i++) {
+            $suffixHuruf = strtolower(Coordinate::stringFromColumnIndex($i + 1)); // a..e, f, g, ..., z, aa, ab
+            $headers[] = 'opsi_' . $suffixHuruf;
+        }
+
+        $headers[] = 'kunci_jawaban';
+        $headers[] = 'bobot_nilai';
+
+        $sheet->fromArray($headers, null, 'A1');
+
+        $totalCols = count($headers);
+        $lastColLetter = Coordinate::stringFromColumnIndex($totalCols);
+
+        $headerStyle = [
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => [
+                'fillType'   => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '5E72E4'],
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical'   => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ];
+        $sheet->getStyle("A1:{$lastColLetter}1")->applyFromArray($headerStyle);
+        $sheet->getRowDimension(1)->setRowHeight(24);
+
+        $indexToHuruf = [0 => 'A', 1 => 'B', 2 => 'C', 3 => 'D', 4 => 'E'];
+        $rowsData = [];
+
+        foreach (array_values($rawSoals) as $idx => $soal) {
+            $no = $idx + 1;
+            $tipe = strtolower(trim((string) ($soal['tipe'] ?? 'pg')));
+            $pertanyaan = trim((string) ($soal['pertanyaan'] ?? ''));
+            $hasMedia = !empty($soal['has_media']) && (string) $soal['has_media'] === '1';
+
+            if ($hasMedia) {
+                $pertanyaan = $pertanyaan !== ''
+                    ? $pertanyaan . ' (isi gambar)'
+                    : '(isi gambar)';
+            }
+
+            $opsiCols = array_fill(0, $maxOpsiCount, '');
+            $kunciCol = '';
+            $bobotCol = isset($soal['bobot_nilai']) && is_numeric($soal['bobot_nilai'])
+                ? (int) $soal['bobot_nilai']
+                : 10;
+
+            if ($tipe === 'benar_salah') {
+                $pernyataanList = is_array($soal['pernyataan_bs'] ?? null)
+                    ? array_values($soal['pernyataan_bs'])
+                    : [];
+                $kunciParts = [];
+                $bobotParts = [];
+
+                foreach ($pernyataanList as $pIdx => $item) {
+                    $opsiCols[$pIdx] = trim((string) ($item['teks'] ?? ''));
+                    $kunciVal = strtolower(trim((string) ($item['kunci'] ?? '')));
+                    if ($kunciVal === 'benar') {
+                        $kunciParts[] = 'B';
+                    } elseif ($kunciVal === 'salah') {
+                        $kunciParts[] = 'S';
+                    }
+                    $bobotParts[] = isset($item['bobot']) && is_numeric($item['bobot'])
+                        ? (int) $item['bobot']
+                        : 10;
+                }
+
+                $kunciCol = implode(',', $kunciParts);
+                $bobotCol = !empty($bobotParts) ? implode(',', $bobotParts) : $bobotCol;
+            } elseif (in_array($tipe, ['pg', 'pg_kompleks'], true)) {
+                $rawOpsi = is_array($soal['opsi_jawaban'] ?? null) ? $soal['opsi_jawaban'] : [];
+                $rawOpsiMedia = is_array($soal['has_opsi_media'] ?? null) ? $soal['has_opsi_media'] : [];
+
+                for ($optIdx = 0; $optIdx < 5; $optIdx++) {
+                    $teksOpsi = trim((string) ($rawOpsi[$optIdx] ?? ''));
+                    $hasOptImg = !empty($rawOpsiMedia[$optIdx]) && (string) $rawOpsiMedia[$optIdx] === '1';
+
+                    if ($hasOptImg) {
+                        $teksOpsi = $teksOpsi !== ''
+                            ? $teksOpsi . ' (isi gambar)'
+                            : '(isi gambar)';
+                    }
+
+                    $opsiCols[$optIdx] = $teksOpsi;
+                }
+
+                $rawKunci = is_array($soal['kunci_jawaban'] ?? null) ? $soal['kunci_jawaban'] : [];
+                $hurufList = [];
+                foreach ($rawKunci as $kVal) {
+                    $kInt = (int) $kVal;
+                    if (isset($indexToHuruf[$kInt]) && !in_array($indexToHuruf[$kInt], $hurufList, true)) {
+                        $hurufList[] = $indexToHuruf[$kInt];
+                    }
+                }
+                sort($hurufList);
+                $kunciCol = implode(',', $hurufList);
+            } else {
+                // Esai
+                $kunciCol = '';
+            }
+
+            $rowsData[] = array_merge(
+                [$no, $tipe, $pertanyaan],
+                $opsiCols,
+                [$kunciCol, $bobotCol]
+            );
+        }
+
+        $sheet->fromArray($rowsData, null, 'A2');
+
+        // Data Validation Dropdown untuk kolom tipe_soal (B2:B200)
+        $maxRowValidation = max(200, count($rowsData) + 20);
+        for ($row = 2; $row <= $maxRowValidation; $row++) {
+            $validation = $sheet->getCell("B{$row}")->getDataValidation();
+            $validation->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+            $validation->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_STOP);
+            $validation->setAllowBlank(false);
+            $validation->setShowDropDown(true);
+            $validation->setFormula1('"pg,pg_kompleks,benar_salah,esai"');
+        }
+
+        for ($colIdx = 1; $colIdx <= $totalCols; $colIdx++) {
+            $colLetter = Coordinate::stringFromColumnIndex($colIdx);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+        }
+
+        $kodeUji = preg_replace('/[^A-Za-z0-9_-]/', '', strtoupper(trim((string) $request->input('kode_uji', ''))));
+        $fileName = $kodeUji !== ''
+            ? "Export_Soal_SBA_{$kodeUji}.xlsx"
+            : 'Export_Soal_SBA_' . date('Ymd_His') . '.xlsx';
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /**
+     * AJAX Endpoint: Smart Header Parser untuk File Excel Soal (Mendukung Banyak Kolom opsi_*)
      */
     public function importSoalPreview(Request $request)
     {
@@ -896,30 +1446,49 @@ class SbaController extends Controller
                 ], 422);
             }
 
-            // 1. Validasi Urutan & Nama Header Kolom (Baris 1)
-            $expectedHeaders = [
-                'no',
-                'tipe_soal',
-                'pertanyaan',
-                'opsi_a',
-                'opsi_b',
-                'opsi_c',
-                'opsi_d',
-                'opsi_e',
-                'kunci_jawaban',
-                'bobot_nilai',
-            ];
+            // 1. Smart Header Detection: Petakan indeks kolom berdasarkan nama header pada baris pertama
+            $headerRow = $rows[0];
+            $colMap = [];
+            $opsiColIndices = [];
+            $relevantColIndices = [];
 
-            $actualHeaders = array_map(function ($val) {
-                return strtolower(trim((string) $val));
-            }, array_slice($rows[0], 0, 10));
+            foreach ($headerRow as $colIdx => $rawHeader) {
+                $hName = strtolower(trim((string) $rawHeader));
+                if ($hName === '') {
+                    continue;
+                }
 
-            if ($actualHeaders !== $expectedHeaders) {
+                if (in_array($hName, ['no', 'tipe_soal', 'pertanyaan', 'kunci_jawaban', 'bobot_nilai'], true)) {
+                    $colMap[$hName] = $colIdx;
+                    $relevantColIndices[] = $colIdx;
+                } elseif (str_starts_with($hName, 'opsi_')) {
+                    $opsiColIndices[] = $colIdx;
+                    $relevantColIndices[] = $colIdx;
+                }
+            }
+
+            $requiredHeaders = ['tipe_soal', 'pertanyaan', 'kunci_jawaban', 'bobot_nilai'];
+            $missingHeaders = array_values(array_diff($requiredHeaders, array_keys($colMap)));
+
+            if (!empty($missingHeaders) || count($opsiColIndices) < 2) {
+                $detailMissing = [];
+                if (!empty($missingHeaders)) {
+                    $detailMissing[] = 'kolom wajib tidak ditemukan: ' . implode(', ', $missingHeaders);
+                }
+                if (count($opsiColIndices) < 2) {
+                    $detailMissing[] = 'minimal harus terdapat 2 kolom dengan awalan opsi_ (contoh: opsi_a, opsi_b, ..., opsi_f, opsi_g, dst.)';
+                }
+
                 return response()->json([
                     'status'  => 'error',
-                    'message' => 'Data tidak sesuai template! Urutan dan nama header kolom wajib: ' . implode(', ', $expectedHeaders) . '.',
+                    'message' => 'Header Excel tidak sesuai! (' . implode('; ', $detailMissing) . ').',
                 ], 422);
             }
+
+            $idxTipe       = $colMap['tipe_soal'];
+            $idxPertanyaan = $colMap['pertanyaan'];
+            $idxKunci      = $colMap['kunci_jawaban'];
+            $idxBobot      = $colMap['bobot_nilai'];
 
             // 2. Parsing & Validasi Tiap Baris Soal (Mulai Baris 2)
             $parsedSoals = [];
@@ -929,26 +1498,30 @@ class SbaController extends Controller
             foreach (array_slice($rows, 1) as $idx => $row) {
                 $excelRowNum = $idx + 2;
 
-                // Lewati baris yang benar-benar kosong seluruh kolomnya
-                $joined = trim(implode('', array_map('strval', array_slice($row, 0, 10))));
+                // Lewati baris yang benar-benar kosong pada seluruh kolom relevan
+                $joined = '';
+                foreach ($relevantColIndices as $rColIdx) {
+                    $joined .= trim((string) ($row[$rColIdx] ?? ''));
+                }
                 if ($joined === '') {
                     continue;
                 }
 
-                $tipe       = strtolower(trim((string) ($row[1] ?? '')));
-                $pertanyaan = trim((string) ($row[2] ?? ''));
-                $opsiRaw    = [
-                    trim((string) ($row[3] ?? '')), // A
-                    trim((string) ($row[4] ?? '')), // B
-                    trim((string) ($row[5] ?? '')), // C
-                    trim((string) ($row[6] ?? '')), // D
-                    trim((string) ($row[7] ?? '')), // E
-                ];
-                $kunciRaw   = strtoupper(trim((string) ($row[8] ?? '')));
-                $bobot      = is_numeric($row[9] ?? null) && (int) $row[9] > 0 ? (int) $row[9] : 10;
+                $tipe       = strtolower(trim((string) ($row[$idxTipe] ?? '')));
+                $pertanyaan = trim((string) ($row[$idxPertanyaan] ?? ''));
 
-                if (!in_array($tipe, ['pg', 'pg_kompleks', 'esai'])) {
-                    $errors[] = "Baris {$excelRowNum}: Tipe soal '{$tipe}' tidak valid (gunakan pg, pg_kompleks, atau esai).";
+                // Ambil seluruh nilai dari kolom berawalan opsi_* secara berurutan (opsi_a, opsi_b, ..., opsi_f, dst.)
+                $allOpsiValues = [];
+                foreach ($opsiColIndices as $oColIdx) {
+                    $allOpsiValues[] = trim((string) ($row[$oColIdx] ?? ''));
+                }
+
+                $kunciRaw = strtoupper(trim((string) ($row[$idxKunci] ?? '')));
+                $bobotRaw = trim((string) ($row[$idxBobot] ?? ''));
+                $bobot    = is_numeric($bobotRaw) && (int) $bobotRaw > 0 ? (int) $bobotRaw : 10;
+
+                if (!in_array($tipe, ['pg', 'pg_kompleks', 'benar_salah', 'esai'], true)) {
+                    $errors[] = "Baris {$excelRowNum}: Tipe soal '{$tipe}' tidak valid (gunakan pg, pg_kompleks, benar_salah, atau esai).";
                     continue;
                 }
 
@@ -960,9 +1533,83 @@ class SbaController extends Controller
                 $opsiJawaban = null;
                 $kunciJawaban = [];
 
-                if (in_array($tipe, ['pg', 'pg_kompleks'])) {
-                    if ($opsiRaw[0] === '' || $opsiRaw[1] === '') {
-                        $errors[] = "Baris {$excelRowNum}: Soal {$tipe} minimal wajib mengisi Opsi A dan Opsi B.";
+                if ($tipe === 'benar_salah') {
+                    // Ambil seluruh pernyataan yang terisi dari seluruh kolom opsi_* (tidak dibatasi 5)
+                    $pernyataanTerisi = array_values(array_filter($allOpsiValues, fn($v) => $v !== ''));
+                    $jumlahPernyataan = count($pernyataanTerisi);
+
+                    if ($jumlahPernyataan === 0) {
+                        $errors[] = "Baris {$excelRowNum}: Soal benar_salah minimal wajib mengisi 1 pernyataan pada kolom opsi_*.";
+                        continue;
+                    }
+
+                    if ($kunciRaw === '') {
+                        $errors[] = "Baris {$excelRowNum}: Kunci jawaban wajib diisi untuk tipe benar_salah (contoh: B,S,B).";
+                        continue;
+                    }
+
+                    $kunciParts = array_values(array_filter(array_map('trim', explode(',', $kunciRaw)), fn($v) => $v !== ''));
+                    if (count($kunciParts) !== $jumlahPernyataan) {
+                        $errors[] = "Baris {$excelRowNum}: Jumlah kunci jawaban (" . count($kunciParts) . ") harus sama dengan jumlah pernyataan yang terisi ({$jumlahPernyataan}).";
+                        continue;
+                    }
+
+                    $validKunciBs = true;
+                    foreach ($kunciParts as $kPart) {
+                        if (in_array($kPart, ['B', 'BENAR', 'TRUE', '1'], true)) {
+                            $kunciJawaban[] = 'benar';
+                        } elseif (in_array($kPart, ['S', 'SALAH', 'FALSE', '0'], true)) {
+                            $kunciJawaban[] = 'salah';
+                        } else {
+                            $errors[] = "Baris {$excelRowNum}: Kunci '{$kPart}' pada benar_salah tidak valid (gunakan B/BENAR atau S/SALAH dipisah koma).";
+                            $validKunciBs = false;
+                            break;
+                        }
+                    }
+                    if (!$validKunciBs) {
+                        continue;
+                    }
+
+                    // Parsing bobot: dipisah koma per pernyataan (misal "10,15,5") atau 1 angka total (dibagi rata)
+                    $bobotPerItem = [];
+                    if ($bobotRaw !== '' && str_contains($bobotRaw, ',')) {
+                        $bobotParts = array_map('trim', explode(',', $bobotRaw));
+                        if (count($bobotParts) !== $jumlahPernyataan) {
+                            $errors[] = "Baris {$excelRowNum}: Jika bobot dipisah koma, jumlahnya (" . count($bobotParts) . ") harus sama dengan jumlah pernyataan ({$jumlahPernyataan}).";
+                            continue;
+                        }
+                        foreach ($bobotParts as $bp) {
+                            $bobotPerItem[] = is_numeric($bp) && (int) $bp >= 0 ? (int) $bp : 0;
+                        }
+                    } else {
+                        $totalTarget = is_numeric($bobotRaw) && (int) $bobotRaw > 0 ? (int) $bobotRaw : ($jumlahPernyataan * 10);
+                        $base = intdiv($totalTarget, $jumlahPernyataan);
+                        $rem = $totalTarget % $jumlahPernyataan;
+                        for ($i = 0; $i < $jumlahPernyataan; $i++) {
+                            $bobotPerItem[] = $base + ($i === $jumlahPernyataan - 1 ? $rem : 0);
+                        }
+                    }
+
+                    $opsiJawaban = [];
+                    foreach ($pernyataanTerisi as $i => $teksPernyataan) {
+                        $opsiJawaban[] = [
+                            'teks'  => $teksPernyataan,
+                            'bobot' => $bobotPerItem[$i],
+                        ];
+                    }
+                    $bobot = array_sum($bobotPerItem);
+                } elseif (in_array($tipe, ['pg', 'pg_kompleks'], true)) {
+                    // Untuk PG & PG Kompleks, gunakan 5 kolom opsi pertama (opsi_a..opsi_e)
+                    $opsiPg = [
+                        $allOpsiValues[0] ?? '',
+                        $allOpsiValues[1] ?? '',
+                        $allOpsiValues[2] ?? '',
+                        $allOpsiValues[3] ?? '',
+                        $allOpsiValues[4] ?? '',
+                    ];
+
+                    if ($opsiPg[0] === '' || $opsiPg[1] === '') {
+                        $errors[] = "Baris {$excelRowNum}: Soal {$tipe} minimal wajib mengisi 2 pilihan jawaban pertama (Opsi A dan Opsi B).";
                         continue;
                     }
 
@@ -971,7 +1618,7 @@ class SbaController extends Controller
                         continue;
                     }
 
-                    $opsiJawaban = $opsiRaw;
+                    $opsiJawaban = $opsiPg;
 
                     if ($tipe === 'pg') {
                         if (!isset($hurufToIndex[$kunciRaw])) {
@@ -979,13 +1626,12 @@ class SbaController extends Controller
                             continue;
                         }
                         $idxKunci = (int) $hurufToIndex[$kunciRaw];
-                        if ($opsiRaw[$idxKunci] === '') {
+                        if ($opsiPg[$idxKunci] === '') {
                             $errors[] = "Baris {$excelRowNum}: Kunci jawaban '{$kunciRaw}' menunjuk pada opsi yang kosong.";
                             continue;
                         }
                         $kunciJawaban = [(string) $idxKunci];
                     } else {
-                        // pg_kompleks (dipisah koma, misal A,C,E)
                         $parts = array_unique(array_filter(array_map('trim', explode(',', $kunciRaw))));
                         $validKunci = true;
                         foreach ($parts as $huruf) {
@@ -995,7 +1641,7 @@ class SbaController extends Controller
                                 break;
                             }
                             $idxKunci = (int) $hurufToIndex[$huruf];
-                            if ($opsiRaw[$idxKunci] === '') {
+                            if ($opsiPg[$idxKunci] === '') {
                                 $errors[] = "Baris {$excelRowNum}: Kunci jawaban '{$huruf}' menunjuk pada opsi yang kosong.";
                                 $validKunci = false;
                                 break;
@@ -1013,6 +1659,7 @@ class SbaController extends Controller
                     'pertanyaan'    => $pertanyaan,
                     'media'         => null,
                     'opsi_jawaban'  => $opsiJawaban,
+                    'opsi_media'    => null,
                     'kunci_jawaban' => $kunciJawaban,
                     'bobot_nilai'   => $bobot,
                 ];

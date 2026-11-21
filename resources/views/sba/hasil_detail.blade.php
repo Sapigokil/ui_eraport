@@ -149,7 +149,7 @@
             @csrf
         </form>
 
-        {{-- FORM PENILAIAN MANUAL (ESAI & PG/PGK TANPA KUNCI) --}}
+        {{-- FORM PENILAIAN MANUAL (ESAI & SOAL TANPA KUNCI) --}}
         <form action="{{ route('sba.hasil.simpan_nilai', $hasil->id) }}" method="POST" id="formPenilaian">
             @csrf
             
@@ -182,14 +182,14 @@
                                 <i class="fas fa-sync-alt me-1"></i> Refresh Nilai (Bobot Baru)
                             </button>
                             <small class="text-xxs text-muted d-block mb-3" style="line-height: 1.3;">
-                                *Menghitung ulang skor PG/PG Kompleks mengikuti perubahan bobot soal terbaru.
+                                *Menghitung ulang skor PG, PG Kompleks & Benar/Salah mengikuti perubahan bobot soal terbaru.
                             </small>
 
                             <button type="button" id="btnAutoScoring" class="btn btn-outline-info btn-sm w-100 mb-1">
                                 <i class="fas fa-magic me-1"></i> Auto-Scoring Penuh
                             </button>
                             <small class="text-xxs text-muted d-block mb-3" style="line-height: 1.3;">
-                                *Memberikan nilai maksimal pada seluruh soal manual (esai / PG tanpa kunci).
+                                *Memberikan nilai maksimal pada seluruh soal manual (esai / soal tanpa kunci).
                             </small>
 
                             <hr class="my-2">
@@ -209,7 +209,23 @@
                             $jawabanRaw = $jawabanSiswa ? $jawabanSiswa->jawaban : null;
                             $skorDidapat = $jawabanSiswa ? (float) $jawabanSiswa->skor_didapat : 0;
                             $kunciArray = is_array($soal->kunci_jawaban) ? array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== '') : [];
-                            $tanpaKunci = in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray);
+
+                            // Deteksi kunci & status tanpa kunci untuk soal Pernyataan Benar Salah
+                            $bsPernyataanList = ($soal->tipe === 'benar_salah' && is_array($soal->opsi_jawaban)) ? $soal->opsi_jawaban : [];
+                            $bsKunciMap = [];
+                            if ($soal->tipe === 'benar_salah') {
+                                foreach ($bsPernyataanList as $stmtIdx => $stmtItem) {
+                                    $kunciItem = is_array($stmtItem)
+                                        ? strtolower(trim((string) ($stmtItem['kunci'] ?? ($soal->kunci_jawaban[$stmtIdx] ?? ''))))
+                                        : strtolower(trim((string) ($soal->kunci_jawaban[$stmtIdx] ?? '')));
+                                    if (in_array($kunciItem, ['benar', 'salah'], true)) {
+                                        $bsKunciMap[$stmtIdx] = $kunciItem;
+                                    }
+                                }
+                            }
+
+                            $tanpaKunci = (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray))
+                                || ($soal->tipe === 'benar_salah' && empty($bsKunciMap));
                             $isManualGraded = ($soal->tipe === 'esai') || $tanpaKunci;
 
                             if ($isManualGraded) {
@@ -217,13 +233,21 @@
                             } else {
                                 $totalSkorOtomatis += $skorDidapat;
                             }
+
+                            $labelTipe = match($soal->tipe) {
+                                'pg' => 'PG',
+                                'pg_kompleks' => 'PG Kompleks',
+                                'benar_salah' => 'Pernyataan Benar / Salah',
+                                'esai' => 'Esai',
+                                default => str_replace('_', ' ', $soal->tipe),
+                            };
                         @endphp
 
                         <div class="card card-custom mb-3 {{ $isManualGraded ? 'border border-warning' : 'border' }}">
-                            <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center border-bottom">
+                            <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center border-bottom flex-wrap gap-2">
                                 <div>
                                     <span class="badge bg-gradient-dark text-xxs me-2">Soal #{{ $index + 1 }}</span>
-                                    <span class="badge bg-outline-primary text-xxs text-uppercase">{{ str_replace('_', ' ', $soal->tipe) }}</span>
+                                    <span class="badge bg-outline-primary text-xxs text-uppercase">{{ $labelTipe }}</span>
                                     @if($tanpaKunci)
                                         <span class="badge bg-warning text-dark text-xxs ms-1">
                                             <i class="fas fa-key me-1"></i> Tanpa Kunci Jawaban
@@ -242,8 +266,10 @@
                                             <i class="fas fa-pen-alt me-1"></i> Perlu Penilaian Manual
                                         </span>
                                     @else
-                                        @if($skorDidapat > 0)
-                                            <span class="badge bg-success text-xxs"><i class="fas fa-check me-1"></i> Benar (+{{ $skorDidapat }})</span>
+                                        @if($skorDidapat >= (float) $soal->bobot_nilai && $skorDidapat > 0)
+                                            <span class="badge bg-success text-xxs"><i class="fas fa-check me-1"></i> Benar (+{{ round($skorDidapat, 2) }})</span>
+                                        @elseif($skorDidapat > 0)
+                                            <span class="badge bg-info text-xxs"><i class="fas fa-adjust me-1"></i> Sebagian Benar (+{{ round($skorDidapat, 2) }})</span>
                                         @else
                                             <span class="badge bg-danger text-xxs"><i class="fas fa-times me-1"></i> Salah (0)</span>
                                         @endif
@@ -252,7 +278,7 @@
                             </div>
 
                             <div class="card-body p-3">
-                                {{-- PERTANYAAN --}}
+                                {{-- PERTANYAAN / STIMULUS --}}
                                 <p class="text-sm text-dark font-weight-bold mb-3">{!! nl2br(e($soal->pertanyaan)) !!}</p>
 
                                 {{-- GAMBAR SOAL JIKA ADA --}}
@@ -262,19 +288,27 @@
                                     </div>
                                 @endif
 
-                                {{-- TIPE PG & PG KOMPLEKS --}}
+                                {{-- TIPE PG & PG KOMPLEKS (TEKS &/ATAU GAMBAR OPSI) --}}
                                 @if(in_array($soal->tipe, ['pg', 'pg_kompleks']))
+                                    @php
+                                        $opsiTeksList = is_array($soal->opsi_jawaban) ? $soal->opsi_jawaban : [];
+                                        $opsiMediaList = is_array($soal->opsi_media) ? $soal->opsi_media : [];
+                                        $jumlahSlotOpsi = max(count($opsiTeksList), count($opsiMediaList));
+                                    @endphp
                                     <div class="options-wrapper">
-                                        @foreach($soal->opsi_jawaban as $optIdx => $opsiTeks)
-                                            @if(!empty(trim($opsiTeks)))
+                                        @for($optIdx = 0; $optIdx < $jumlahSlotOpsi; $optIdx++)
+                                            @php
+                                                $opsiTeks = trim((string) ($opsiTeksList[$optIdx] ?? ''));
+                                                $opsiMediaPath = $opsiMediaList[$optIdx] ?? null;
+                                            @endphp
+                                            @if($opsiTeks !== '' || !empty($opsiMediaPath))
                                                 @php
-                                                    $isKunci = in_array((string)$optIdx, $kunciArray);
+                                                    $isKunci = in_array((string)$optIdx, array_map('strval', $kunciArray));
                                                     
-                                                    // Cek apakah opsi ini dipilih siswa
                                                     $isChosen = false;
                                                     if ($soal->tipe === 'pg_kompleks') {
-                                                        $siswaArr = json_decode($jawabanRaw, true) ?? [];
-                                                        $isChosen = in_array((string)$optIdx, $siswaArr);
+                                                        $siswaArr = is_array($jawabanRaw) ? $jawabanRaw : (json_decode((string) $jawabanRaw, true) ?? []);
+                                                        $isChosen = in_array((string)$optIdx, array_map('strval', $siswaArr));
                                                     } else {
                                                         $isChosen = ((string)$optIdx === (string)$jawabanRaw && $jawabanRaw !== null);
                                                     }
@@ -288,11 +322,21 @@
                                                     }
                                                 @endphp
 
-                                                <div class="{{ $boxClass }} d-flex justify-content-between align-items-center">
-                                                    <div class="text-xs text-dark">
-                                                        <strong class="me-2">{{ chr(65 + $optIdx) }}.</strong> {{ $opsiTeks }}
+                                                <div class="{{ $boxClass }} d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                                                    <div class="text-xs text-dark d-flex align-items-start flex-grow-1">
+                                                        <strong class="me-2">{{ chr(65 + $optIdx) }}.</strong>
+                                                        <div>
+                                                            @if($opsiTeks !== '')
+                                                                <div>{!! nl2br(e($opsiTeks)) !!}</div>
+                                                            @endif
+                                                            @if(!empty($opsiMediaPath))
+                                                                <div class="{{ $opsiTeks !== '' ? 'mt-2' : '' }}">
+                                                                    <img src="{{ asset('storage/' . $opsiMediaPath) }}" alt="Gambar Opsi {{ chr(65 + $optIdx) }}" class="img-thumbnail rounded shadow-xs" style="max-height: 130px;">
+                                                                </div>
+                                                            @endif
+                                                        </div>
                                                     </div>
-                                                    <div>
+                                                    <div class="flex-shrink-0">
                                                         @if($isKunci)
                                                             <span class="badge-kunci me-1"><i class="fas fa-key me-1"></i> Kunci</span>
                                                         @endif
@@ -302,7 +346,7 @@
                                                     </div>
                                                 </div>
                                             @endif
-                                        @endforeach
+                                        @endfor
                                     </div>
 
                                     {{-- TOOLBAR INPUT SKOR MANUAL UNTUK PG / PGK YANG TIDAK DILENGKAPI KUNCI --}}
@@ -333,7 +377,112 @@
                                         </div>
                                     @endif
 
-                                {{-- TIPE ESAI / URAIAN (PANEL KORREKSI GURU) --}}
+                                {{-- TIPE PERNYATAAN BENAR / SALAH --}}
+                                @elseif($soal->tipe === 'benar_salah')
+                                    @php
+                                        $siswaBsArr = is_array($jawabanRaw)
+                                            ? $jawabanRaw
+                                            : (json_decode((string) $jawabanRaw, true) ?? []);
+                                        $totalPernyataan = count($bsPernyataanList);
+                                        $jumlahTepat = 0;
+
+                                        foreach ($bsPernyataanList as $sIdx => $sItem) {
+                                            $kVal = $bsKunciMap[$sIdx] ?? '';
+                                            $jVal = strtolower(trim((string) ($siswaBsArr[$sIdx] ?? '')));
+                                            if ($kVal !== '' && $jVal === $kVal) {
+                                                $jumlahTepat++;
+                                            }
+                                        }
+                                    @endphp
+
+                                    @if(!$tanpaKunci && $totalPernyataan > 0)
+                                        <div class="d-flex justify-content-between align-items-center bg-light px-3 py-2 rounded border mb-2 text-xs">
+                                            <span class="text-secondary">
+                                                <i class="fas fa-tasks text-primary me-1"></i> Ketepatan Pernyataan:
+                                            </span>
+                                            <span class="font-weight-bold text-dark">
+                                                {{ $jumlahTepat }} dari {{ $totalPernyataan }} pernyataan benar
+                                            </span>
+                                        </div>
+                                    @endif
+
+                                    <div class="options-wrapper">
+                                        @foreach($bsPernyataanList as $stmtIdx => $stmtItem)
+                                            @php
+                                                $teksPernyataan = is_array($stmtItem) ? ($stmtItem['teks'] ?? '') : (string) $stmtItem;
+                                                $kunciStmt = $bsKunciMap[$stmtIdx] ?? '';
+                                                $jawabStmt = strtolower(trim((string) ($siswaBsArr[$stmtIdx] ?? '')));
+                                                $isStmtBenar = ($kunciStmt !== '' && $jawabStmt === $kunciStmt);
+                                                $isStmtSalah = ($kunciStmt !== '' && $jawabStmt !== $kunciStmt);
+
+                                                $boxClass = 'option-box';
+                                                if ($tanpaKunci) {
+                                                    if ($jawabStmt !== '') $boxClass .= ' option-chosen-neutral';
+                                                } else {
+                                                    if ($isStmtBenar) $boxClass .= ' option-correct';
+                                                    elseif ($isStmtSalah) $boxClass .= ' option-wrong';
+                                                }
+                                            @endphp
+
+                                            <div class="{{ $boxClass }} d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                                                <div class="text-xs text-dark flex-grow-1">
+                                                    <strong class="me-2">{{ $stmtIdx + 1 }}.</strong> {!! nl2br(e($teksPernyataan)) !!}
+                                                </div>
+
+                                                <div class="d-flex flex-wrap align-items-center gap-1 flex-shrink-0">
+                                                    @if($kunciStmt !== '')
+                                                        <span class="badge-kunci">
+                                                            <i class="fas fa-key me-1"></i> Kunci: {{ ucfirst($kunciStmt) }}
+                                                        </span>
+                                                    @endif
+
+                                                    @if($jawabStmt === 'benar')
+                                                        <span class="badge {{ !$tanpaKunci ? ($isStmtBenar ? 'bg-success' : 'bg-danger') : 'bg-primary' }} text-xxs">
+                                                            <i class="fas fa-user-check me-1"></i> Asesi: Benar
+                                                        </span>
+                                                    @elseif($jawabStmt === 'salah')
+                                                        <span class="badge {{ !$tanpaKunci ? ($isStmtBenar ? 'bg-success' : 'bg-danger') : 'bg-primary' }} text-xxs">
+                                                            <i class="fas fa-user-check me-1"></i> Asesi: Salah
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-secondary text-xxs">
+                                                            <i class="fas fa-minus-circle me-1"></i> Tidak Dijawab
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    {{-- TOOLBAR INPUT SKOR MANUAL JIKA SOAL BENAR/SALAH DIBUAT TANPA KUNCI --}}
+                                    @if($tanpaKunci)
+                                        <div class="d-flex flex-wrap align-items-center gap-2 bg-light p-2 px-3 border border-warning rounded mt-3">
+                                            <span class="text-xs font-weight-bold text-dark me-2">
+                                                <i class="fas fa-gavel text-warning me-1"></i> Beri Skor Manual (Tanpa Kunci):
+                                            </span>
+                                            
+                                            <button type="button" class="btn btn-xs btn-outline-success mb-0 btn-quick-grade" 
+                                                    data-soal-id="{{ $soal->id }}" data-skor="{{ $soal->bobot_nilai }}">
+                                                <i class="fas fa-check me-1"></i> Benar Full ({{ $soal->bobot_nilai }})
+                                            </button>
+                                            <button type="button" class="btn btn-xs btn-outline-danger mb-0 btn-quick-grade" 
+                                                    data-soal-id="{{ $soal->id }}" data-skor="0">
+                                                <i class="fas fa-times me-1"></i> Salah (0)
+                                            </button>
+
+                                            <div class="input-group input-group-sm ms-auto" style="width: 145px;">
+                                                <input type="number" step="0.5" min="0" max="{{ $soal->bobot_nilai }}" 
+                                                       name="skor_manual[{{ $soal->id }}]" 
+                                                       id="input_skor_{{ $soal->id }}"
+                                                       class="form-control text-center font-weight-bold input-skor-manual bg-white" 
+                                                       value="{{ $skorDidapat }}" 
+                                                       data-bobot-max="{{ $soal->bobot_nilai }}">
+                                                <span class="input-group-text text-xxs">/ {{ $soal->bobot_nilai }}</span>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                {{-- TIPE ESAI / URAIAN (PANEL KOREKSI GURU) --}}
                                 @elseif($soal->tipe === 'esai')
                                     <div class="bg-light p-3 rounded border mb-3">
                                         <span class="text-xxs text-secondary font-weight-bold d-block mb-1">
@@ -348,7 +497,6 @@
                                     <div class="d-flex flex-wrap align-items-center gap-2 bg-white p-2 px-3 border border-warning rounded">
                                         <span class="text-xs font-weight-bold text-dark me-2">Beri Skor Esai:</span>
                                         
-                                        {{-- Tombol Quick Grade --}}
                                         <button type="button" class="btn btn-xs btn-outline-success mb-0 btn-quick-grade" 
                                                 data-soal-id="{{ $soal->id }}" data-skor="{{ $soal->bobot_nilai }}">
                                             <i class="fas fa-check me-1"></i> Benar Full ({{ $soal->bobot_nilai }})
@@ -411,7 +559,6 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', recalculateTotalRealtime);
     });
 
-    // Quick Grade Buttons (Benar Full / Salah 0)
     document.querySelectorAll('.btn-quick-grade').forEach(btn => {
         btn.addEventListener('click', function() {
             const soalId = this.getAttribute('data-soal-id');
@@ -424,7 +571,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Refresh Nilai Otomatis Sesuai Bobot Soal Terbaru
     const btnRefreshNilai = document.getElementById('btnRefreshNilai');
     const formRefreshNilai = document.getElementById('formRefreshNilai');
     if (btnRefreshNilai && formRefreshNilai) {
@@ -434,7 +580,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Auto Scoring Penuh untuk semua item penilaian manual
     document.getElementById('btnAutoScoring').addEventListener('click', function() {
         if (!confirm('Apakah Anda yakin ingin memberikan nilai maksimal pada seluruh soal penilaian manual?')) return;
 
