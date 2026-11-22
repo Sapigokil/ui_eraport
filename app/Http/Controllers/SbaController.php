@@ -1597,15 +1597,15 @@ class SbaController extends Controller
                 ], 422);
             }
 
-            $idxTipe       = $colMap['tipe_soal'];
-            $idxPertanyaan = $colMap['pertanyaan'];
-            $idxKunci      = $colMap['kunci_jawaban'];
-            $idxBobot      = $colMap['bobot_nilai'];
+            $colIdxTipe       = $colMap['tipe_soal'];
+            $colIdxPertanyaan = $colMap['pertanyaan'];
+            $colIdxKunci      = $colMap['kunci_jawaban'];
+            $colIdxBobot      = $colMap['bobot_nilai'];
 
             // 2. Parsing & Validasi Tiap Baris Soal (Mulai Baris 2)
             $parsedSoals = [];
             $errors = [];
-            $hurufToIndex = ['A' => '0', 'B' => '1', 'C' => '2', 'D' => '3', 'E' => '4'];
+            $hurufToIndex = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, 'E' => 4];
 
             foreach (array_slice($rows, 1) as $idx => $row) {
                 $excelRowNum = $idx + 2;
@@ -1619,8 +1619,8 @@ class SbaController extends Controller
                     continue;
                 }
 
-                $tipe       = strtolower(trim((string) ($row[$idxTipe] ?? '')));
-                $pertanyaan = trim((string) ($row[$idxPertanyaan] ?? ''));
+                $tipe       = strtolower(trim((string) ($row[$colIdxTipe] ?? '')));
+                $pertanyaan = trim((string) ($row[$colIdxPertanyaan] ?? ''));
 
                 // Ambil seluruh nilai dari kolom berawalan opsi_* secara berurutan (opsi_a, opsi_b, ..., opsi_f, dst.)
                 $allOpsiValues = [];
@@ -1628,8 +1628,11 @@ class SbaController extends Controller
                     $allOpsiValues[] = trim((string) ($row[$oColIdx] ?? ''));
                 }
 
-                $kunciRaw = strtoupper(trim((string) ($row[$idxKunci] ?? '')));
-                $bobotRaw = trim((string) ($row[$idxBobot] ?? ''));
+                $kunciRawClean = preg_replace('/[\s\x{00A0}\x{200B}-\x{200D}\x{FEFF}]+/u', '', (string) ($row[$colIdxKunci] ?? ''));
+                $kunciRaw = strtoupper((string) $kunciRawClean);
+
+                $bobotRawClean = preg_replace('/[\s\x{00A0}\x{200B}-\x{200D}\x{FEFF}]+/u', '', (string) ($row[$colIdxBobot] ?? ''));
+                $bobotRaw = (string) $bobotRawClean;
                 $bobot    = is_numeric($bobotRaw) && (int) $bobotRaw > 0 ? (int) $bobotRaw : 10;
 
                 if (!in_array($tipe, ['pg', 'pg_kompleks', 'benar_salah', 'esai'], true)) {
@@ -1737,12 +1740,12 @@ class SbaController extends Controller
                             $errors[] = "Baris {$excelRowNum}: Kunci jawaban PG harus berupa satu huruf (A, B, C, D, atau E).";
                             continue;
                         }
-                        $idxKunci = (int) $hurufToIndex[$kunciRaw];
-                        if ($opsiPg[$idxKunci] === '') {
+                        $opsiIdxKunci = (int) $hurufToIndex[$kunciRaw];
+                        if ($opsiPg[$opsiIdxKunci] === '') {
                             $errors[] = "Baris {$excelRowNum}: Kunci jawaban '{$kunciRaw}' menunjuk pada opsi yang kosong.";
                             continue;
                         }
-                        $kunciJawaban = [(string) $idxKunci];
+                        $kunciJawaban = [(string) $opsiIdxKunci];
                     } else {
                         $parts = array_unique(array_filter(array_map('trim', explode(',', $kunciRaw))));
                         $validKunci = true;
@@ -1752,13 +1755,13 @@ class SbaController extends Controller
                                 $validKunci = false;
                                 break;
                             }
-                            $idxKunci = (int) $hurufToIndex[$huruf];
-                            if ($opsiPg[$idxKunci] === '') {
+                            $opsiIdxKunci = (int) $hurufToIndex[$huruf];
+                            if ($opsiPg[$opsiIdxKunci] === '') {
                                 $errors[] = "Baris {$excelRowNum}: Kunci jawaban '{$huruf}' menunjuk pada opsi yang kosong.";
                                 $validKunci = false;
                                 break;
                             }
-                            $kunciJawaban[] = (string) $idxKunci;
+                            $kunciJawaban[] = (string) $opsiIdxKunci;
                         }
                         if (!$validKunci) {
                             continue;
