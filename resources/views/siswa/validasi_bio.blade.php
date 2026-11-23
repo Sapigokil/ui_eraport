@@ -16,6 +16,17 @@
             </a>
         </div>
 
+        {{-- ALERT ERROR VALIDASI KOLOM DARI CONTROLLER --}}
+        @if (session('error'))
+            <div class="alert bg-gradient-danger alert-dismissible text-white fade show mb-4 shadow-sm" role="alert">
+                <div class="d-flex align-items-start">
+                    <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                    <div class="text-sm">{!! nl2br(e(session('error'))) !!}</div>
+                </div>
+                <button type="button" class="btn-close text-lg py-3 opacity-10" data-bs-dismiss="alert">&times;</button>
+            </div>
+        @endif
+
         @php
             $siswa = $pengajuan->siswa;
             $detail = $siswa->detail ?? new \App\Models\DetailSiswa();
@@ -28,7 +39,7 @@
             $formatVal = fn($val) => empty($val) ? '-' : $val;
 
             // ====================================================================
-            // 💡 FUNGSI AJAIB UNTUK INLINE DIFF (MENAMPILKAN PERUBAHAN DATA)
+            // FUNGSI UNTUK INLINE DIFF (MENAMPILKAN PERUBAHAN DATA)
             // ====================================================================
             
             // 1. Fungsi untuk mencoret data lama jika ada pengajuan baru
@@ -116,11 +127,16 @@
                                         <dt class="col-sm-4 text-secondary">Jenis Kelamin:</dt>
                                         <dd class="col-sm-8 font-weight-bold text-dark">{{ $siswa->jenis_kelamin }}</dd>
 
-                                        {{-- CONTOH PENERAPAN INLINE DIFF (Hanya pada kolom detail) --}}
                                         <dt class="col-sm-4 text-secondary mt-2">NIK:</dt>
                                         <dd class="col-sm-8 mt-2">
                                             <span class="{{ $oldStyle('nik') }}">{{ $detail->nik ?? '-' }}</span>
                                             {!! $renderDiff('nik') !!}
+                                        </dd>
+
+                                        <dt class="col-sm-4 text-secondary mt-2">No. KK:</dt>
+                                        <dd class="col-sm-8 mt-2">
+                                            <span class="{{ $oldStyle('no_kk') }}">{{ $detail->no_kk ?? '-' }}</span>
+                                            {!! $renderDiff('no_kk') !!}
                                         </dd>
                                     </dl>
                                 </div>
