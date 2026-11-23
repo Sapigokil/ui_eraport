@@ -76,22 +76,23 @@ class Uji extends Model
     }
 
     /**
-     * Cek apakah asesmen memiliki soal esai atau soal PG/PGK yang belum memiliki kunci jawaban
+     * Cek apakah asesmen memiliki soal manual (esai tanpa kunci atau soal objektif tanpa kunci)
      */
     public function butuhPenilaianManual(): bool
     {
         $soals = $this->relationLoaded('soals') ? $this->soals : $this->soals()->get();
 
         foreach ($soals as $soal) {
-            if ($soal->tipe === 'esai') {
+            $kunci = is_array($soal->kunci_jawaban)
+                ? array_filter($soal->kunci_jawaban, fn($v) => trim((string) $v) !== '')
+                : [];
+
+            if ($soal->tipe === 'esai' && empty($kunci)) {
                 return true;
             }
 
-            if (in_array($soal->tipe, ['pg', 'pg_kompleks'])) {
-                $kunci = is_array($soal->kunci_jawaban) ? array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== '') : [];
-                if (empty($kunci)) {
-                    return true;
-                }
+            if (in_array($soal->tipe, ['pg', 'pg_kompleks'], true) && empty($kunci)) {
+                return true;
             }
         }
 

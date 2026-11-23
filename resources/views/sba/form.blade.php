@@ -596,7 +596,8 @@
                         Gunakan file template resmi dengan header kolom wajib:<br>
                         <code class="text-primary fw-bold">no, tipe_soal, pertanyaan, opsi_a..e, kunci_jawaban, bobot_nilai</code><br>
                         <span class="text-xxs text-muted d-block mt-1">
-                            • Untuk <strong>benar_salah</strong>: isi pernyataan pada kolom berawalan <code>opsi_</code> (bisa menambah kolom baru seperti <code>opsi_6</code>, <code>opsi_7</code>, dst. sesuai jumlah pernyataan), kunci dipisah koma (misal <code>B,S,B</code>), dan bobot dipisah koma (misal <code>10,10,20</code>) atau total (misal <code>40</code>).
+                            • Untuk <strong>benar_salah</strong>: isi pernyataan pada kolom berawalan <code>opsi_</code> (bisa menambah kolom baru seperti <code>opsi_6</code>, <code>opsi_7</code>, dst. sesuai jumlah pernyataan), kunci dipisah koma (misal <code>B,S,B</code>), dan bobot dipisah koma (misal <code>10,10,20</code>) atau total (misal <code>40</code>).<br>
+                            • Untuk <strong>esai</strong>: isi <code>kunci_jawaban</code> jika berupa isian singkat (gunakan pemisah <code>|</code> untuk beberapa variasi jawaban benar, misal <code>Soekarno | Ir. Soekarno</code>), atau kosongkan jika uraian manual.
                         </span>
                     </p>
                     <a href="{{ route('sba.soal.template') }}" class="btn btn-sm bg-gradient-info text-white fw-bold w-100 mb-0 shadow-xs">
@@ -821,6 +822,21 @@
                     {{-- Baris pernyataan Benar/Salah dirender dinamis di sini --}}
                 </div>
             </div>
+
+            {{-- CONTAINER KUNCI JAWABAN OPSIONAL UNTUK URAIAN / ISIAN SINGKAT --}}
+            <div class="esai-wrapper border-top pt-3 mt-3 d-none">
+                <div class="p-3 bg-light border rounded">
+                    <label class="form-control-label text-xs mb-1 text-primary d-block">
+                        <i class="fas fa-key me-1"></i> Kunci Jawaban Isian Singkat (Opsional — Kosongkan jika Uraian Manual)
+                    </label>
+                    <input type="text" class="form-control form-control-sm border bg-white px-2 py-1 soal-kunci-isian"
+                           placeholder="Contoh teks: Soekarno | Ir. Soekarno  atau  Contoh angka: 0,5 | 0.5">
+                    <small class="text-xxs text-secondary d-block mt-1" style="line-height: 1.45;">
+                        • <strong>Jika diisi:</strong> Sistem mengoreksi otomatis (tidak peka huruf besar/kecil, koma/titik desimal pada angka disamakan). Gunakan tanda garis tegak <code>|</code> untuk memisahkan beberapa variasi jawaban benar.<br>
+                        • <strong>Jika dikosongkan:</strong> Dianggap sebagai soal uraian panjang dan dinilai manual oleh penguji.
+                    </small>
+                </div>
+            </div>
         </div>
 
         <div class="card-footer bg-light py-1 text-center border-top">
@@ -925,7 +941,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const closeTag = `</${tag}>`;
 
         if (selectedText.length > 0) {
-            // Toggle: jika teks terpilih sudah terbungkus tag yang sama, lepas tag-nya
             if (selectedText.startsWith(openTag) && selectedText.endsWith(closeTag)) {
                 const unwrapped = selectedText.slice(openTag.length, selectedText.length - closeTag.length);
                 textareaEl.value = currentVal.substring(0, start) + unwrapped + currentVal.substring(end);
@@ -1016,14 +1031,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Pantau perubahan ketikan pada semua kolom soal, opsi, dan pernyataan BS
     document.addEventListener('input', function(e) {
         if (e.target && e.target.classList.contains('math-watch-input')) {
             renderMathPreviewForTextarea(e.target);
         }
     });
 
-    // Shortcut keyboard Ctrl+B, Ctrl+I, Ctrl+U di dalam textarea soal/opsi/pernyataan
     document.addEventListener('keydown', function(e) {
         if (!e.target || !e.target.classList.contains('math-watch-input')) return;
         if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
@@ -1035,7 +1048,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Delegasi klik tombol format teks (B, I, U, x₂, x²)
     document.addEventListener('click', function(e) {
         const btnFmt = e.target.closest('.btn-format-text');
         if (!btnFmt) return;
@@ -1047,7 +1059,6 @@ document.addEventListener('DOMContentLoaded', function() {
         applyFormatTagToTextarea(targetTa, btnFmt.dataset.tag);
     });
 
-    // Delegasi klik tombol "fx Rumus"
     document.addEventListener('click', function(e) {
         const btnEq = e.target.closest('.btn-open-equation');
         if (!btnEq) return;
@@ -1071,7 +1082,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Tombol simbol cepat di dalam modal MathLive
     document.querySelectorAll('.eq-quick-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             if (!mathFieldEl) return;
@@ -1278,7 +1288,6 @@ document.addEventListener('DOMContentLoaded', function() {
         addSoal(); 
     }
 
-    // Pastikan KaTeX & format teks ter-render pada soal yang dimuat awal setelah script defer siap
     window.addEventListener('load', function() {
         refreshAllMathPreviews();
     });
@@ -1349,6 +1358,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     kunciCheckboxes.forEach((c, i) => {
                         if (kunciData.includes(String(i)) || kunciData.includes(i)) c.checked = true;
                     });
+                }
+            } else if (data.tipe === 'esai') {
+                const kunciIsianInput = soalItem.querySelector('.soal-kunci-isian');
+                if (kunciIsianInput) {
+                    const kunciList = Array.isArray(data.kunci_jawaban)
+                        ? data.kunci_jawaban.filter(v => String(v ?? '').trim() !== '')
+                        : (data.kunci_jawaban ? [String(data.kunci_jawaban)] : []);
+                    kunciIsianInput.value = kunciList.join(' | ');
                 }
             }
         }
@@ -1540,6 +1557,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const tipe = item.querySelector('.soal-tipe').value;
         const opsiWrapper = item.querySelector('.opsi-wrapper');
         const bsWrapper = item.querySelector('.bs-wrapper');
+        const esaiWrapper = item.querySelector('.esai-wrapper');
         const radios = item.querySelectorAll('.kunci-radio');
         const checkboxes = item.querySelectorAll('.kunci-checkbox');
         const opsiTexts = item.querySelectorAll('.opsi-teks');
@@ -1556,6 +1574,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tipe === 'benar_salah') {
             opsiWrapper.classList.add('d-none');
             bsWrapper.classList.remove('d-none');
+            if (esaiWrapper) esaiWrapper.classList.add('d-none');
 
             opsiTexts.forEach(el => el.removeAttribute('required'));
             radios.forEach(el => el.removeAttribute('required'));
@@ -1580,6 +1599,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (tipe === 'esai') {
             opsiWrapper.classList.add('d-none');
             bsWrapper.classList.add('d-none');
+            if (esaiWrapper) esaiWrapper.classList.remove('d-none');
 
             opsiTexts.forEach(el => el.removeAttribute('required'));
             radios.forEach(el => el.removeAttribute('required'));
@@ -1594,6 +1614,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             opsiWrapper.classList.remove('d-none');
             bsWrapper.classList.add('d-none');
+            if (esaiWrapper) esaiWrapper.classList.add('d-none');
 
             bobotUtamaInput.readOnly = false;
             bobotUtamaInput.classList.remove('bg-light');
@@ -1627,6 +1648,9 @@ document.addEventListener('DOMContentLoaded', function() {
             item.querySelector('.soal-tipe').name = `soals[${index}][tipe]`;
             item.querySelector('.soal-bobot').name = `soals[${index}][bobot_nilai]`;
             item.querySelector('.soal-pertanyaan').name = `soals[${index}][pertanyaan]`;
+
+            const kunciIsianEl = item.querySelector('.soal-kunci-isian');
+            if (kunciIsianEl) kunciIsianEl.name = `soals[${index}][kunci_isian]`;
             
             item.querySelector('.soal-media').name = `soals[${index}][media]`;
             item.querySelector('.soal-remove-media').name = `soals[${index}][remove_media]`;
@@ -1706,7 +1730,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const n = soalItems.length;
         if (n === 0) return;
 
-        // Hitung total unit penilaian (1 unit per soal biasa, 1 unit per pernyataan pada soal benar_salah)
         let totalUnits = 0;
         soalItems.forEach(item => {
             const tipe = item.querySelector('.soal-tipe').value;
@@ -1767,6 +1790,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     opsi_jawaban: [],
                     has_opsi_media: [],
                     kunci_jawaban: [],
+                    kunci_isian: '',
                     pernyataan_bs: []
                 };
 
@@ -1807,6 +1831,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                     });
+                } else {
+                    soalObj.kunci_isian = item.querySelector('.soal-kunci-isian')?.value?.trim() || '';
                 }
 
                 payloadSoals.push(soalObj);

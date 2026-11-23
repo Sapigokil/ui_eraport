@@ -37,6 +37,116 @@ class SbaController extends Controller
     }
 
     /**
+     * Helper Private: Pecah string kunci isian singkat berpemisah '|' menjadi array variasi bersih
+     */
+    private function parseKunciIsianSingkat($rawKunci): ?array
+    {
+        if (is_array($rawKunci)) {
+            $parts = [];
+            foreach ($rawKunci as $item) {
+                foreach (explode('|', (string) $item) as $sub) {
+                    $clean = trim((string) preg_replace('/\s+/u', ' ', $sub));
+                    if ($clean !== '') {
+                        $parts[] = $clean;
+                    }
+                }
+            }
+            $unique = array_values(array_unique($parts));
+            return !empty($unique) ? $unique : null;
+        }
+
+        $rawStr = trim((string) $rawKunci);
+        if ($rawStr === '') {
+            return null;
+        }
+
+        $parts = [];
+        foreach (explode('|', $rawStr) as $sub) {
+            $clean = trim((string) preg_replace('/\s+/u', ' ', $sub));
+            if ($clean !== '') {
+                $parts[] = $clean;
+            }
+        }
+
+        $unique = array_values(array_unique($parts));
+        return !empty($unique) ? $unique : null;
+    }
+
+    /**
+     * Helper Private: Smart Normalized Exact Match untuk Jawaban Isian Singkat
+     * - Jika kunci berupa angka: wajib cocok secara nilai numerik (mendukung koma/titik desimal, misal 0,5 == 0.5)
+     * - Jika kunci berupa teks: normalisasi huruf kecil, spasi ganda, dan tanda baca pinggir, lalu cocok persis
+     */
+    private function isJawabanIsianCocok(string $jawabanSiswa, array $daftarKunci): bool
+    {
+        $siswaTrim = trim($jawabanSiswa);
+        if ($siswaTrim === '') {
+            return false;
+        }
+
+        // Ekspansi jika elemen array masih mengandung pemisah '|'
+        $kunciVariants = [];
+        foreach ($daftarKunci as $kItem) {
+            foreach (explode('|', (string) $kItem) as $sub) {
+                $clean = trim($sub);
+                if ($clean !== '') {
+                    $kunciVariants[] = $clean;
+                }
+            }
+        }
+
+        if (empty($kunciVariants)) {
+            return false;
+        }
+
+        $normalizeNumber = static function (string $val): ?float {
+            $cleaned = preg_replace('/\s+/u', '', trim($val));
+            if ($cleaned === '') {
+                return null;
+            }
+            // Ganti koma desimal menjadi titik jika hanya ada satu pemisah desimal
+            if (substr_count($cleaned, ',') === 1 && substr_count($cleaned, '.') === 0) {
+                $cleaned = str_replace(',', '.', $cleaned);
+            }
+            if (is_numeric($cleaned)) {
+                return (float) $cleaned;
+            }
+            return null;
+        };
+
+        $normalizeText = static function (string $val): string {
+            $lower = mb_strtolower(trim($val), 'UTF-8');
+            // Hapus tanda baca di awal/akhir kata/kalimat (titik, koma, tanda kutip, kurung, dll.)
+            $stripped = preg_replace('/^[\p{P}\p{S}\s]+|[\p{P}\p{S}\s]+$/u', '', $lower);
+            // Samakan spasi berlebih di tengah menjadi satu spasi
+            return trim((string) preg_replace('/\s+/u', ' ', (string) $stripped));
+        };
+
+        $siswaNum = $normalizeNumber($siswaTrim);
+        $siswaTextNorm = $normalizeText($siswaTrim);
+
+        foreach ($kunciVariants as $kunci) {
+            $kunciNum = $normalizeNumber($kunci);
+
+            // Jalur 1: Pencocokan Numerik Eksak
+            if ($kunciNum !== null) {
+                if ($siswaNum !== null && abs($siswaNum - $kunciNum) < 1e-9) {
+                    return true;
+                }
+                continue;
+            }
+
+            // Jalur 2: Pencocokan Teks Ternormalisasi Eksak
+            $kunciTextNorm = $normalizeText($kunci);
+            if ($kunciTextNorm !== '' && $siswaTextNorm === $kunciTextNorm) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * AJAX Endpoint: Cek ketersediaan Kode Asesmen secara real-time
      */
     public function checkKode(Request $request)
@@ -74,7 +184,7 @@ class SbaController extends Controller
     }
 
     /**
-     * Helper Private: Normalisasi & Validasi Payload Soal (termasuk tipe benar_salah & opsi gambar)
+     * Helper Private: Normalisasi & Validasi Payload Soal (termasuk tipe benar_salah, esai berkunci & opsi gambar)
      */
     private function normalizeSoalPayload(
         Request $request,
@@ -170,10 +280,12 @@ class SbaController extends Controller
             ];
         }
 
-        // Esai
+        // Esai / Isian Singkat (Mendukung Kunci Jawaban Opsional berpemisah '|')
+        $kunciIsian = $this->parseKunciIsianSingkat($soalData['kunci_isian'] ?? ($soalData['kunci_jawaban'] ?? null));
+
         return [
             'opsi_jawaban'  => null,
-            'kunci_jawaban' => null,
+            'kunci_jawaban' => $kunciIsian,
             'bobot_nilai'   => isset($soalData['bobot_nilai']) && is_numeric($soalData['bobot_nilai']) ? (int) $soalData['bobot_nilai'] : 10,
         ];
     }
@@ -192,7 +304,6 @@ class SbaController extends Controller
             ? $existingSoal->opsi_media
             : [];
 
-        // Jika bukan PG / PG Kompleks, bersihkan file gambar opsi lama bila ada
         if (!in_array($tipe, ['pg', 'pg_kompleks'], true)) {
             foreach ($existingOpsiMedia as $oldPath) {
                 if (!empty($oldPath) && Storage::disk('public')->exists($oldPath)) {
@@ -376,7 +487,6 @@ class SbaController extends Controller
             'soals.*.opsi_media.*.max'       => 'Ukuran file gambar pilihan jawaban maksimal 2MB.',
         ]);
 
-        // Validasi & Normalisasi payload tiap soal sebelum masuk transaksi DB
         $normalizedSoals = [];
         foreach ($request->soals as $index => $soalData) {
             $normalizedSoals[$index] = $this->normalizeSoalPayload($request, $soalData, (int) $index);
@@ -695,7 +805,6 @@ class SbaController extends Controller
             ? UjiHasil::where('uji_id', $uji->id)->where('status_pengerjaan', 'selesai')->count()
             : 0;
 
-        // Ambil daftar kelas unik dari peserta ujian ini untuk dropdown filter kelas
         $kelasIdsPeserta = DB::table('uji_hasils')
             ->join('users', 'uji_hasils.asesi_id', '=', 'users.id')
             ->join('siswa', 'users.id_siswa', '=', 'siswa.id_siswa')
@@ -813,7 +922,6 @@ class SbaController extends Controller
             return $pdf->download("Rekap_Hasil_{$uji->kode_uji}.pdf");
         }
 
-        // Muat jawaban peserta secara batch untuk rincian skor per soal
         $dataHasils->load('jawabans');
         $this->attachSiswaKelasInfo($dataHasils);
 
@@ -929,7 +1037,7 @@ class SbaController extends Controller
     }
 
     /**
-     * Helper Private: Hitung Skor Satu Butir Soal Otomatis (PG, PG Kompleks, Benar/Salah)
+     * Helper Private: Hitung Skor Satu Butir Soal Otomatis (PG, PG Kompleks, Benar/Salah, Isian Singkat/Esai Berkunci)
      */
     private function evaluasiSkorSoalOtomatis(UjiSoal $soal, ?UjiJawaban $jawaban): float
     {
@@ -974,9 +1082,19 @@ class SbaController extends Controller
             return round($skorSoal, 2);
         }
 
-        $kunciFiltered = array_values(array_filter($kunciArray, fn($v) => $v !== null && $v !== ''));
+        $kunciFiltered = array_values(array_filter($kunciArray, fn($v) => trim((string) $v) !== ''));
         if (empty($kunciFiltered)) {
             return 0.0;
+        }
+
+        if ($soal->tipe === 'esai') {
+            $jawabanText = is_array($jawaban->jawaban)
+                ? (string) (reset($jawaban->jawaban) ?: '')
+                : (string) $jawaban->jawaban;
+
+            return $this->isJawabanIsianCocok($jawabanText, $kunciFiltered)
+                ? $bobotSoalTarget
+                : 0.0;
         }
 
         if ($soal->tipe === 'pg_kompleks') {
@@ -1003,6 +1121,26 @@ class SbaController extends Controller
     }
 
     /**
+     * Helper Private: Cek apakah suatu butir soal membutuhkan penilaian manual
+     */
+    private function isSoalManualGraded(UjiSoal $soal): bool
+    {
+        $kunciArray = is_array($soal->kunci_jawaban)
+            ? array_values(array_filter($soal->kunci_jawaban, fn($v) => trim((string) $v) !== ''))
+            : [];
+
+        if ($soal->tipe === 'esai') {
+            return empty($kunciArray);
+        }
+
+        if (in_array($soal->tipe, ['pg', 'pg_kompleks'], true)) {
+            return empty($kunciArray);
+        }
+
+        return false;
+    }
+
+    /**
      * Helper Private: Proses Hitung Ulang & Simpan Skor untuk 1 Record UjiHasil
      */
     private function recalculateSingleHasil(UjiHasil $hasil, $soals): float
@@ -1013,10 +1151,7 @@ class SbaController extends Controller
 
         foreach ($soals as $soal) {
             $jawaban = $mapJawaban->get($soal->id);
-            $kunciArray = is_array($soal->kunci_jawaban)
-                ? array_values(array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== ''))
-                : [];
-            $isManualGraded = ($soal->tipe === 'esai') || (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray));
+            $isManualGraded = $this->isSoalManualGraded($soal);
 
             if ($isManualGraded) {
                 if ($jawaban) {
@@ -1047,7 +1182,7 @@ class SbaController extends Controller
     }
 
     /**
-     * Refresh / Hitung Ulang Nilai Satu Peserta Sesuai Bobot Soal Terbaru
+     * Refresh / Hitung Ulang Nilai Satu Peserta Sesuai Bobot & Kunci Soal Terbaru
      */
     public function refreshNilaiHasil($hasil_id)
     {
@@ -1060,7 +1195,7 @@ class SbaController extends Controller
 
         return redirect()->back()->with(
             'success',
-            "Nilai peserta berhasil diperbarui sesuai bobot soal terbaru (Total Skor Tersimpan: {$totalSkorBaru} Poin)."
+            "Nilai peserta berhasil diperbarui sesuai bobot & kunci soal terbaru (Total Skor Tersimpan: {$totalSkorBaru} Poin)."
         );
     }
 
@@ -1109,12 +1244,12 @@ class SbaController extends Controller
 
         return redirect()->back()->with(
             'success',
-            "Berhasil menghitung ulang dan memperbarui nilai untuk {$jumlahDiproses} {$keteranganScope} sesuai bobot soal terbaru."
+            "Berhasil menghitung ulang dan memperbarui nilai untuk {$jumlahDiproses} {$keteranganScope} sesuai bobot & kunci soal terbaru."
         );
     }
 
     /**
-     * Simpan Penilaian Manual (Esai & PG/PGK Tanpa Kunci) serta Finalisasi Skor (Status menjadi 'final')
+     * Simpan Penilaian Manual (Uraian Tanpa Kunci & PG/PGK Tanpa Kunci) serta Finalisasi Skor (Status menjadi 'final')
      */
     public function simpanPenilaianEsai(Request $request, $hasil_id)
     {
@@ -1122,7 +1257,7 @@ class SbaController extends Controller
         $this->authorizeUjiAccess($hasil->uji);
 
         $skorManualTotal = 0;
-        $skorOtomatisPg = 0;
+        $skorOtomatisTotal = 0;
 
         $skorInputs = $request->input('skor_manual', $request->input('skor_esai', []));
 
@@ -1131,8 +1266,7 @@ class SbaController extends Controller
                 ->where('uji_soal_id', $soal->id)
                 ->first();
 
-            $kunciArray = is_array($soal->kunci_jawaban) ? array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== '') : [];
-            $isManualGraded = ($soal->tipe === 'esai') || (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray));
+            $isManualGraded = $this->isSoalManualGraded($soal);
 
             if ($isManualGraded) {
                 $skorDidapat = isset($skorInputs[$soal->id]) ? (float) $skorInputs[$soal->id] : ($jawaban ? (float) $jawaban->skor_didapat : 0);
@@ -1157,15 +1291,15 @@ class SbaController extends Controller
                 $skorManualTotal += $skorDidapat;
             } else {
                 if ($jawaban) {
-                    $skorOtomatisPg += (float) $jawaban->skor_didapat;
+                    $skorOtomatisTotal += (float) $jawaban->skor_didapat;
                 }
             }
         }
 
-        $totalSkorAkhir = $skorOtomatisPg + $skorManualTotal;
+        $totalSkorAkhir = $skorOtomatisTotal + $skorManualTotal;
 
         $hasil->update([
-            'skor_otomatis'     => $skorOtomatisPg,
+            'skor_otomatis'     => $skorOtomatisTotal,
             'total_skor'        => $totalSkorAkhir,
             'status_pengerjaan' => 'final',
         ]);
@@ -1219,7 +1353,7 @@ class SbaController extends Controller
                 continue;
             }
 
-            if (in_array($soal->tipe, ['pg', 'pg_kompleks', 'benar_salah'])) {
+            if (!$this->isSoalManualGraded($soal)) {
                 $skorItem = $this->evaluasiSkorSoalOtomatis($soal, $jawabanSiswa);
                 $totalSkorOtomatis += $skorItem;
                 $jawabanSiswa->update(['skor_didapat' => $skorItem]);
@@ -1366,7 +1500,7 @@ class SbaController extends Controller
     }
 
     /**
-     * Unduh Template Excel (.xlsx) untuk Import Soal SBA (Mendukung Kolom Dinamis opsi_a, opsi_b, ... opsi_f, dst.)
+     * Unduh Template Excel (.xlsx) untuk Import Soal SBA
      */
     public function downloadTemplateSoal()
     {
@@ -1374,7 +1508,6 @@ class SbaController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Soal SBA');
 
-        // 1. Header Kolom Standar (Kolom opsi_* dapat ditambah seperti opsi_f, opsi_g, dst. untuk benar_salah)
         $headers = [
             'no',
             'tipe_soal',
@@ -1390,7 +1523,6 @@ class SbaController extends Controller
 
         $sheet->fromArray($headers, null, 'A1');
 
-        // Styling Header
         $headerStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => [
@@ -1405,16 +1537,15 @@ class SbaController extends Controller
         $sheet->getStyle('A1:J1')->applyFromArray($headerStyle);
         $sheet->getRowDimension(1)->setRowHeight(24);
 
-        // 2. Contoh Pengisian 4 Tipe Soal (PG, PG Kompleks, Benar Salah, Esai)
         $contohData = [
             [1, 'pg', 'Ibu kota Provinsi Jawa Tengah adalah...', 'Bandung', 'Surabaya', 'Semarang', 'Surakarta', 'Yogyakarta', 'C', 10],
             [2, 'pg_kompleks', 'Manakah di bawah ini yang termasuk bilangan prima?', '2', '4', '5', '9', '11', 'A,C,E', 20],
             [3, 'benar_salah', 'Perhatikan informasi berikut mengenai tata surya. Tentukan Benar (B) atau Salah (S) untuk setiap pernyataan di bawah ini!', 'Matahari adalah pusat tata surya', 'Bumi memiliki dua satelit alami', 'Planet terbesar di tata surya adalah Jupiter', '', '', 'B,S,B', '10,10,20'],
-            [4, 'esai', 'Jelaskan secara singkat proses terjadinya siklus air!', '', '', '', '', '', '', 30],
+            [4, 'esai', 'Presiden pertama Republik Indonesia adalah...', '', '', '', '', '', 'Soekarno | Ir. Soekarno', 10],
+            [5, 'esai', 'Jelaskan secara singkat proses terjadinya siklus air!', '', '', '', '', '', '', 20],
         ];
         $sheet->fromArray($contohData, null, 'A2');
 
-        // Data Validation Dropdown untuk kolom tipe_soal (B2:B200)
         for ($row = 2; $row <= 200; $row++) {
             $validation = $sheet->getCell("B{$row}")->getDataValidation();
             $validation->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
@@ -1424,7 +1555,6 @@ class SbaController extends Controller
             $validation->setFormula1('"pg,pg_kompleks,benar_salah,esai"');
         }
 
-        // Auto-size kolom
         for ($colIdx = 1; $colIdx <= count($headers); $colIdx++) {
             $colLetter = Coordinate::stringFromColumnIndex($colIdx);
             $sheet->getColumnDimension($colLetter)->setAutoSize(true);
@@ -1442,8 +1572,7 @@ class SbaController extends Controller
     }
 
     /**
-     * Export Daftar Soal dari Form ke Excel (.xlsx) dengan Kolom Dinamis Full Huruf (opsi_a..opsi_e, opsi_f, opsi_g, dst.)
-     * Soal/Opsi yang memiliki gambar otomatis ditandai dengan teks "(isi gambar)"
+     * Export Daftar Soal dari Form ke Excel (.xlsx)
      */
     public function exportSoalExcel(Request $request)
     {
@@ -1455,7 +1584,6 @@ class SbaController extends Controller
             ], 422);
         }
 
-        // Hitung jumlah kolom opsi terbanyak (minimal 5 untuk opsi_a..opsi_e, bertambah dinamis jika pernyataan > 5)
         $maxOpsiCount = 5;
         foreach ($rawSoals as $soal) {
             if (strtolower(trim((string) ($soal['tipe'] ?? ''))) === 'benar_salah') {
@@ -1472,7 +1600,6 @@ class SbaController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Template Soal SBA');
 
-        // 1. Susun Header Dinamis Full Huruf (no, tipe_soal, pertanyaan, opsi_a..opsi_e, opsi_f, opsi_g.., kunci_jawaban, bobot_nilai)
         $headers = [
             'no',
             'tipe_soal',
@@ -1480,7 +1607,7 @@ class SbaController extends Controller
         ];
 
         for ($i = 0; $i < $maxOpsiCount; $i++) {
-            $suffixHuruf = strtolower(Coordinate::stringFromColumnIndex($i + 1)); // a..e, f, g, ..., z, aa, ab
+            $suffixHuruf = strtolower(Coordinate::stringFromColumnIndex($i + 1));
             $headers[] = 'opsi_' . $suffixHuruf;
         }
 
@@ -1577,8 +1704,9 @@ class SbaController extends Controller
                 sort($hurufList);
                 $kunciCol = implode(',', $hurufList);
             } else {
-                // Esai
-                $kunciCol = '';
+                // Esai / Isian Singkat
+                $parsedKunci = $this->parseKunciIsianSingkat($soal['kunci_isian'] ?? ($soal['kunci_jawaban'] ?? null));
+                $kunciCol = !empty($parsedKunci) ? implode(' | ', $parsedKunci) : '';
             }
 
             $rowsData[] = array_merge(
@@ -1590,7 +1718,6 @@ class SbaController extends Controller
 
         $sheet->fromArray($rowsData, null, 'A2');
 
-        // Data Validation Dropdown untuk kolom tipe_soal (B2:B200)
         $maxRowValidation = max(200, count($rowsData) + 20);
         for ($row = 2; $row <= $maxRowValidation; $row++) {
             $validation = $sheet->getCell("B{$row}")->getDataValidation();
@@ -1622,7 +1749,7 @@ class SbaController extends Controller
     }
 
     /**
-     * AJAX Endpoint: Smart Header Parser untuk File Excel Soal (Mendukung Banyak Kolom opsi_*)
+     * AJAX Endpoint: Smart Header Parser untuk File Excel Soal
      */
     public function importSoalPreview(Request $request)
     {
@@ -1646,7 +1773,6 @@ class SbaController extends Controller
                 ], 422);
             }
 
-            // 1. Smart Header Detection: Petakan indeks kolom berdasarkan nama header pada baris pertama
             $headerRow = $rows[0];
             $colMap = [];
             $opsiColIndices = [];
@@ -1690,7 +1816,6 @@ class SbaController extends Controller
             $colIdxKunci      = $colMap['kunci_jawaban'];
             $colIdxBobot      = $colMap['bobot_nilai'];
 
-            // 2. Parsing & Validasi Tiap Baris Soal (Mulai Baris 2)
             $parsedSoals = [];
             $errors = [];
             $hurufToIndex = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, 'E' => 4];
@@ -1698,7 +1823,6 @@ class SbaController extends Controller
             foreach (array_slice($rows, 1) as $idx => $row) {
                 $excelRowNum = $idx + 2;
 
-                // Lewati baris yang benar-benar kosong pada seluruh kolom relevan
                 $joined = '';
                 foreach ($relevantColIndices as $rColIdx) {
                     $joined .= trim((string) ($row[$rColIdx] ?? ''));
@@ -1710,13 +1834,13 @@ class SbaController extends Controller
                 $tipe       = strtolower(trim((string) ($row[$colIdxTipe] ?? '')));
                 $pertanyaan = trim((string) ($row[$colIdxPertanyaan] ?? ''));
 
-                // Ambil seluruh nilai dari kolom berawalan opsi_* secara berurutan (opsi_a, opsi_b, ..., opsi_f, dst.)
                 $allOpsiValues = [];
                 foreach ($opsiColIndices as $oColIdx) {
                     $allOpsiValues[] = trim((string) ($row[$oColIdx] ?? ''));
                 }
 
-                $kunciRawClean = preg_replace('/[\s\x{00A0}\x{200B}-\x{200D}\x{FEFF}]+/u', '', (string) ($row[$colIdxKunci] ?? ''));
+                $kunciOriginal = trim((string) ($row[$colIdxKunci] ?? ''));
+                $kunciRawClean = preg_replace('/[\s\x{00A0}\x{200B}-\x{200D}\x{FEFF}]+/u', '', $kunciOriginal);
                 $kunciRaw = strtoupper((string) $kunciRawClean);
 
                 $bobotRawClean = preg_replace('/[\s\x{00A0}\x{200B}-\x{200D}\x{FEFF}]+/u', '', (string) ($row[$colIdxBobot] ?? ''));
@@ -1737,7 +1861,6 @@ class SbaController extends Controller
                 $kunciJawaban = [];
 
                 if ($tipe === 'benar_salah') {
-                    // Ambil seluruh pernyataan yang terisi dari seluruh kolom opsi_* (tidak dibatasi 5)
                     $pernyataanTerisi = array_values(array_filter($allOpsiValues, fn($v) => $v !== ''));
                     $jumlahPernyataan = count($pernyataanTerisi);
 
@@ -1773,7 +1896,6 @@ class SbaController extends Controller
                         continue;
                     }
 
-                    // Parsing bobot: dipisah koma per pernyataan (misal "10,15,5") atau 1 angka total (dibagi rata)
                     $bobotPerItem = [];
                     if ($bobotRaw !== '' && str_contains($bobotRaw, ',')) {
                         $bobotParts = array_map('trim', explode(',', $bobotRaw));
@@ -1802,7 +1924,6 @@ class SbaController extends Controller
                     }
                     $bobot = array_sum($bobotPerItem);
                 } elseif (in_array($tipe, ['pg', 'pg_kompleks'], true)) {
-                    // Untuk PG & PG Kompleks, gunakan 5 kolom opsi pertama (opsi_a..opsi_e)
                     $opsiPg = [
                         $allOpsiValues[0] ?? '',
                         $allOpsiValues[1] ?? '',
@@ -1855,6 +1976,9 @@ class SbaController extends Controller
                             continue;
                         }
                     }
+                } else {
+                    // Esai / Isian Singkat: kunci jawaban bersifat opsional, mendukung pemisah '|'
+                    $kunciJawaban = $this->parseKunciIsianSingkat($kunciOriginal) ?? [];
                 }
 
                 $parsedSoals[] = [

@@ -23,6 +23,7 @@ return [
                 'Penambahan fitur Equation Editor untuk input soal matematika, fisika, dan kimia pada modul Smart Based Assessment (SBA).',
                 'Penambahan Fitur Text editor untuk input soal dengan format teks yang lebih kaya (bold, italic, underline, bullet list, numbered list, dan lainnya).',
                 'Penambahan Fitur anti sleep screen pada halaman ujian untuk mencegah layar perangkat peserta ujian mati selama ujian berlangsung.',
+                'Kunci Jawaban pada soal esai dapat diatur secara opsional untuk memudahkan penilaian otomatis pada soal esai tertentu.',
             ],
         ],
         [
