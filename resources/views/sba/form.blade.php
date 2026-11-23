@@ -6,6 +6,14 @@
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
     <x-app.navbar />
 
+    {{-- KaTeX untuk Live Preview Rumus Matematika --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+    {{-- MathLive untuk Editor Rumus Visual seperti MS Word --}}
+    <script defer src="https://cdn.jsdelivr.net/npm/mathlive@0.101.0/dist/mathlive.min.js"></script>
+
     <style>
         .btn-export-excel-ungu {
             background-color: #ffffff !important;
@@ -17,6 +25,94 @@
             background-color: #f8f5ff !important;
             border-color: #59339d !important;
             color: #59339d !important;
+        }
+        .editor-mini-toolbar {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 3px;
+        }
+        .btn-fmt-helper {
+            background-color: #ffffff;
+            border: 1px solid #d2d6da;
+            color: #344767;
+            font-size: 0.72rem;
+            line-height: 1.2;
+            padding: 2px 7px;
+            border-radius: 5px;
+            transition: all 0.15s ease;
+        }
+        .btn-fmt-helper:hover {
+            background-color: #f1f3f5;
+            border-color: #6f42c1;
+            color: #6f42c1;
+        }
+        .btn-eq-helper {
+            background-color: #f3ebff;
+            border: 1px solid #d6c2f5;
+            color: #6f42c1;
+            font-weight: 700;
+            font-size: 0.72rem;
+            line-height: 1.2;
+            padding: 2px 8px;
+            border-radius: 5px;
+            transition: all 0.15s ease;
+        }
+        .btn-eq-helper:hover {
+            background-color: #6f42c1;
+            border-color: #6f42c1;
+            color: #ffffff;
+        }
+        .math-live-preview {
+            background-color: #faf7ff;
+            border: 1px dashed #c8b2ef;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 6px;
+            font-size: 0.9rem;
+            color: #1e293b;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+        .math-live-preview-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #6f42c1;
+            letter-spacing: 0.4px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        math-field {
+            width: 100%;
+            font-size: 1.35rem;
+            padding: 12px 14px;
+            border: 2px solid #cbd5e1;
+            border-radius: 10px;
+            background-color: #ffffff;
+            color: #0f172a;
+            min-height: 74px;
+            --keyboard-zindex: 1070;
+        }
+        math-field:focus-within {
+            border-color: #6f42c1;
+            box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.16);
+            outline: none;
+        }
+        .eq-quick-btn {
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            background: #ffffff;
+            color: #334155;
+            font-weight: 600;
+            transition: all 0.15s ease;
+        }
+        .eq-quick-btn:hover {
+            border-color: #6f42c1;
+            background: #f6f2ff;
+            color: #6f42c1;
         }
     </style>
 
@@ -305,7 +401,7 @@
                             {{-- SECTION 2: PENYUSUNAN SOAL --}}
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mt-4 mb-3">
                                 <h6 class="mb-0 text-info text-sm"><i class="fas fa-list-ol me-1"></i> Bagian 2: Daftar Soal</h6>
-                                <span class="text-xs text-secondary"><i class="fas fa-info-circle"></i> Tahan & geser icon grid atau gunakan tombol panah untuk memindah posisi.</span>
+                                <span class="text-xs text-secondary"><i class="fas fa-info-circle"></i> Blok teks lalu klik <strong>B / I / U</strong> untuk memformat huruf, atau <strong>fx Rumus</strong> untuk persamaan matematika.</span>
                             </div>
                             
                             <div class="bg-gray-50 rounded p-2 border" id="soal-container" style="min-height: 200px;">
@@ -341,6 +437,85 @@
     </div>
     <x-app.footer />
 </main>
+
+{{-- MODAL VISUAL EQUATION EDITOR (MATHLIVE - SEPERTI EQUATION DI MS WORD) --}}
+<div class="modal fade" id="modalEquationEditor" tabindex="-1" aria-labelledby="modalEquationEditorLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header bg-gradient-primary border-0 py-3 px-4">
+                <h6 class="modal-title fw-bold text-white mb-0" id="modalEquationEditorLabel">
+                    <i class="fas fa-square-root-alt me-2"></i> Editor Rumus Matematika (Visual)
+                </h6>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-white text-start">
+                <p class="text-xs text-secondary mb-2">
+                    Ketik rumus langsung pada kotak di bawah (gunakan tombol simbol cepat atau keyboard, misal <code>/</code> untuk pecahan, <code>^</code> untuk pangkat, atau klik ikon keyboard virtual di sudut kanan kotak):
+                </p>
+
+                {{-- TOMBOL SIMBOL CEPAT --}}
+                <div class="d-flex flex-wrap gap-1 mb-2 p-2 bg-light rounded border">
+                    <button type="button" class="eq-quick-btn" data-latex="\frac{#@}{#?}" title="Pecahan">a/b (Pecahan)</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\sqrt{#@}" title="Akar Kuadrat">√x (Akar)</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\sqrt[#?]{#@}" title="Akar Pangkat n">ⁿ√x</button>
+                    <button type="button" class="eq-quick-btn" data-latex="{#@}^{#?}" title="Pangkat">xⁿ (Pangkat)</button>
+                    <button type="button" class="eq-quick-btn" data-latex="{#@}_{#?}" title="Indeks Bawah">xₙ (Subscript)</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\sum_{#?}^{#?}" title="Sigma">∑ (Sigma)</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\int_{#?}^{#?}" title="Integral">∫ (Integral)</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\lim_{x \to #?}" title="Limit">lim</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\times" title="Kali">×</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\div" title="Bagi">÷</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\pm" title="Plus Minus">±</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\leq" title="Kurang dari sama dengan">≤</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\geq" title="Lebih dari sama dengan">≥</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\neq" title="Tidak sama dengan">≠</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\pi" title="Pi">π</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\theta" title="Theta">θ</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\alpha" title="Alpha">α</button>
+                    <button type="button" class="eq-quick-btn" data-latex="\beta" title="Beta">β</button>
+                    <button type="button" class="eq-quick-btn" data-latex="^{\circ}" title="Derajat">°</button>
+                </div>
+
+                {{-- KOTAK INPUT VISUAL MATHLIVE --}}
+                <div class="mb-3">
+                    <math-field id="mathlive-editor-field" smart-fence="true"></math-field>
+                </div>
+
+                {{-- PILIHAN PENEMPATAN RUMUS --}}
+                <div class="p-2 px-3 bg-light rounded border d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <span class="text-xs fw-bold text-dark">Tampilan di Soal:</span>
+                    <div class="d-flex flex-wrap gap-3">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="eq_display_mode" id="eqModeInline" value="inline" checked>
+                            <label class="form-check-label text-xs text-dark cursor-pointer mb-0" for="eqModeInline">
+                                Sebaris dengan kalimat (<code>$ ... $</code>)
+                            </label>
+                        </div>
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="radio" name="eq_display_mode" id="eqModeBlock" value="block">
+                            <label class="form-check-label text-xs text-dark cursor-pointer mb-0" for="eqModeBlock">
+                                Baris baru rata tengah (<code>$$ ... $$</code>)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top bg-light py-2 px-4 d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-sm btn-outline-danger mb-0" id="btn-clear-mathlive">
+                    <i class="fas fa-eraser me-1"></i> Bersihkan
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary fw-bold px-3 mb-0" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" id="btn-insert-mathlive" class="btn btn-sm bg-gradient-primary text-white fw-bold px-4 shadow-sm mb-0">
+                        <i class="fas fa-check me-1"></i> Sisipkan Rumus
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {{-- MODAL PERINGATAN TOTAL BOBOT NILAI TIDAK SAMA DENGAN 100 --}}
 <div class="modal fade" id="modalPeringatanBobot" tabindex="-1" aria-labelledby="modalPeringatanBobotLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -522,8 +697,24 @@
                 
                 <div class="col-md-9">
                     <div class="form-group mb-2">
-                        <label class="form-control-label text-xs mb-1 label-pertanyaan-utama">Pertanyaan <span class="text-danger">*</span></label>
-                        <textarea class="form-control form-control-sm border px-2 py-1 soal-pertanyaan" rows="4" placeholder="Ketikkan teks pertanyaan di sini..." required style="resize: vertical; min-height: 90px; max-height: 250px;"></textarea>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-1">
+                            <label class="form-control-label text-xs mb-0 label-pertanyaan-utama">Pertanyaan <span class="text-danger">*</span></label>
+                            <div class="editor-mini-toolbar">
+                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="b" title="Tebal (Ctrl+B)"><strong>B</strong></button>
+                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="i" title="Miring (Ctrl+I)"><em>I</em></button>
+                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="u" title="Garis Bawah (Ctrl+U)"><u>U</u></button>
+                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="sub" title="Subscript (Contoh: H₂O)">x<sub>2</sub></button>
+                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="sup" title="Superscript (Contoh: m²)">x<sup>2</sup></button>
+                                <button type="button" class="btn btn-eq-helper mb-0 btn-open-equation" data-target="pertanyaan" title="Buka Editor Rumus Matematika">
+                                    <i class="fas fa-square-root-alt me-1"></i> fx Rumus
+                                </button>
+                            </div>
+                        </div>
+                        <textarea class="form-control form-control-sm border px-2 py-1 soal-pertanyaan math-watch-input" rows="4" placeholder="Ketikkan teks pertanyaan di sini..." required style="resize: vertical; min-height: 90px; max-height: 250px;"></textarea>
+                        <div class="math-live-preview d-none">
+                            <span class="math-live-preview-label"><i class="fas fa-eye me-1"></i> Pratinjau Tampilan:</span>
+                            <div class="math-preview-content"></div>
+                        </div>
                     </div>
 
                     {{-- SLOT INPUT GAMBAR SOAL & PREVIEW --}}
@@ -572,7 +763,23 @@
                                 <div class="row g-2 align-items-start">
                                     {{-- KOLOM KIRI: ISIAN KETIKAN OPSI --}}
                                     <div class="col-12 col-md-7">
-                                        <textarea class="form-control form-control-sm border px-2 py-1 opsi-teks" rows="2" placeholder="Masukkan teks untuk opsi {{ $huruf }} (atau kosongkan jika hanya memakai gambar)..." style="resize: vertical; min-height: 58px;"></textarea>
+                                        <div class="d-flex justify-content-end mb-1">
+                                            <div class="editor-mini-toolbar">
+                                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="b" title="Tebal (Ctrl+B)"><strong>B</strong></button>
+                                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="i" title="Miring (Ctrl+I)"><em>I</em></button>
+                                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="u" title="Garis Bawah (Ctrl+U)"><u>U</u></button>
+                                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="sub" title="Subscript">x<sub>2</sub></button>
+                                                <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="sup" title="Superscript">x<sup>2</sup></button>
+                                                <button type="button" class="btn btn-eq-helper mb-0 btn-open-equation" data-target="opsi" title="Sisipkan Rumus Matematika ke Opsi {{ $huruf }}">
+                                                    <i class="fas fa-square-root-alt me-1"></i> fx Rumus
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <textarea class="form-control form-control-sm border px-2 py-1 opsi-teks math-watch-input" rows="2" placeholder="Masukkan teks untuk opsi {{ $huruf }} (atau kosongkan jika hanya memakai gambar)..." style="resize: vertical; min-height: 58px;"></textarea>
+                                        <div class="math-live-preview d-none">
+                                            <span class="math-live-preview-label"><i class="fas fa-eye me-1"></i> Pratinjau Opsi {{ $huruf }}:</span>
+                                            <div class="math-preview-content"></div>
+                                        </div>
                                     </div>
 
                                     {{-- KOLOM KANAN: INSERT GAMBAR OPSI & PREVIEW --}}
@@ -627,12 +834,28 @@
 {{-- TEMPLATE SATU BARIS PERNYATAAN BENAR / SALAH --}}
 <template id="bs-row-template">
     <div class="bs-row p-2 bg-light border rounded">
-        <div class="row g-2 align-items-center">
-            <div class="col-auto">
+        <div class="row g-2 align-items-start">
+            <div class="col-auto pt-1">
                 <span class="badge bg-secondary bs-row-num">1</span>
             </div>
             <div class="col">
-                <textarea class="form-control form-control-sm border bg-white px-2 py-1 bs-teks" rows="1" placeholder="Tuliskan teks pernyataan..." style="resize: vertical;"></textarea>
+                <div class="d-flex justify-content-end mb-1">
+                    <div class="editor-mini-toolbar">
+                        <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="b" title="Tebal (Ctrl+B)"><strong>B</strong></button>
+                        <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="i" title="Miring (Ctrl+I)"><em>I</em></button>
+                        <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="u" title="Garis Bawah (Ctrl+U)"><u>U</u></button>
+                        <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="sub" title="Subscript">x<sub>2</sub></button>
+                        <button type="button" class="btn btn-fmt-helper mb-0 btn-format-text" data-tag="sup" title="Superscript">x<sup>2</sup></button>
+                        <button type="button" class="btn btn-eq-helper mb-0 btn-open-equation" data-target="bs" title="Sisipkan Rumus Matematika">
+                            <i class="fas fa-square-root-alt me-1"></i> fx
+                        </button>
+                    </div>
+                </div>
+                <textarea class="form-control form-control-sm border bg-white px-2 py-1 bs-teks math-watch-input" rows="1" placeholder="Tuliskan teks pernyataan..." style="resize: vertical;"></textarea>
+                <div class="math-live-preview d-none">
+                    <span class="math-live-preview-label"><i class="fas fa-eye me-1"></i> Pratinjau:</span>
+                    <div class="math-preview-content"></div>
+                </div>
             </div>
             <div class="col-md-auto">
                 <div class="d-flex align-items-center gap-2 bg-white border rounded px-2 py-1">
@@ -680,6 +903,226 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
+    /* ========================================================================
+     * TOOLBAR FORMAT TEKS (B/I/U/SUB/SUP), EDITOR RUMUS (MATHLIVE) & PREVIEW KATEX
+     * ======================================================================== */
+    const modalEqEl = document.getElementById('modalEquationEditor');
+    const mathFieldEl = document.getElementById('mathlive-editor-field');
+    const btnInsertMath = document.getElementById('btn-insert-mathlive');
+    const btnClearMath = document.getElementById('btn-clear-mathlive');
+    let activeEquationTextarea = null;
+
+    const RICH_TAG_REGEX = /<\/?(b|i|u|sub|sup|strong|em)\s*>/i;
+
+    function applyFormatTagToTextarea(textareaEl, tag) {
+        if (!textareaEl || !tag) return;
+        const start = textareaEl.selectionStart ?? textareaEl.value.length;
+        const end = textareaEl.selectionEnd ?? textareaEl.value.length;
+        const currentVal = textareaEl.value;
+        const selectedText = currentVal.substring(start, end);
+        const openTag = `<${tag}>`;
+        const closeTag = `</${tag}>`;
+
+        if (selectedText.length > 0) {
+            // Toggle: jika teks terpilih sudah terbungkus tag yang sama, lepas tag-nya
+            if (selectedText.startsWith(openTag) && selectedText.endsWith(closeTag)) {
+                const unwrapped = selectedText.slice(openTag.length, selectedText.length - closeTag.length);
+                textareaEl.value = currentVal.substring(0, start) + unwrapped + currentVal.substring(end);
+                textareaEl.focus();
+                textareaEl.setSelectionRange(start, start + unwrapped.length);
+            } else {
+                const wrapped = `${openTag}${selectedText}${closeTag}`;
+                textareaEl.value = currentVal.substring(0, start) + wrapped + currentVal.substring(end);
+                textareaEl.focus();
+                textareaEl.setSelectionRange(start + openTag.length, start + openTag.length + selectedText.length);
+            }
+        } else {
+            const placeholderText = 'teks';
+            const inserted = `${openTag}${placeholderText}${closeTag}`;
+            textareaEl.value = currentVal.substring(0, start) + inserted + currentVal.substring(end);
+            textareaEl.focus();
+            textareaEl.setSelectionRange(start + openTag.length, start + openTag.length + placeholderText.length);
+        }
+
+        renderMathPreviewForTextarea(textareaEl);
+    }
+
+    function buildSafeRichHtmlWithMathTokens(rawText) {
+        const mathTokens = [];
+        // 1. Amankan blok rumus $$...$$ dan $...$ lebih dulu agar tidak tersentuh escaping HTML
+        const protectedText = rawText.replace(/(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g, function(match) {
+            const token = `@@MATH_TOKEN_${mathTokens.length}@@`;
+            mathTokens.push(match);
+            return token;
+        });
+
+        // 2. Escape seluruh HTML berbahaya di luar blok rumus
+        let safeHtml = protectedText
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // 3. Kembalikan hanya tag format teks yang diizinkan (whitelist)
+        safeHtml = safeHtml.replace(/&lt;(\/?(b|i|u|sub|sup|strong|em))&gt;/gi, '<$1>');
+
+        // 4. Konversi baris baru menjadi <br>
+        safeHtml = safeHtml.replace(/\n/g, '<br>');
+
+        // 5. Kembalikan blok rumus matematika ke posisi semula
+        safeHtml = safeHtml.replace(/@@MATH_TOKEN_(\d+)@@/g, function(_, idx) {
+            return mathTokens[Number(idx)] ?? '';
+        });
+
+        return safeHtml;
+    }
+
+    function renderMathPreviewForTextarea(textareaEl) {
+        if (!textareaEl) return;
+        const wrapper = textareaEl.closest('.form-group, .col-12, .col');
+        if (!wrapper) return;
+
+        const previewBox = wrapper.querySelector('.math-live-preview');
+        const previewContent = previewBox?.querySelector('.math-preview-content');
+        if (!previewBox || !previewContent) return;
+
+        const rawText = textareaEl.value || '';
+        const hasMath = rawText.includes('$');
+        const hasRichTag = RICH_TAG_REGEX.test(rawText);
+
+        if (!hasMath && !hasRichTag) {
+            previewBox.classList.add('d-none');
+            previewContent.innerHTML = '';
+            return;
+        }
+
+        previewBox.classList.remove('d-none');
+        previewContent.innerHTML = buildSafeRichHtmlWithMathTokens(rawText);
+
+        if (hasMath && typeof renderMathInElement === 'function') {
+            renderMathInElement(previewContent, {
+                delimiters: [
+                    { left: '$$', right: '$$', display: true },
+                    { left: '$', right: '$', display: false }
+                ],
+                throwOnError: false
+            });
+        }
+    }
+
+    function refreshAllMathPreviews(scopeEl = document) {
+        scopeEl.querySelectorAll('.math-watch-input').forEach(ta => {
+            renderMathPreviewForTextarea(ta);
+        });
+    }
+
+    // Pantau perubahan ketikan pada semua kolom soal, opsi, dan pernyataan BS
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.classList.contains('math-watch-input')) {
+            renderMathPreviewForTextarea(e.target);
+        }
+    });
+
+    // Shortcut keyboard Ctrl+B, Ctrl+I, Ctrl+U di dalam textarea soal/opsi/pernyataan
+    document.addEventListener('keydown', function(e) {
+        if (!e.target || !e.target.classList.contains('math-watch-input')) return;
+        if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+
+        const key = e.key.toLowerCase();
+        if (key === 'b' || key === 'i' || key === 'u') {
+            e.preventDefault();
+            applyFormatTagToTextarea(e.target, key);
+        }
+    });
+
+    // Delegasi klik tombol format teks (B, I, U, x₂, x²)
+    document.addEventListener('click', function(e) {
+        const btnFmt = e.target.closest('.btn-format-text');
+        if (!btnFmt) return;
+
+        const wrapper = btnFmt.closest('.form-group, .col-12, .col');
+        const targetTa = wrapper ? wrapper.querySelector('.math-watch-input') : null;
+        if (!targetTa) return;
+
+        applyFormatTagToTextarea(targetTa, btnFmt.dataset.tag);
+    });
+
+    // Delegasi klik tombol "fx Rumus"
+    document.addEventListener('click', function(e) {
+        const btnEq = e.target.closest('.btn-open-equation');
+        if (!btnEq) return;
+
+        const wrapper = btnEq.closest('.form-group, .col-12, .col');
+        const targetTa = wrapper ? wrapper.querySelector('.math-watch-input') : null;
+        if (!targetTa) return;
+
+        activeEquationTextarea = targetTa;
+        if (mathFieldEl) {
+            mathFieldEl.value = '';
+        }
+
+        const bsModalEq = bootstrap.Modal.getOrCreateInstance(modalEqEl);
+        bsModalEq.show();
+    });
+
+    if (modalEqEl && mathFieldEl) {
+        modalEqEl.addEventListener('shown.bs.modal', function() {
+            mathFieldEl.focus();
+        });
+    }
+
+    // Tombol simbol cepat di dalam modal MathLive
+    document.querySelectorAll('.eq-quick-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (!mathFieldEl) return;
+            const latexTpl = this.dataset.latex || '';
+            mathFieldEl.executeCommand(['insert', latexTpl]);
+            mathFieldEl.focus();
+        });
+    });
+
+    if (btnClearMath && mathFieldEl) {
+        btnClearMath.addEventListener('click', function() {
+            mathFieldEl.value = '';
+            mathFieldEl.focus();
+        });
+    }
+
+    if (btnInsertMath && mathFieldEl) {
+        btnInsertMath.addEventListener('click', function() {
+            const latex = (mathFieldEl.value || '').trim();
+            if (!latex) {
+                mathFieldEl.focus();
+                return;
+            }
+
+            const displayMode = document.querySelector('input[name="eq_display_mode"]:checked')?.value || 'inline';
+            const formattedFormula = displayMode === 'block'
+                ? `\n$$${latex}$$\n`
+                : `$${latex}$`;
+
+            if (activeEquationTextarea) {
+                const start = activeEquationTextarea.selectionStart ?? activeEquationTextarea.value.length;
+                const end = activeEquationTextarea.selectionEnd ?? activeEquationTextarea.value.length;
+                const currentVal = activeEquationTextarea.value;
+
+                activeEquationTextarea.value =
+                    currentVal.substring(0, start) +
+                    formattedFormula +
+                    currentVal.substring(end);
+
+                const newCursorPos = start + formattedFormula.length;
+                activeEquationTextarea.focus();
+                activeEquationTextarea.setSelectionRange(newCursorPos, newCursorPos);
+                renderMathPreviewForTextarea(activeEquationTextarea);
+            }
+
+            const bsModalEq = bootstrap.Modal.getInstance(modalEqEl);
+            if (bsModalEq) {
+                bsModalEq.hide();
+            }
+        });
+    }
 
     /* ========================================================================
      * VALIDASI, GENERATOR & CEK REAL-TIME KODE ASESMEN (A-Z, 0-9, MAX 12)
@@ -822,6 +1265,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         rowsContainer.appendChild(rowEl);
+        renderMathPreviewForTextarea(teksInput);
         updateSoalNames();
         recalcBobotBenarSalah(soalItem);
     }
@@ -833,6 +1277,11 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         addSoal(); 
     }
+
+    // Pastikan KaTeX & format teks ter-render pada soal yang dimuat awal setelah script defer siap
+    window.addEventListener('load', function() {
+        refreshAllMathPreviews();
+    });
 
     function addSoal(referenceElement = null, position = 'after', data = null) {
         const clone = template.content.cloneNode(true);
@@ -913,6 +1362,7 @@ document.addEventListener('DOMContentLoaded', function() {
             container.appendChild(soalItem);
         }
         
+        refreshAllMathPreviews(soalItem);
         updateSoalNames();
         
         if(!data && referenceElement) {

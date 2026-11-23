@@ -6,6 +6,11 @@
 <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
     <x-app.navbar />
 
+    {{-- KaTeX untuk Render Rumus Matematika --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
     <style>
         .card-custom {
             border: none;
@@ -44,6 +49,16 @@
             font-size: 0.7rem;
             padding: 2px 8px;
             border-radius: 4px;
+        }
+        .katex {
+            font-size: 1.06em;
+        }
+        .katex-display {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 4px 2px;
+            margin: 0.5em 0;
+            max-width: 100%;
         }
         @media (min-width: 992px) {
             .sticky-summary {
@@ -279,7 +294,7 @@
 
                             <div class="card-body p-3">
                                 {{-- PERTANYAAN / STIMULUS --}}
-                                <p class="text-sm text-dark font-weight-bold mb-3">{!! nl2br(e($soal->pertanyaan)) !!}</p>
+                                <div class="text-sm text-dark font-weight-bold mb-3 math-render-area" style="line-height: 1.6;">{{ $soal->pertanyaan }}</div>
 
                                 {{-- GAMBAR SOAL JIKA ADA --}}
                                 @if($soal->media_url)
@@ -323,11 +338,11 @@
                                                 @endphp
 
                                                 <div class="{{ $boxClass }} d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                                                    <div class="text-xs text-dark d-flex align-items-start flex-grow-1">
+                                                    <div class="text-xs text-dark d-flex align-items-start flex-grow-1" style="min-width: 0;">
                                                         <strong class="me-2">{{ chr(65 + $optIdx) }}.</strong>
-                                                        <div>
+                                                        <div class="flex-grow-1" style="min-width: 0;">
                                                             @if($opsiTeks !== '')
-                                                                <div>{!! nl2br(e($opsiTeks)) !!}</div>
+                                                                <div class="math-render-area" style="line-height: 1.5;">{{ $opsiTeks }}</div>
                                                             @endif
                                                             @if(!empty($opsiMediaPath))
                                                                 <div class="{{ $opsiTeks !== '' ? 'mt-2' : '' }}">
@@ -425,8 +440,9 @@
                                             @endphp
 
                                             <div class="{{ $boxClass }} d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                                                <div class="text-xs text-dark flex-grow-1">
-                                                    <strong class="me-2">{{ $stmtIdx + 1 }}.</strong> {!! nl2br(e($teksPernyataan)) !!}
+                                                <div class="text-xs text-dark d-flex align-items-start flex-grow-1" style="min-width: 0;">
+                                                    <strong class="me-2">{{ $stmtIdx + 1 }}.</strong>
+                                                    <div class="flex-grow-1 math-render-area" style="line-height: 1.5; min-width: 0;">{{ $teksPernyataan }}</div>
                                                 </div>
 
                                                 <div class="d-flex flex-wrap align-items-center gap-1 flex-shrink-0">
@@ -528,9 +544,64 @@
     <x-app.footer />
 </main>
 
-{{-- SCRIPT JAVASCRIPT KALKULASI REALTIME --}}
+{{-- SCRIPT JAVASCRIPT KALKULASI REALTIME & RENDER FORMAT TEKS + KATEX --}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function buildSafeRichHtmlWithMathTokens(rawText) {
+        const mathTokens = [];
+        // 1. Amankan blok rumus $$...$$ dan $...$ lebih dulu
+        const protectedText = rawText.replace(/(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g, function(match) {
+            const token = `@@MATH_TOKEN_${mathTokens.length}@@`;
+            mathTokens.push(match);
+            return token;
+        });
+
+        // 2. Escape karakter HTML berbahaya di luar rumus
+        let safeHtml = protectedText
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+        // 3. Kembalikan tag format teks yang aman (whitelist)
+        safeHtml = safeHtml.replace(/&lt;(\/?(b|i|u|sub|sup|strong|em))&gt;/gi, '<$1>');
+
+        // 4. Konversi baris baru menjadi <br>
+        safeHtml = safeHtml.replace(/\n/g, '<br>');
+
+        // 5. Kembalikan blok rumus matematika ke posisi semula
+        safeHtml = safeHtml.replace(/@@MATH_TOKEN_(\d+)@@/g, function(_, idx) {
+            return mathTokens[Number(idx)] ?? '';
+        });
+
+        return safeHtml;
+    }
+
+    function renderAllRichTextAndKatex() {
+        document.querySelectorAll('.math-render-area').forEach(el => {
+            if (el.dataset.richFormatted !== '1') {
+                const rawText = el.textContent || '';
+                el.innerHTML = buildSafeRichHtmlWithMathTokens(rawText);
+                el.dataset.richFormatted = '1';
+            }
+
+            if (el.dataset.katexRendered !== '1' && typeof renderMathInElement === 'function') {
+                if ((el.textContent || '').includes('$')) {
+                    renderMathInElement(el, {
+                        delimiters: [
+                            { left: '$$', right: '$$', display: true },
+                            { left: '$', right: '$', display: false }
+                        ],
+                        throwOnError: false
+                    });
+                }
+                el.dataset.katexRendered = '1';
+            }
+        });
+    }
+
+    window.addEventListener('load', renderAllRichTextAndKatex);
+    renderAllRichTextAndKatex();
+
     const skorOtomatisBase = {{ (float) $totalSkorOtomatis }};
     const manualInputs = document.querySelectorAll('.input-skor-manual');
     const totalRealtimeEl = document.getElementById('nilai-total-realtime');

@@ -133,7 +133,7 @@
                                                 </div>
 
                                                 {{-- Filter Kelas --}}
-                                                <div class="col-md-5">
+                                                <div class="col-md-4">
                                                     <label class="form-label text-xs font-weight-bold text-uppercase mb-1 text-secondary">Filter Kelas</label>
                                                     <div class="input-group input-group-outline bg-white rounded-2">
                                                         <select name="id_kelas" class="form-control text-sm px-2" onchange="this.form.submit()">
@@ -145,6 +145,18 @@
                                                                     {{ $k->nama_kelas }}
                                                                 </option>
                                                             @endforeach
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                {{-- Filter Status User --}}
+                                                <div class="col-md-4">
+                                                    <label class="form-label text-xs font-weight-bold text-uppercase mb-1 text-secondary">Status User</label>
+                                                    <div class="input-group input-group-outline bg-white rounded-2">
+                                                        <select name="status_user" class="form-control text-sm px-2" onchange="this.form.submit()">
+                                                            <option value="semua" {{ request('status_user', 'semua') == 'semua' ? 'selected' : '' }}>Semua</option>
+                                                            <option value="terdaftar" {{ request('status_user') == 'terdaftar' ? 'selected' : '' }}>Terdaftar</option>
+                                                            <option value="belum_terdaftar" {{ request('status_user') == 'belum_terdaftar' ? 'selected' : '' }}>Belum Terdaftar</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -209,15 +221,27 @@
                                                 @endif
                                             </td>
                                             <td class="align-middle text-center">
-                                                @if($siswa->status == 'aktif')
-                                                    <span class="badge badge-sm bg-gradient-success">Aktif</span>
-                                                @elseif($siswa->status == 'keluar')
-                                                    <span class="badge badge-sm bg-gradient-danger">Keluar</span>
-                                                @elseif($siswa->status == 'lulus')
-                                                    <span class="badge badge-sm bg-gradient-info">Lulus</span>
-                                                @else
-                                                    <span class="badge badge-sm bg-secondary">{{ $siswa->status }}</span>
-                                                @endif
+                                                <div class="d-flex flex-column align-items-center gap-1">
+                                                    @if($siswa->status == 'aktif')
+                                                        <span class="badge badge-sm bg-gradient-success">Aktif</span>
+                                                    @elseif($siswa->status == 'keluar')
+                                                        <span class="badge badge-sm bg-gradient-danger">Keluar</span>
+                                                    @elseif($siswa->status == 'lulus')
+                                                        <span class="badge badge-sm bg-gradient-info">Lulus</span>
+                                                    @else
+                                                        <span class="badge badge-sm bg-secondary">{{ $siswa->status }}</span>
+                                                    @endif
+
+                                                    @if(($siswa->user_account_count ?? 0) > 0)
+                                                        <span class="badge badge-sm bg-gradient-primary">
+                                                            <i class="fas fa-user-check me-1"></i> Terdaftar
+                                                        </span>
+                                                    @else
+                                                        <span class="badge badge-sm bg-gradient-warning">
+                                                            <i class="fas fa-user-times me-1"></i> Belum Terdaftar
+                                                        </span>
+                                                    @endif
+                                                </div>
                                             </td>
                                             <td class="align-middle text-center">
                                                 {{-- 👇 PERUBAHAN: Menambahkan target="_blank" untuk open new tab 👇 --}}

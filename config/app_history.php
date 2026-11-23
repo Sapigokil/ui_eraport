@@ -11,11 +11,20 @@ return [
     |
     */
 
-    'current_version' => '1.0.28',
+    'current_version' => '1.0.29',
     
-    'last_updated' => '2026-11-21',
+    'last_updated' => '2026-11-23',
 
     'changelog' => [
+        [
+            'version' => '1.0.29',
+            'date'    => '2026-11-23',
+            'notes'   => [
+                'Penambahan fitur Equation Editor untuk input soal matematika, fisika, dan kimia pada modul Smart Based Assessment (SBA).',
+                'Penambahan Fitur Text editor untuk input soal dengan format teks yang lebih kaya (bold, italic, underline, bullet list, numbered list, dan lainnya).',
+                'Penambahan Fitur anti sleep screen pada halaman ujian untuk mencegah layar perangkat peserta ujian mati selama ujian berlangsung.',
+            ],
+        ],
         [
             'version' => '1.0.28',
             'date'    => '2026-11-21',

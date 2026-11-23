@@ -36,6 +36,21 @@ class SiswaController extends Controller
             }
         }
 
+        $statusUserFilter = $request->get('status_user', 'semua');
+        if ($statusUserFilter === 'terdaftar') {
+            $query->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('users')
+                  ->whereColumn('users.id_siswa', 'siswa.id_siswa');
+            });
+        } elseif ($statusUserFilter === 'belum_terdaftar') {
+            $query->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                  ->from('users')
+                  ->whereColumn('users.id_siswa', 'siswa.id_siswa');
+            });
+        }
+
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -50,7 +65,14 @@ class SiswaController extends Controller
     public function index(Request $request)
     {
         $listKelas = Kelas::orderBy('nama_kelas')->get();
-        $query = Siswa::with('kelas', 'ekskul');
+        $query = Siswa::with('kelas', 'ekskul')
+            ->select('siswa.*')
+            ->selectSub(function ($q) {
+                $q->from('users')
+                  ->selectRaw('COUNT(*)')
+                  ->whereColumn('users.id_siswa', 'siswa.id_siswa');
+            }, 'user_account_count');
+
         $query = $this->applyFilters($query, $request);
         
         $query->orderBy('nama_siswa', 'asc');

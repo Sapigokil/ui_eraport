@@ -33,6 +33,11 @@
     <!-- Bootstrap 5 & FontAwesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- KaTeX untuk Render Rumus Matematika -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
     
     <style>
         :root {
@@ -50,6 +55,18 @@
             user-select: none;
             -webkit-user-select: none;
             min-height: 100vh;
+        }
+
+        /* Penyesuaian Rumus KaTeX agar Responsif di Layar HP */
+        .katex {
+            font-size: 1.08em;
+        }
+        .katex-display {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 6px 2px;
+            margin: 0.6em 0;
+            max-width: 100%;
         }
 
         /* Header Navbar & Banner Ungu Gradasi */
@@ -348,9 +365,7 @@
                                 <h6 class="fw-bold text-dark mb-2 small">
                                     <i class="fas fa-align-left text-sba-purple me-2"></i>Informasi Asesmen
                                 </h6>
-                                <div class="text-dark small mb-0" style="line-height: 1.6;">
-                                    {!! nl2br(e($uji->deskripsi)) !!}
-                                </div>
+                                <div class="text-dark small mb-0 math-render-area" style="line-height: 1.6;">{{ $uji->deskripsi }}</div>
                             </div>
                         @endif
 
@@ -486,9 +501,7 @@
                                     @endif
 
                                     {{-- 2. TEKS PERTANYAAN / STIMULUS BACAAN --}}
-                                    <div class="mb-4 text-dark fs-6" style="line-height: 1.7; font-weight: 500;">
-                                        {!! nl2br(e($soal->pertanyaan)) !!}
-                                    </div>
+                                    <div class="mb-4 text-dark fs-6 math-render-area" style="line-height: 1.7; font-weight: 500;">{{ $soal->pertanyaan }}</div>
 
                                     {{-- 3. OPSI JAWABAN (TEKS &/ATAU GAMBAR + PEMULIHAN JAWABAN TERSIMPAN) --}}
                                     <div class="options-container">
@@ -506,9 +519,9 @@
                                                         <input class="form-check-input d-none radio-jawaban" type="radio" name="jawaban_{{ $soal->id }}" value="{{ $optIndex }}" id="opt_{{ $soal->id }}_{{ $optIndex }}" data-soal-id="{{ $soal->id }}" {{ $isChecked ? 'checked' : '' }}>
                                                         <label class="w-100 d-flex align-items-center m-0 cursor-pointer text-dark" for="opt_{{ $soal->id }}_{{ $optIndex }}">
                                                             <div class="option-badge">{{ chr(65 + $optIndex) }}</div>
-                                                            <div class="flex-grow-1">
+                                                            <div class="flex-grow-1" style="min-width: 0;">
                                                                 @if($opsiTeks !== '')
-                                                                    <div style="line-height: 1.5;">{!! nl2br(e($opsiTeks)) !!}</div>
+                                                                    <div class="math-render-area" style="line-height: 1.5;">{{ $opsiTeks }}</div>
                                                                 @endif
                                                                 @if(!empty($opsiMediaPath))
                                                                     <div class="{{ $opsiTeks !== '' ? 'mt-2' : '' }}">
@@ -538,9 +551,9 @@
                                                         <input class="form-check-input me-3 checkbox-jawaban" type="checkbox" name="jawaban_{{ $soal->id }}[]" value="{{ $optIndex }}" id="opt_{{ $soal->id }}_{{ $optIndex }}" data-soal-id="{{ $soal->id }}" style="transform: scale(1.2);" {{ $isChecked ? 'checked' : '' }}>
                                                         <label class="w-100 d-flex align-items-center m-0 cursor-pointer text-dark" for="opt_{{ $soal->id }}_{{ $optIndex }}">
                                                             <div class="option-badge">{{ chr(65 + $optIndex) }}</div>
-                                                            <div class="flex-grow-1">
+                                                            <div class="flex-grow-1" style="min-width: 0;">
                                                                 @if($opsiTeks !== '')
-                                                                    <div style="line-height: 1.5;">{!! nl2br(e($opsiTeks)) !!}</div>
+                                                                    <div class="math-render-area" style="line-height: 1.5;">{{ $opsiTeks }}</div>
                                                                 @endif
                                                                 @if(!empty($opsiMediaPath))
                                                                     <div class="{{ $opsiTeks !== '' ? 'mt-2' : '' }}">
@@ -576,13 +589,11 @@
                                                     @endphp
                                                     <div class="bs-statement-row {{ $isAnsweredRow ? 'bs-answered' : '' }}" data-stmt-index="{{ $stmtIndex }}">
                                                         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-                                                            <div class="d-flex align-items-start flex-grow-1">
+                                                            <div class="d-flex align-items-start flex-grow-1" style="min-width: 0;">
                                                                 <span class="badge bg-secondary bg-opacity-10 text-dark fw-bold me-3 mt-1 px-2 py-1" style="min-width: 28px;">
                                                                     {{ $stmtIndex + 1 }}.
                                                                 </span>
-                                                                <div class="text-dark" style="line-height: 1.6;">
-                                                                    {!! nl2br(e($teksPernyataan)) !!}
-                                                                </div>
+                                                                <div class="text-dark math-render-area" style="line-height: 1.6; min-width: 0;">{{ $teksPernyataan }}</div>
                                                             </div>
 
                                                             <div class="d-flex align-items-center gap-2 flex-shrink-0 justify-content-end">
@@ -788,6 +799,62 @@
             const secUjian = document.getElementById('section-ujian');
             const btnFullscreen = document.getElementById('btnFullscreen');
             const btnKembaliUjian = document.getElementById('btnKembaliUjian');
+
+            // --- RENDER FORMAT TEKS (B/I/U/SUB/SUP) & RUMUS MATEMATIKA (KATEX) TANPA BENTROK ---
+            function buildSafeRichHtmlWithMathTokens(rawText) {
+                const mathTokens = [];
+                // 1. Amankan blok rumus $$...$$ dan $...$ lebih dulu
+                const protectedText = rawText.replace(/(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g, function(match) {
+                    const token = `@@MATH_TOKEN_${mathTokens.length}@@`;
+                    mathTokens.push(match);
+                    return token;
+                });
+
+                // 2. Escape karakter HTML berbahaya di luar rumus
+                let safeHtml = protectedText
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+
+                // 3. Kembalikan tag format teks yang aman (whitelist)
+                safeHtml = safeHtml.replace(/&lt;(\/?(b|i|u|sub|sup|strong|em))&gt;/gi, '<$1>');
+
+                // 4. Konversi baris baru menjadi <br>
+                safeHtml = safeHtml.replace(/\n/g, '<br>');
+
+                // 5. Kembalikan blok rumus matematika ke posisi semula
+                safeHtml = safeHtml.replace(/@@MATH_TOKEN_(\d+)@@/g, function(_, idx) {
+                    return mathTokens[Number(idx)] ?? '';
+                });
+
+                return safeHtml;
+            }
+
+            function renderAllRichTextAndKatex() {
+                document.querySelectorAll('.math-render-area').forEach(el => {
+                    if (el.dataset.richFormatted !== '1') {
+                        const rawText = el.textContent || '';
+                        el.innerHTML = buildSafeRichHtmlWithMathTokens(rawText);
+                        el.dataset.richFormatted = '1';
+                    }
+
+                    if (el.dataset.katexRendered !== '1' && typeof renderMathInElement === 'function') {
+                        if ((el.textContent || '').includes('$')) {
+                            renderMathInElement(el, {
+                                delimiters: [
+                                    { left: '$$', right: '$$', display: true },
+                                    { left: '$', right: '$', display: false }
+                                ],
+                                throwOnError: false
+                            });
+                        }
+                        el.dataset.katexRendered = '1';
+                    }
+                });
+            }
+
+            window.addEventListener('load', renderAllRichTextAndKatex);
+            renderAllRichTextAndKatex();
             
             const isOpenBook = {{ $uji->open_book ? 'true' : 'false' }};
             let isUjianDimulai = false;
@@ -814,6 +881,80 @@
                 }
             }
 
+            // --- SCREEN WAKE LOCK (MENCEGAH LAYAR ANDROID SLEEP SAAT UJIAN) ---
+            let wakeLockSentinel = null;
+            let fallbackVideoEl = null;
+
+            function startFallbackNoSleepVideo() {
+                try {
+                    if (!fallbackVideoEl) {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 2;
+                        canvas.height = 2;
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            ctx.fillStyle = '#000000';
+                            ctx.fillRect(0, 0, 2, 2);
+                        }
+                        if (typeof canvas.captureStream === 'function') {
+                            fallbackVideoEl = document.createElement('video');
+                            fallbackVideoEl.setAttribute('playsinline', '');
+                            fallbackVideoEl.setAttribute('muted', '');
+                            fallbackVideoEl.muted = true;
+                            fallbackVideoEl.loop = true;
+                            fallbackVideoEl.style.position = 'fixed';
+                            fallbackVideoEl.style.width = '1px';
+                            fallbackVideoEl.style.height = '1px';
+                            fallbackVideoEl.style.opacity = '0.01';
+                            fallbackVideoEl.style.pointerEvents = 'none';
+                            fallbackVideoEl.style.zIndex = '-1';
+                            fallbackVideoEl.srcObject = canvas.captureStream(1);
+                            document.body.appendChild(fallbackVideoEl);
+                        }
+                    }
+                    if (fallbackVideoEl && fallbackVideoEl.paused) {
+                        fallbackVideoEl.play().catch(() => {});
+                    }
+                } catch (e) {
+                    // Abaikan jika perangkat membatasi canvas stream
+                }
+            }
+
+            async function requestScreenWakeLock() {
+                if (!isUjianDimulai || isLockedGagal || isSubmittingFinal) return;
+
+                if ('wakeLock' in navigator) {
+                    try {
+                        if (!wakeLockSentinel || wakeLockSentinel.released) {
+                            wakeLockSentinel = await navigator.wakeLock.request('screen');
+                            wakeLockSentinel.addEventListener('release', () => {
+                                wakeLockSentinel = null;
+                            });
+                        }
+                        return;
+                    } catch (err) {
+                        // Jika ditolak oleh sistem/webview, jalankan fallback video hening
+                    }
+                }
+
+                startFallbackNoSleepVideo();
+            }
+
+            function releaseScreenWakeLock() {
+                if (wakeLockSentinel) {
+                    wakeLockSentinel.release().catch(() => {});
+                    wakeLockSentinel = null;
+                }
+                if (fallbackVideoEl) {
+                    try {
+                        fallbackVideoEl.pause();
+                        fallbackVideoEl.srcObject = null;
+                        fallbackVideoEl.remove();
+                    } catch (e) {}
+                    fallbackVideoEl = null;
+                }
+            }
+
             function getCsrfToken() {
                 return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
             }
@@ -829,6 +970,7 @@
             function submitFinalisasiOtomatis() {
                 if (isSubmittingFinal || isLockedGagal) return;
                 isSubmittingFinal = true;
+                releaseScreenWakeLock();
                 document.getElementById('form-finalisasi').submit();
             }
 
@@ -859,7 +1001,10 @@
                 }
             }
 
-            btnFullscreen?.addEventListener('click', mintaFullscreen);
+            btnFullscreen?.addEventListener('click', function() {
+                mintaFullscreen();
+                requestScreenWakeLock();
+            });
 
             // --- 3. KLIK MULAI UJIAN ---
             btnMulaiUji.addEventListener('click', function() {
@@ -871,6 +1016,8 @@
                 secUjian.classList.remove('d-none');
                 isUjianDimulai = true;
 
+                renderAllRichTextAndKatex();
+                requestScreenWakeLock();
                 mulaiTimer();
                 updateGridStatus();
                 highlightRadioSelection();
@@ -891,6 +1038,7 @@
 
             function kunciFormUjian() {
                 isLockedGagal = true;
+                releaseScreenWakeLock();
                 document.querySelectorAll('input, button, select, textarea').forEach(el => {
                     if (el.id !== 'btnKeluarPortal') {
                         el.disabled = true;
@@ -944,19 +1092,33 @@
                 if (!isOpenBook && supportsFullscreen) {
                     mintaFullscreen();
                 }
+                requestScreenWakeLock();
             });
 
             btnKeluarPortal.addEventListener('click', function() {
+                releaseScreenWakeLock();
                 window.location.href = "{{ route('sba.portal') }}";
             });
 
-            if (!isOpenBook) {
-                document.addEventListener("visibilitychange", function() {
-                    if (document.hidden) {
+            // Aktifkan kembali Wake Lock saat siswa kembali ke halaman ujian (berlaku untuk Open Book maupun Strict Mode)
+            document.addEventListener("visibilitychange", function() {
+                if (document.hidden) {
+                    if (!isOpenBook) {
                         laporkanPelanggaran('pindah_tab');
                     }
-                });
+                } else {
+                    requestScreenWakeLock();
+                }
+            });
 
+            // Pastikan Wake Lock tetap aktif saat peserta menyentuh layar / mengganti soal
+            document.addEventListener('pointerdown', function() {
+                if (isUjianDimulai && (!wakeLockSentinel || wakeLockSentinel.released)) {
+                    requestScreenWakeLock();
+                }
+            }, { passive: true });
+
+            if (!isOpenBook) {
                 if (supportsFullscreen) {
                     window.addEventListener('blur', function() {
                         if (!document.hidden) {
@@ -967,12 +1129,16 @@
                     document.addEventListener("fullscreenchange", function() {
                         if (!isSedangFullscreen() && isUjianDimulai && !document.hidden) {
                             laporkanPelanggaran('keluar_fullscreen');
+                        } else if (isSedangFullscreen()) {
+                            requestScreenWakeLock();
                         }
                     });
 
                     document.addEventListener("webkitfullscreenchange", function() {
                         if (!isSedangFullscreen() && isUjianDimulai && !document.hidden) {
                             laporkanPelanggaran('keluar_fullscreen');
+                        } else if (isSedangFullscreen()) {
+                            requestScreenWakeLock();
                         }
                     });
                 }
@@ -985,6 +1151,7 @@
                     return;
                 }
                 isSubmittingFinal = true;
+                releaseScreenWakeLock();
             });
 
             // --- 5. LOGIKA NAVIGASI & PENGECEKAN FULLSCREEN SETIAP GANTI SOAL ---
