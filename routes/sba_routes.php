@@ -63,8 +63,9 @@ Route::middleware(['auth', 'can:sba.menu'])->group(function () {
         Route::post('/hasil/{hasil_id}/unlock', [SbaController::class, 'unlockSesi'])->name('hasil.unlock');
         Route::post('/hasil/{hasil_id}/finalisasi', [SbaController::class, 'finalisasiPaksa'])->name('hasil.finalisasi');
 
-        // Action Hapus Massal (Bulk Delete)
+        // Action Massal (Bulk Delete & Bulk Refresh Nilai)
         Route::delete('/uji/{uji_id}/hasil/bulk-delete', [SbaController::class, 'bulkDelete'])->name('hasil.bulk_delete');
+        Route::post('/uji/{uji_id}/hasil/bulk-refresh-nilai', [SbaController::class, 'bulkRefreshNilai'])->name('hasil.bulk_refresh_nilai');
 
     });
 

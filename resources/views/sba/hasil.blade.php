@@ -134,11 +134,6 @@
                                                     <i class="fas fa-file-excel text-success me-2 fs-6"></i> Export to Excel (.xlsx/.csv)
                                                 </a>
                                             </li>
-                                            {{-- <li>
-                                                <a class="dropdown-item text-xs py-2 fw-bold" href="{{ route('sba.hasil.export', array_merge(['uji_id' => $uji->id, 'format' => 'pdf'], request()->query())) }}" target="_blank">
-                                                    <i class="fas fa-file-pdf text-danger me-2 fs-6"></i> Export to PDF (.pdf)
-                                                </a>
-                                            </li> --}}
                                         </ul>
                                     </div>
 
@@ -188,12 +183,12 @@
                             </div>
                         @endif
 
-                        {{-- PANEL FILTER AUTO-SUBMIT ONCHANGE & TOMBOL RESET (RESPONSIVE MOBILE & HALF-DESKTOP) --}}
+                        {{-- PANEL FILTER AUTO-SUBMIT ONCHANGE & TOMBOL RESET --}}
                         <form id="filterForm" action="{{ route('sba.hasil.index', $uji->id) }}" method="GET" class="row g-2 mb-3 align-items-center">
                             <input type="hidden" name="sort_by" value="{{ request('sort_by', 'total_skor') }}">
                             <input type="hidden" name="sort_order" value="{{ request('sort_order', 'desc') }}">
 
-                            {{-- Filter Status Pengerjaan (Auto-Submit) --}}
+                            {{-- Filter Status Pengerjaan --}}
                             <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                                 <select name="status_pengerjaan" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
                                     <option value="">-- Semua Status --</option>
@@ -206,7 +201,7 @@
                                 </select>
                             </div>
 
-                            {{-- Filter Kelas (Auto-Submit) --}}
+                            {{-- Filter Kelas --}}
                             <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                                 <select name="id_kelas" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
                                     <option value="">-- Semua Kelas --</option>
@@ -218,7 +213,7 @@
                                 </select>
                             </div>
 
-                            {{-- Filter Keysearch (NISN / ID Asesi / Nama) --}}
+                            {{-- Filter Keysearch --}}
                             <div class="col-12 col-sm-6 col-md-4 col-xl-2">
                                 <div class="input-group input-group-sm border rounded">
                                     <span class="input-group-text bg-transparent border-0 pe-1">
@@ -470,14 +465,14 @@
                                             {{-- AKSI --}}
                                             <td class="text-center align-middle">
                                                 <div class="d-flex justify-content-center align-items-center gap-1">
-                                                    {{-- TOMBOL FINALISASI PAKSA (Khusus status berlangsung yang ditinggal tutup browser) --}}
+                                                    {{-- TOMBOL FINALISASI PAKSA --}}
                                                     @if($hasil->status_pengerjaan === 'berlangsung')
                                                         <button type="button" class="btn btn-outline-success btn-sm mb-0 px-2 shadow-sm" title="Finalisasi Paksa & Hitung Skor" onclick="finalisasiPaksaPeserta({{ $hasil->id }})">
                                                             <i class="fas fa-check-double"></i> Finalisasi
                                                         </button>
                                                     @endif
 
-                                                    {{-- TOMBOL UNLOCK / LANJUTKAN (Khusus status gagal_pelanggaran) --}}
+                                                    {{-- TOMBOL UNLOCK / LANJUTKAN --}}
                                                     @if($hasil->status_pengerjaan === 'gagal_pelanggaran')
                                                         <button type="button" class="btn btn-outline-warning btn-sm mb-0 px-2 shadow-sm" title="Buka Kunci / Izinkan Melanjutkan" onclick="unlockSesiPeserta({{ $hasil->id }})">
                                                             <i class="fas fa-unlock"></i> Lanjutkan
@@ -510,21 +505,38 @@
                                 </table>
                             </div>
 
-                            {{-- PANEL TOMBOL AKSI MASSAL (DITARUH DI BAWAH AKSI DELETE TABEL) --}}
-                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
-                                <div>
+                            {{-- PANEL TOMBOL AKSI MASSAL --}}
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 pt-2 border-top">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
                                     <button type="button" id="btnBulkDelete" class="btn btn-danger btn-sm mb-0 shadow-sm" disabled onclick="konfirmasiBulkDelete()">
                                         <i class="fas fa-trash-alt me-1"></i> Hapus Terpilih (<span id="selectedCount">0</span>)
                                     </button>
+
+                                    <button type="button" id="btnBulkRefreshSelected" class="btn btn-outline-primary btn-sm mb-0 shadow-sm" disabled onclick="konfirmasiBulkRefresh('selected')">
+                                        <i class="fas fa-sync-alt me-1"></i> Refresh Nilai Terpilih (<span id="selectedCountRefresh">0</span>)
+                                    </button>
+
+                                    @if($hasils->total() > 0)
+                                        <button type="button" id="btnBulkRefreshAll" class="btn bg-gradient-primary text-white btn-sm mb-0 shadow-sm" onclick="konfirmasiBulkRefresh('all')">
+                                            <i class="fas fa-sync-alt me-1"></i> Refresh Semua Nilai ({{ $hasils->total() }})
+                                        </button>
+                                    @endif
                                 </div>
                                 
-                                {{-- INFORMASI PAGINATION (KAPASITAS HALAMAN) --}}
+                                {{-- INFORMASI PAGINATION --}}
                                 @if($hasils instanceof \Illuminate\Pagination\LengthAwarePaginator)
                                     <div class="text-xs text-secondary">
                                         Menampilkan {{ $hasils->firstItem() ?? 0 }} sampai {{ $hasils->lastItem() ?? 0 }} dari total {{ $hasils->total() }} data
                                     </div>
                                 @endif
                             </div>
+                        </form>
+
+                        {{-- FORM TERPISAH KHUSUS BULK REFRESH NILAI --}}
+                        <form id="formBulkRefreshNilai" action="{{ route('sba.hasil.bulk_refresh_nilai', $uji->id) }}" method="POST" class="d-none">
+                            @csrf
+                            <input type="hidden" name="mode" id="bulkRefreshMode" value="selected">
+                            <div id="bulkRefreshIdsContainer"></div>
                         </form>
 
                         {{-- FORM TERPISAH KHUSUS SINGLE DELETE --}}
@@ -560,22 +572,33 @@
     <x-app.footer />
 </main>
 
-{{-- SCRIPT JAVASCRIPT UNTUK CHECKBOX, BULK DELETE, UNLOCK, & FINALISASI --}}
+{{-- SCRIPT JAVASCRIPT UNTUK CHECKBOX, BULK DELETE, BULK REFRESH, UNLOCK, & FINALISASI --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const checkAll = document.getElementById('checkAllHasil');
         const checkItems = document.querySelectorAll('.check-item-hasil');
         const btnBulkDelete = document.getElementById('btnBulkDelete');
+        const btnBulkRefreshSelected = document.getElementById('btnBulkRefreshSelected');
         const selectedCountEl = document.getElementById('selectedCount');
+        const selectedCountRefreshEl = document.getElementById('selectedCountRefresh');
 
-        function updateBulkDeleteState() {
+        function updateBulkActionState() {
             const checkedCount = document.querySelectorAll('.check-item-hasil:checked').length;
             selectedCountEl.innerText = checkedCount;
+            if (selectedCountRefreshEl) {
+                selectedCountRefreshEl.innerText = checkedCount;
+            }
 
             if (checkedCount > 0) {
                 btnBulkDelete.removeAttribute('disabled');
+                if (btnBulkRefreshSelected) {
+                    btnBulkRefreshSelected.removeAttribute('disabled');
+                }
             } else {
                 btnBulkDelete.setAttribute('disabled', 'true');
+                if (btnBulkRefreshSelected) {
+                    btnBulkRefreshSelected.setAttribute('disabled', 'true');
+                }
             }
 
             if (checkItems.length > 0 && checkedCount === checkItems.length) {
@@ -595,12 +618,12 @@
                 checkItems.forEach(item => {
                     item.checked = this.checked;
                 });
-                updateBulkDeleteState();
+                updateBulkActionState();
             });
         }
 
         checkItems.forEach(item => {
-            item.addEventListener('change', updateBulkDeleteState);
+            item.addEventListener('change', updateBulkActionState);
         });
     });
 
@@ -612,6 +635,42 @@
         if (confirm(`Apakah Anda yakin ingin menghapus ${checkedCount} data hasil ujian yang dipilih secara permanen?`)) {
             document.getElementById('formBulkDelete').submit();
         }
+    }
+
+    // Fungsi konfirmasi refresh nilai massal (terpilih atau semua)
+    function konfirmasiBulkRefresh(mode) {
+        const form = document.getElementById('formBulkRefreshNilai');
+        const modeInput = document.getElementById('bulkRefreshMode');
+        const idsContainer = document.getElementById('bulkRefreshIdsContainer');
+        idsContainer.innerHTML = '';
+
+        if (mode === 'all') {
+            const totalPeserta = {{ (int) $hasils->total() }};
+            if (!confirm(`Hitung ulang dan perbarui nilai untuk SEMUA (${totalPeserta}) peserta pada ujian ini sesuai bobot soal terbaru?`)) {
+                return;
+            }
+            modeInput.value = 'all';
+            form.submit();
+            return;
+        }
+
+        const checkedBoxes = document.querySelectorAll('.check-item-hasil:checked');
+        if (checkedBoxes.length === 0) return;
+
+        if (!confirm(`Hitung ulang dan perbarui nilai untuk ${checkedBoxes.length} peserta yang dipilih sesuai bobot soal terbaru?`)) {
+            return;
+        }
+
+        modeInput.value = 'selected';
+        checkedBoxes.forEach(cb => {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'ids[]';
+            hiddenInput.value = cb.value;
+            idsContainer.appendChild(hiddenInput);
+        });
+
+        form.submit();
     }
 
     // Fungsi single delete via JS

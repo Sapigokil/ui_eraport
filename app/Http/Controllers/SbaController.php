@@ -946,7 +946,6 @@ class SbaController extends Controller
                 ? $jawaban->jawaban
                 : (json_decode((string) $jawaban->jawaban, true) ?? []);
 
-            // Hitung total bobot item di dalam JSON untuk menyesuaikan jika bobot_nilai soal diubah
             $totalBobotItemJson = 0.0;
             foreach ($pernyataanList as $item) {
                 $totalBobotItemJson += (float) ($item['bobot'] ?? 0);
@@ -993,7 +992,7 @@ class SbaController extends Controller
             return ($kunciStrArray === $jawabanSiswaArray) ? $bobotSoalTarget : 0.0;
         }
 
-        // PG (tangani jika jawaban tersimpan sebagai string tunggal maupun array 1 elemen)
+        // PG
         $jawabanTunggal = is_array($jawaban->jawaban)
             ? (string) (reset($jawaban->jawaban) ?: '')
             : trim((string) $jawaban->jawaban, "\" \t\n\r\0\x0B");
@@ -1004,56 +1003,113 @@ class SbaController extends Controller
     }
 
     /**
-     * Refresh / Hitung Ulang Nilai Peserta Sesuai Bobot Soal Terbaru
+     * Helper Private: Proses Hitung Ulang & Simpan Skor untuk 1 Record UjiHasil
+     */
+    private function recalculateSingleHasil(UjiHasil $hasil, $soals): float
+    {
+        $mapJawaban = $hasil->jawabans->keyBy('uji_soal_id');
+        $skorOtomatisBaru = 0.0;
+        $skorManualTotal = 0.0;
+
+        foreach ($soals as $soal) {
+            $jawaban = $mapJawaban->get($soal->id);
+            $kunciArray = is_array($soal->kunci_jawaban)
+                ? array_values(array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== ''))
+                : [];
+            $isManualGraded = ($soal->tipe === 'esai') || (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray));
+
+            if ($isManualGraded) {
+                if ($jawaban) {
+                    $skorManualItem = (float) $jawaban->skor_didapat;
+                    if ($skorManualItem > (float) $soal->bobot_nilai) {
+                        $skorManualItem = (float) $soal->bobot_nilai;
+                        $jawaban->forceFill(['skor_didapat' => $skorManualItem])->save();
+                    }
+                    $skorManualTotal += $skorManualItem;
+                }
+            } else {
+                $skorItemBaru = $this->evaluasiSkorSoalOtomatis($soal, $jawaban);
+                if ($jawaban) {
+                    $jawaban->forceFill(['skor_didapat' => $skorItemBaru])->save();
+                }
+                $skorOtomatisBaru += $skorItemBaru;
+            }
+        }
+
+        $totalSkorBaru = round($skorOtomatisBaru + $skorManualTotal, 2);
+
+        $hasil->forceFill([
+            'skor_otomatis' => round($skorOtomatisBaru, 2),
+            'total_skor'    => $totalSkorBaru,
+        ])->save();
+
+        return $totalSkorBaru;
+    }
+
+    /**
+     * Refresh / Hitung Ulang Nilai Satu Peserta Sesuai Bobot Soal Terbaru
      */
     public function refreshNilaiHasil($hasil_id)
     {
         $hasil = UjiHasil::with(['uji.soals', 'jawabans'])->findOrFail($hasil_id);
         $this->authorizeUjiAccess($hasil->uji);
 
-        $mapJawaban = $hasil->jawabans->keyBy('uji_soal_id');
-        $skorOtomatisBaru = 0.0;
-        $skorManualTotal = 0.0;
-
-        DB::transaction(function () use ($hasil, $mapJawaban, &$skorOtomatisBaru, &$skorManualTotal) {
-            foreach ($hasil->uji->soals as $soal) {
-                $jawaban = $mapJawaban->get($soal->id);
-                $kunciArray = is_array($soal->kunci_jawaban)
-                    ? array_values(array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== ''))
-                    : [];
-                $isManualGraded = ($soal->tipe === 'esai') || (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray));
-
-                if ($isManualGraded) {
-                    if ($jawaban) {
-                        $skorManualItem = (float) $jawaban->skor_didapat;
-                        if ($skorManualItem > (float) $soal->bobot_nilai) {
-                            $skorManualItem = (float) $soal->bobot_nilai;
-                            $jawaban->forceFill(['skor_didapat' => $skorManualItem])->save();
-                        }
-                        $skorManualTotal += $skorManualItem;
-                    }
-                } else {
-                    $skorItemBaru = $this->evaluasiSkorSoalOtomatis($soal, $jawaban);
-                    if ($jawaban) {
-                        $jawaban->forceFill(['skor_didapat' => $skorItemBaru])->save();
-                    }
-                    $skorOtomatisBaru += $skorItemBaru;
-                }
-            }
-
-            $totalSkorBaru = round($skorOtomatisBaru + $skorManualTotal, 2);
-
-            $hasil->forceFill([
-                'skor_otomatis' => round($skorOtomatisBaru, 2),
-                'total_skor'    => $totalSkorBaru,
-            ])->save();
+        $totalSkorBaru = DB::transaction(function () use ($hasil) {
+            return $this->recalculateSingleHasil($hasil, $hasil->uji->soals);
         });
-
-        $hasil->refresh();
 
         return redirect()->back()->with(
             'success',
-            "Nilai peserta berhasil diperbarui sesuai bobot soal terbaru (Total Skor Tersimpan: {$hasil->total_skor} Poin)."
+            "Nilai peserta berhasil diperbarui sesuai bobot soal terbaru (Total Skor Tersimpan: {$totalSkorBaru} Poin)."
+        );
+    }
+
+    /**
+     * Refresh / Hitung Ulang Nilai Massal (Peserta Terpilih atau Seluruh Peserta Ujian)
+     */
+    public function bulkRefreshNilai(Request $request, $uji_id)
+    {
+        $uji = Uji::with('soals')->findOrFail($uji_id);
+        $this->authorizeUjiAccess($uji);
+
+        $mode = $request->input('mode', 'selected');
+
+        if ($mode === 'all') {
+            $hasils = UjiHasil::with('jawabans')
+                ->where('uji_id', $uji->id)
+                ->get();
+        } else {
+            $request->validate([
+                'ids'   => 'required|array|min:1',
+                'ids.*' => 'integer|exists:uji_hasils,id',
+            ], [
+                'ids.required' => 'Pilih minimal 1 peserta untuk diperbarui nilainya.',
+            ]);
+
+            $hasils = UjiHasil::with('jawabans')
+                ->where('uji_id', $uji->id)
+                ->whereIn('id', $request->ids)
+                ->get();
+        }
+
+        if ($hasils->isEmpty()) {
+            return redirect()->back()->with('error', 'Tidak ada data hasil peserta yang dapat diperbarui.');
+        }
+
+        $soals = $uji->soals;
+
+        DB::transaction(function () use ($hasils, $soals) {
+            foreach ($hasils as $hasil) {
+                $this->recalculateSingleHasil($hasil, $soals);
+            }
+        });
+
+        $jumlahDiproses = $hasils->count();
+        $keteranganScope = $mode === 'all' ? 'seluruh peserta pada asesmen ini' : 'peserta terpilih';
+
+        return redirect()->back()->with(
+            'success',
+            "Berhasil menghitung ulang dan memperbarui nilai untuk {$jumlahDiproses} {$keteranganScope} sesuai bobot soal terbaru."
         );
     }
 
