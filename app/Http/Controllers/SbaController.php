@@ -938,6 +938,7 @@ class SbaController extends Controller
         }
 
         $kunciArray = is_array($soal->kunci_jawaban) ? $soal->kunci_jawaban : [];
+        $bobotSoalTarget = (float) $soal->bobot_nilai;
 
         if ($soal->tipe === 'benar_salah') {
             $pernyataanList = is_array($soal->opsi_jawaban) ? $soal->opsi_jawaban : [];
@@ -945,17 +946,33 @@ class SbaController extends Controller
                 ? $jawaban->jawaban
                 : (json_decode((string) $jawaban->jawaban, true) ?? []);
 
+            // Hitung total bobot item di dalam JSON untuk menyesuaikan jika bobot_nilai soal diubah
+            $totalBobotItemJson = 0.0;
+            foreach ($pernyataanList as $item) {
+                $totalBobotItemJson += (float) ($item['bobot'] ?? 0);
+            }
+
+            $faktorSkala = ($totalBobotItemJson > 0 && $bobotSoalTarget > 0)
+                ? ($bobotSoalTarget / $totalBobotItemJson)
+                : 1.0;
+
             $skorSoal = 0.0;
+            $jumlahPernyataan = count($pernyataanList);
+
             foreach ($pernyataanList as $idx => $item) {
-                $kunciItem = strtolower(trim((string) ($kunciArray[$idx] ?? '')));
+                $kunciItem = strtolower(trim((string) ($kunciArray[$idx] ?? ($item['kunci'] ?? ''))));
                 $jawabItem = strtolower(trim((string) ($jawabanSiswaArr[$idx] ?? '')));
-                $bobotItem = (float) ($item['bobot'] ?? 0);
+
+                $bobotItem = $totalBobotItemJson > 0
+                    ? ((float) ($item['bobot'] ?? 0) * $faktorSkala)
+                    : ($jumlahPernyataan > 0 ? ($bobotSoalTarget / $jumlahPernyataan) : 0.0);
 
                 if ($kunciItem !== '' && $jawabItem === $kunciItem) {
                     $skorSoal += $bobotItem;
                 }
             }
-            return $skorSoal;
+
+            return round($skorSoal, 2);
         }
 
         $kunciFiltered = array_values(array_filter($kunciArray, fn($v) => $v !== null && $v !== ''));
@@ -964,17 +981,25 @@ class SbaController extends Controller
         }
 
         if ($soal->tipe === 'pg_kompleks') {
-            $jawabanSiswaArray = array_map('strval', json_decode((string) $jawaban->jawaban, true) ?? []);
-            $kunciStrArray = array_map('strval', $kunciFiltered);
+            $rawJawaban = is_array($jawaban->jawaban)
+                ? $jawaban->jawaban
+                : (json_decode((string) $jawaban->jawaban, true) ?? []);
+
+            $jawabanSiswaArray = array_values(array_unique(array_map('strval', $rawJawaban)));
+            $kunciStrArray = array_values(array_unique(array_map('strval', $kunciFiltered)));
             sort($kunciStrArray);
             sort($jawabanSiswaArray);
 
-            return ($kunciStrArray === $jawabanSiswaArray) ? (float) $soal->bobot_nilai : 0.0;
+            return ($kunciStrArray === $jawabanSiswaArray) ? $bobotSoalTarget : 0.0;
         }
 
-        // PG
-        return in_array((string) $jawaban->jawaban, array_map('strval', $kunciFiltered), true)
-            ? (float) $soal->bobot_nilai
+        // PG (tangani jika jawaban tersimpan sebagai string tunggal maupun array 1 elemen)
+        $jawabanTunggal = is_array($jawaban->jawaban)
+            ? (string) (reset($jawaban->jawaban) ?: '')
+            : trim((string) $jawaban->jawaban, "\" \t\n\r\0\x0B");
+
+        return in_array($jawabanTunggal, array_map('strval', $kunciFiltered), true)
+            ? $bobotSoalTarget
             : 0.0;
     }
 
@@ -987,42 +1012,49 @@ class SbaController extends Controller
         $this->authorizeUjiAccess($hasil->uji);
 
         $mapJawaban = $hasil->jawabans->keyBy('uji_soal_id');
-        $skorOtomatisBaru = 0;
-        $skorManualTotal = 0;
+        $skorOtomatisBaru = 0.0;
+        $skorManualTotal = 0.0;
 
-        foreach ($hasil->uji->soals as $soal) {
-            $jawaban = $mapJawaban->get($soal->id);
-            $kunciArray = is_array($soal->kunci_jawaban)
-                ? array_values(array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== ''))
-                : [];
-            $isManualGraded = ($soal->tipe === 'esai') || (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray));
+        DB::transaction(function () use ($hasil, $mapJawaban, &$skorOtomatisBaru, &$skorManualTotal) {
+            foreach ($hasil->uji->soals as $soal) {
+                $jawaban = $mapJawaban->get($soal->id);
+                $kunciArray = is_array($soal->kunci_jawaban)
+                    ? array_values(array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== ''))
+                    : [];
+                $isManualGraded = ($soal->tipe === 'esai') || (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray));
 
-            if ($isManualGraded) {
-                if ($jawaban) {
-                    $skorManualItem = (float) $jawaban->skor_didapat;
-                    if ($skorManualItem > (float) $soal->bobot_nilai) {
-                        $skorManualItem = (float) $soal->bobot_nilai;
-                        $jawaban->update(['skor_didapat' => $skorManualItem]);
+                if ($isManualGraded) {
+                    if ($jawaban) {
+                        $skorManualItem = (float) $jawaban->skor_didapat;
+                        if ($skorManualItem > (float) $soal->bobot_nilai) {
+                            $skorManualItem = (float) $soal->bobot_nilai;
+                            $jawaban->forceFill(['skor_didapat' => $skorManualItem])->save();
+                        }
+                        $skorManualTotal += $skorManualItem;
                     }
-                    $skorManualTotal += $skorManualItem;
+                } else {
+                    $skorItemBaru = $this->evaluasiSkorSoalOtomatis($soal, $jawaban);
+                    if ($jawaban) {
+                        $jawaban->forceFill(['skor_didapat' => $skorItemBaru])->save();
+                    }
+                    $skorOtomatisBaru += $skorItemBaru;
                 }
-            } else {
-                $skorItemBaru = $this->evaluasiSkorSoalOtomatis($soal, $jawaban);
-                if ($jawaban) {
-                    $jawaban->update(['skor_didapat' => $skorItemBaru]);
-                }
-                $skorOtomatisBaru += $skorItemBaru;
             }
-        }
 
-        $totalSkorBaru = $skorOtomatisBaru + $skorManualTotal;
+            $totalSkorBaru = round($skorOtomatisBaru + $skorManualTotal, 2);
 
-        $hasil->update([
-            'skor_otomatis' => $skorOtomatisBaru,
-            'total_skor'    => $totalSkorBaru,
-        ]);
+            $hasil->forceFill([
+                'skor_otomatis' => round($skorOtomatisBaru, 2),
+                'total_skor'    => $totalSkorBaru,
+            ])->save();
+        });
 
-        return redirect()->back()->with('success', "Nilai peserta berhasil diperbarui sesuai bobot soal terbaru (Total Skor: {$totalSkorBaru} Poin).");
+        $hasil->refresh();
+
+        return redirect()->back()->with(
+            'success',
+            "Nilai peserta berhasil diperbarui sesuai bobot soal terbaru (Total Skor Tersimpan: {$hasil->total_skor} Poin)."
+        );
     }
 
     /**
