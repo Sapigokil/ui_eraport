@@ -362,6 +362,8 @@ class PklRaporController extends Controller
         $querySiswa = Siswa::where('id_kelas', $request->id_kelas);
         if ($request->has('ids') && !empty($request->ids)) {
             $querySiswa->whereIn('id_siswa', explode(',', $request->ids));
+        } else {
+            $querySiswa->where('status', 'aktif');
         }
         $siswaList = $querySiswa->orderBy('nama_siswa', 'asc')->get();
 

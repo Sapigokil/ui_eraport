@@ -22,8 +22,11 @@ class PesertaEkskulController extends Controller
         $filter_id_kelas = $request->input('id_kelas'); 
         $filter_nama_siswa = $request->input('nama_siswa');
         
-        // 1. Inisiasi Query Dasar: Ambil semua data EkskulSiswa
+        // 1. Inisiasi Query Dasar: Ambil data EkskulSiswa khusus siswa aktif
         $peserta = EkskulSiswa::with(['siswa.kelas', 'ekskul'])
+                               ->whereHas('siswa', function($query) {
+                                   $query->where('status', 'aktif');
+                               })
                                ->orderBy('id_ekskul', 'asc')
                                ->orderBy('id_siswa', 'asc'); // Ordering agar data tidak acak
 
@@ -33,15 +36,16 @@ class PesertaEkskulController extends Controller
         }
         
         if ($filter_id_kelas) {
-            // Kita perlu join ke tabel siswa untuk memfilter berdasarkan id_kelas
             $peserta->whereHas('siswa', function($query) use ($filter_id_kelas) {
-                $query->where('id_kelas', $filter_id_kelas);
+                $query->where('status', 'aktif')
+                      ->where('id_kelas', $filter_id_kelas);
             });
         }
 
         if ($filter_nama_siswa) {
             $peserta->whereHas('siswa', function($query) use ($filter_nama_siswa) {
-                $query->where('nama_siswa', 'like', '%' . $filter_nama_siswa . '%');
+                $query->where('status', 'aktif')
+                      ->where('nama_siswa', 'like', '%' . $filter_nama_siswa . '%');
             });
         }
         
@@ -66,6 +70,7 @@ class PesertaEkskulController extends Controller
         $kelas = Kelas::orderBy('nama_kelas')->get();
         
         $siswas = Siswa::select('id_siswa', 'nama_siswa', 'id_kelas')
+                       ->where('status', 'aktif')
                        ->with('kelas:id_kelas,nama_kelas') 
                        ->orderBy('nama_siswa')
                        ->get();
@@ -105,6 +110,7 @@ class PesertaEkskulController extends Controller
         
         $valid_siswa_ids = Siswa::whereIn('id_siswa', $submitted_siswa_ids)
                                 ->where('id_kelas', $id_kelas_filter)
+                                ->where('status', 'aktif')
                                 ->pluck('id_siswa')
                                 ->toArray();
         
@@ -148,8 +154,9 @@ class PesertaEkskulController extends Controller
         // 2. Ambil semua Kelas
         $kelas = Kelas::orderBy('nama_kelas')->get();
         
-        // 3. Ambil semua Siswa
+        // 3. Ambil semua Siswa Aktif
         $siswas = Siswa::select('id_siswa', 'nama_siswa', 'id_kelas')
+                       ->where('status', 'aktif')
                        ->with('kelas:id_kelas,nama_kelas') 
                        ->orderBy('nama_siswa')
                        ->get();
@@ -184,15 +191,24 @@ class PesertaEkskulController extends Controller
         // 2. Ambil Model Ekskul
         $ekskul = Ekskul::findOrFail($id_ekskul);
         
-        // 3. Bersihkan array dari nilai kosong
-        // Array filter ini menangani kasus di mana hanya hidden field saja yang terkirim (hasilnya: [])
+        // 3. Bersihkan array dari nilai kosong dan pastikan hanya siswa aktif
         $submitted_siswa_ids = array_filter($validatedData['siswa_ids'] ?? []);
+        $valid_active_ids = Siswa::whereIn('id_siswa', $submitted_siswa_ids)
+                                 ->where('status', 'aktif')
+                                 ->pluck('id_siswa')
+                                 ->toArray();
+
+        // Pertahankan ID siswa non-aktif (lulus/keluar) yang sudah tersimpan sebelumnya agar riwayat tidak hilang
+        $non_active_existing_ids = EkskulSiswa::where('ekskul_siswa.id_ekskul', $id_ekskul)
+            ->join('siswa', 'ekskul_siswa.id_siswa', '=', 'siswa.id_siswa')
+            ->where('siswa.status', '!=', 'aktif')
+            ->pluck('ekskul_siswa.id_siswa')
+            ->toArray();
+
+        $final_sync_ids = array_unique(array_merge($valid_active_ids, $non_active_existing_ids));
 
         // 4. Sinkronisasi Data
-        // Ini adalah langkah krusial. Sync akan:
-        // - ATTACH (menambahkan) semua ID di $submitted_siswa_ids yang belum ada.
-        // - DETACH (menghapus) semua ID yang ADA di database tetapi TIDAK ADA di $submitted_siswa_ids.
-        $result = $ekskul->peserta()->sync($submitted_siswa_ids);
+        $result = $ekskul->peserta()->sync($final_sync_ids);
 
         // 5. Notifikasi dan Pengalihan
         $count_added = count($result['attached']);

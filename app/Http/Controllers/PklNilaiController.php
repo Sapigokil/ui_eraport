@@ -60,6 +60,8 @@ class PklNilaiController extends Controller
         rsort($tahunAjaranList);
 
         $query = DB::table('pkl_penempatan')
+            ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
+            ->where('siswa.status', 'aktif')
             ->join('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
                 $join->on('pkl_penempatan.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
                      ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
@@ -148,6 +150,8 @@ class PklNilaiController extends Controller
         $rubrikData = PklTpRubrik::all()->groupBy('id_pkl_tp_indikator');
 
         $dataSiswa = DB::table('pkl_penempatan')
+            ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
+            ->where('siswa.status', 'aktif')
             ->join('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
                 $join->on('pkl_penempatan.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
                      ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)

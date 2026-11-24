@@ -45,8 +45,10 @@ class PklGuruSiswaController extends Controller
         // LOGIKA MODE 1: VIEW BY GURU
         // ==========================================
         if ($mode == 'guru') {
-            // REVISI: Mengambil data Penempatan dari tabel pkl_penempatan
+            // REVISI: Mengambil data Penempatan dari tabel pkl_penempatan (khusus siswa aktif)
             $rawData = DB::table('pkl_gurusiswa')
+                ->join('siswa', 'pkl_gurusiswa.id_siswa', '=', 'siswa.id_siswa')
+                ->where('siswa.status', 'aktif')
                 ->leftJoin('pkl_penempatan', function($join) use ($tahun_ajaran, $semester) {
                     $join->on('pkl_gurusiswa.id_siswa', '=', 'pkl_penempatan.id_siswa')
                          ->where('pkl_penempatan.tahun_ajaran', '=', $tahun_ajaran)
@@ -83,9 +85,10 @@ class PklGuruSiswaController extends Controller
             if ($id_kelas) {
                 $kelasInfo = Kelas::find($id_kelas);
 
-                // REVISI: Mengambil relasi guru dari pkl_gurusiswa, dan lokasi dari pkl_penempatan
+                // REVISI: Mengambil relasi guru dari pkl_gurusiswa, dan lokasi dari pkl_penempatan (khusus siswa aktif)
                 $dataSiswa = DB::table('siswa')
                     ->where('siswa.id_kelas', $id_kelas)
+                    ->where('siswa.status', 'aktif')
                     ->leftJoin('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
                         $join->on('siswa.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
                              ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
@@ -160,6 +163,7 @@ class PklGuruSiswaController extends Controller
         $siswa = DB::table('siswa')
             ->join('kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
             ->where('siswa.id_kelas', $id_kelas)
+            ->where('siswa.status', 'aktif')
             ->select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nisn', 'kelas.nama_kelas', 'kelas.tingkat', 'kelas.jurusan')
             ->orderBy('siswa.nama_siswa', 'asc')
             ->get();
@@ -210,6 +214,7 @@ class PklGuruSiswaController extends Controller
             $siswa_data = DB::table('siswa')
                 ->join('kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
                 ->whereIn('siswa.id_siswa', $siswa_ids)
+                ->where('siswa.status', 'aktif')
                 ->select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.id_kelas', 'kelas.nama_kelas', 'kelas.tingkat', 'kelas.jurusan')
                 ->get();
             

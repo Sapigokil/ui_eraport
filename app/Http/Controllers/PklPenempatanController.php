@@ -52,6 +52,7 @@ class PklPenempatanController extends Controller
 
                 $dataSiswa = DB::table('siswa')
                     ->where('siswa.id_kelas', $id_kelas)
+                    ->where('siswa.status', 'aktif')
                     ->leftJoin('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
                         $join->on('siswa.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
                              ->where('pkl_gurusiswa.tahun_ajaran', '=', $tahun_ajaran)
@@ -86,6 +87,7 @@ class PklPenempatanController extends Controller
             $query = DB::table('pkl_penempatan')
                 ->join('pkl_tempat', 'pkl_penempatan.id_pkltempat', '=', 'pkl_tempat.id')
                 ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
+                ->where('siswa.status', 'aktif')
                 ->join('kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
                 ->leftJoin('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
                     $join->on('siswa.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
@@ -195,6 +197,7 @@ class PklPenempatanController extends Controller
         if ($id_pkltempat) {
             $siswa_terpilih = DB::table('pkl_penempatan')
                 ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
+                ->where('siswa.status', 'aktif')
                 ->join('kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
                 ->where('pkl_penempatan.id_pkltempat', $id_pkltempat)
                 ->where('pkl_penempatan.tahun_ajaran', $tahun_ajaran)
@@ -217,6 +220,7 @@ class PklPenempatanController extends Controller
         $siswa = DB::table('siswa')
             ->join('kelas', 'siswa.id_kelas', '=', 'kelas.id_kelas')
             ->where('siswa.id_kelas', $id_kelas)
+            ->where('siswa.status', 'aktif')
             ->select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nisn', 'kelas.nama_kelas', 'kelas.tingkat', 'kelas.jurusan')
             ->orderBy('siswa.nama_siswa', 'asc')
             ->get();

@@ -34,7 +34,7 @@ class PklRaporMonitoringController extends Controller
         }
         rsort($tahunAjaranList);
 
-        // 2. Ambil Semua Data Siswa PKL beserta status penilaiannya
+        // 2. Ambil Semua Data Siswa PKL Aktif beserta status penilaiannya
         $siswaPkl = DB::table('pkl_penempatan')
             ->join('pkl_gurusiswa', function($join) use ($tahun_ajaran, $semester) {
                 $join->on('pkl_penempatan.id_siswa', '=', 'pkl_gurusiswa.id_siswa')
@@ -42,6 +42,7 @@ class PklRaporMonitoringController extends Controller
                      ->where('pkl_gurusiswa.semester', '=', $semester);
             })
             ->join('siswa', 'pkl_penempatan.id_siswa', '=', 'siswa.id_siswa')
+            ->where('siswa.status', 'aktif')
             ->leftJoin('pkl_tempat', 'pkl_penempatan.id_pkltempat', '=', 'pkl_tempat.id')
             ->leftJoin('pkl_catatansiswa', 'pkl_penempatan.id', '=', 'pkl_catatansiswa.id_penempatan')
             ->join('kelas', 'pkl_gurusiswa.id_kelas', '=', 'kelas.id_kelas')

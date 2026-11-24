@@ -210,8 +210,10 @@ class NilaiAkhirController extends Controller
                 }
             }
 
-            // --- B. AMBIL SISWA SESUAI FILTER ---
-            $querySiswa = Siswa::with('detail')->where('id_kelas', $id_kelas);
+            // --- B. AMBIL SISWA SESUAI FILTER (HANYA SISWA AKTIF) ---
+            $querySiswa = Siswa::with('detail')
+                ->where('id_kelas', $id_kelas)
+                ->where('status', 'aktif');
 
             if ($filterAgama !== null && !empty($filterAgama)) {
                 $querySiswa->whereHas('detail', function ($q) use ($filterAgama) {
@@ -222,7 +224,7 @@ class NilaiAkhirController extends Controller
             $siswa = $querySiswa->orderBy('nama_siswa')->get();
 
             if ($siswa->isEmpty()) {
-                $error = 'Tidak ada siswa ditemukan (Cek filter agama atau data siswa).';
+                $error = 'Tidak ada siswa aktif ditemukan (Cek filter agama atau data siswa).';
                 goto render_view;
             }
 
