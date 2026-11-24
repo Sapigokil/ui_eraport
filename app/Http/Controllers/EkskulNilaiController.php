@@ -34,9 +34,7 @@ class EkskulNilaiController extends Controller
 
         $query = Ekskul::with('guru')->withCount([
             'peserta' => function ($q) {
-                $q->whereHas('siswa', function ($sq) {
-                    $sq->where('status', 'aktif');
-                });
+                $q->where('siswa.status', 'aktif');
             }
         ]);
 
@@ -86,10 +84,9 @@ class EkskulNilaiController extends Controller
                 ->toArray();
         }
 
-        $total_peserta = EkskulSiswa::where('id_ekskul', $id_ekskul)
-            ->whereHas('siswa', function ($q) {
-                $q->where('status', 'aktif');
-            })
+        $total_peserta = EkskulSiswa::where('ekskul_siswa.id_ekskul', $id_ekskul)
+            ->join('siswa', 'ekskul_siswa.id_siswa', '=', 'siswa.id_siswa')
+            ->where('siswa.status', 'aktif')
             ->count();
 
         return view('ekskul.peserta_edit', compact(
@@ -219,9 +216,7 @@ class EkskulNilaiController extends Controller
         $query = Ekskul::with('guru')
             ->withCount([
                 'peserta' => function ($q) {
-                    $q->whereHas('siswa', function ($sq) {
-                        $sq->where('status', 'aktif');
-                    });
+                    $q->where('siswa.status', 'aktif');
                 },
                 'nilai as sudah_dinilai' => function ($q) use ($semesterInt, $tahunAjaran) {
                     $q->where('semester', $semesterInt)
