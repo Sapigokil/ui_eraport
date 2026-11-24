@@ -593,7 +593,10 @@ class RaporController extends Controller
         $id_kelas = $request->id_kelas; $semesterRaw = $request->semester ?? 'Ganjil'; $tahun_ajaran = $request->tahun_ajaran;
         if (!$id_kelas) return redirect()->back()->with('error', 'Pilih kelas.');
         
-        $daftarSiswa = Siswa::where('id_kelas', $id_kelas)->orderBy('nama_siswa', 'asc')->get();
+        $daftarSiswa = Siswa::where('id_kelas', $id_kelas)
+            ->where('status', 'aktif')
+            ->orderBy('nama_siswa', 'asc')
+            ->get();
         $allData = [];
         foreach ($daftarSiswa as $siswa) {
             $data = $this->persiapkanDataRapor($siswa->id_siswa, $semesterRaw, $tahun_ajaran);
@@ -622,6 +625,8 @@ class RaporController extends Controller
         if ($request->has('ids') && !empty($request->ids)) {
             $idArray = explode(',', $request->ids);
             $querySiswa->whereIn('id_siswa', $idArray);
+        } else {
+            $querySiswa->where('status', 'aktif');
         }
         $siswaList = $querySiswa->orderBy('nama_siswa', 'asc')->get();
 

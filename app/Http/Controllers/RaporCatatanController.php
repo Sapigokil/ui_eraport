@@ -27,7 +27,9 @@ class RaporCatatanController extends Controller
 
             $semesterDB = ($semesterFilter == 'Ganjil') ? 1 : 2; 
 
-            $siswaData = Siswa::where('id_kelas', $idKelas)->get();
+            $siswaData = Siswa::where('id_kelas', $idKelas)
+                ->where('status', 'aktif')
+                ->get();
 
             $catatan = RaporCatatan::where('id_kelas', $idKelas)
                 ->where('id_tahun_ajaran', $idTahunAjaranFilter) 
@@ -100,7 +102,10 @@ class RaporCatatanController extends Controller
     public function getSiswa($id_kelas)
     {
         // Asumsi ini endpoint AJAX
-        $siswa = Siswa::where('id_kelas', $id_kelas)->select('id_siswa', 'nama')->get();
+        $siswa = Siswa::where('id_kelas', $id_kelas)
+            ->where('status', 'aktif')
+            ->select('id_siswa', 'nama')
+            ->get();
         return response()->json($siswa);
     }
 }
