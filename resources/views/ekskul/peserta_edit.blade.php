@@ -14,7 +14,7 @@
                 <div class="card bg-gradient-primary shadow-primary border-radius-xl">
                     <div class="card-body p-4">
                         <div class="row align-items-center">
-                            <div class="col-md-8 d-flex align-items-center">
+                            <div class="col-md-7 d-flex align-items-center mb-3 mb-md-0">
                                 <div class="icon icon-lg icon-shape bg-white shadow text-center border-radius-xl">
                                     {{-- REVISI: Ganti Icon Bola jadi Icon Universal (Shapes/Layer) --}}
                                     <i class="fas fa-shapes text-primary text-xl opacity-10" aria-hidden="true"></i>
@@ -29,13 +29,18 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-4 text-end">
-                                <div class="d-inline-block bg-white-20 rounded-3 px-3 py-2 border border-white-50">
+                            
+                            <div class="col-md-5 d-flex align-items-center justify-content-md-end gap-3">
+                                <div class="d-inline-block bg-white-20 rounded-3 px-3 py-2 border border-white-50 text-end">
                                     <p class="text-xs text-uppercase font-weight-bold text-white mb-0 opacity-8">Total Peserta</p>
                                     <h3 class="text-white font-weight-bolder mb-0">
                                         {{ $total_peserta }} <span class="text-sm font-weight-normal">Siswa</span>
                                     </h3>
                                 </div>
+
+                                <a href="{{ route('ekskul.peserta.index') }}" class="btn bg-white text-primary btn-sm mb-0 shadow-xs">
+                                    <i class="fas fa-arrow-left me-1"></i> Kembali
+                                </a>
                             </div>
                         </div>
                     </div>

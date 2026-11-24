@@ -28,11 +28,11 @@
                                         Kelola anggota dan peserta kegiatan ekstrakurikuler
                                     </p>
                                 </div>
-                                <div class="pe-3">
+                                {{-- <div class="pe-3">
                                     <a href="{{ route('ekskul.nilai.index') }}" class="btn bg-white text-primary btn-sm mb-0">
                                         <i class="fas fa-arrow-left me-1"></i> Kembali
                                     </a>
-                                </div>
+                                </div> --}}
                             </div>
                         </div>
                     </div>

@@ -169,8 +169,9 @@ class CatatanController extends Controller
                 $isKelasBawah = $kelasTerpilih->tingkat < $maxTingkat;
             }
 
-            // Load Data Siswa
+            // Load Data Siswa (Hanya Siswa Aktif)
             $siswa = Siswa::where('id_kelas', $request->id_kelas)
+                ->where('status', 'aktif')
                 ->orderBy('nama_siswa');
             
             if($request->tahun_ajaran && $semesterInt) {
@@ -254,7 +255,10 @@ class CatatanController extends Controller
 
     public function getSiswa($id_kelas)
     {
-        return Siswa::where('id_kelas', $id_kelas)->orderBy('nama_siswa')->get();
+        return Siswa::where('id_kelas', $id_kelas)
+            ->where('status', 'aktif')
+            ->orderBy('nama_siswa')
+            ->get();
     }
 
     /**
@@ -306,25 +310,29 @@ class CatatanController extends Controller
     {
         $kelasList = Kelas::orderBy('nama_kelas')->get();
         
-        $query = DB::table('catatan')->select([
-            'id_kelas', 
-            'tahun_ajaran', 
-            'semester',
-            DB::raw('COUNT(id_siswa) as total_siswa_dicatat')
-        ])
-        ->groupBy('id_kelas', 'tahun_ajaran', 'semester');
+        $query = DB::table('catatan')
+            ->join('siswa', 'catatan.id_siswa', '=', 'siswa.id_siswa')
+            ->where('siswa.status', 'aktif')
+            ->select([
+                'catatan.id_kelas', 
+                'catatan.tahun_ajaran', 
+                'catatan.semester',
+                DB::raw('COUNT(catatan.id_siswa) as total_siswa_dicatat')
+            ])
+            ->groupBy('catatan.id_kelas', 'catatan.tahun_ajaran', 'catatan.semester');
         
-        if ($request->id_kelas) $query->where('id_kelas', $request->id_kelas);
-        if ($request->tahun_ajaran) $query->where('tahun_ajaran', $request->tahun_ajaran);
+        if ($request->id_kelas) $query->where('catatan.id_kelas', $request->id_kelas);
+        if ($request->tahun_ajaran) $query->where('catatan.tahun_ajaran', $request->tahun_ajaran);
         if ($request->semester) {
             $semInt = $this->mapSemesterToInt($request->semester);
-            if ($semInt) $query->where('semester', $semInt);
+            if ($semInt) $query->where('catatan.semester', $semInt);
         }
         
         $progressData = $query->get();
 
         $kelasMap = Kelas::pluck('nama_kelas', 'id_kelas');
-        $siswaPerKelas = Siswa::select('id_kelas', DB::raw('COUNT(*) as total'))
+        $siswaPerKelas = Siswa::where('status', 'aktif')
+                              ->select('id_kelas', DB::raw('COUNT(*) as total'))
                               ->groupBy('id_kelas')
                               ->get()
                               ->keyBy('id_kelas');
@@ -359,10 +367,13 @@ class CatatanController extends Controller
         ]);
 
         $kelas = Kelas::find($request->id_kelas);
-        $siswa = Siswa::where('id_kelas', $request->id_kelas)->orderBy('nama_siswa')->get();
+        $siswa = Siswa::where('id_kelas', $request->id_kelas)
+            ->where('status', 'aktif')
+            ->orderBy('nama_siswa')
+            ->get();
 
         if ($siswa->isEmpty()) {
-            return back()->with('error', 'Tidak ada siswa ditemukan. Template tidak dapat dibuat.');
+            return back()->with('error', 'Tidak ada siswa aktif ditemukan. Template tidak dapat dibuat.');
         }
 
         $fileName = 'Template_Catatan_Wali_' . str_replace(' ', '_', $kelas->nama_kelas) . '.xlsx';

@@ -164,6 +164,7 @@ class MonitoringWaliController extends Controller
 
         $siswaList = Siswa::leftJoin('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
             ->where('siswa.id_kelas', $id_kelas)
+            ->where('siswa.status', 'aktif')
             ->select(
                 'siswa.id_siswa', 
                 'siswa.nama_siswa', 
@@ -177,7 +178,7 @@ class MonitoringWaliController extends Controller
             $q->where('is_active', 1); 
         }, 'guru'])->where('id_kelas', $id_kelas)->get();
 
-        if ($siswaList->isEmpty()) return back()->with('error', 'Tidak ada siswa di kelas ini.');
+        if ($siswaList->isEmpty()) return back()->with('error', 'Tidak ada siswa aktif di kelas ini.');
 
         DB::beginTransaction();
         try {
@@ -471,6 +472,7 @@ class MonitoringWaliController extends Controller
             $siswaCollection = DB::table('siswa')
                 ->leftJoin('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
                 ->where('siswa.id_kelas', $k->id_kelas)
+                ->where('siswa.status', 'aktif')
                 ->select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nisn', 'detail_siswa.agama')
                 ->orderBy('siswa.nama_siswa')
                 ->get();

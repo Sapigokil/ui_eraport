@@ -69,10 +69,11 @@ class MonitoringController extends Controller
         ];
 
         foreach ($listKelas as $k) {
-            // A. DATA SISWA (Baseline Master)
+            // A. DATA SISWA (Baseline Master - Hanya Siswa Aktif)
             $siswaCollection = DB::table('siswa')
                 ->join('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
                 ->where('siswa.id_kelas', $k->id_kelas)
+                ->where('siswa.status', 'aktif')
                 ->select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nisn', 'detail_siswa.agama', 'siswa.nipd')
                 ->orderBy('siswa.nama_siswa')
                 ->get();
@@ -128,7 +129,7 @@ class MonitoringController extends Controller
                     ->where('id_mapel', $p->id_mapel)
                     ->where('semester', $smtInt)
                     ->where('tahun_ajaran', $tahun_ajaran)
-                    ->where('status_data', ['final', 'cetak'])
+                    ->whereIn('status_data', ['final', 'cetak'])
                     ->count();
 
                 $statusMapel = 'kosong'; 
