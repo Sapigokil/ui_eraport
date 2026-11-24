@@ -16,15 +16,15 @@
 
     <style>
         .btn-export-excel-ungu {
-            background-color: #ffffff !important;
+            background-color: #6f42c1 !important;
             border: 1px solid #6f42c1 !important;
-            color: #6f42c1 !important;
+            color: #ffffff !important;
         }
         .btn-export-excel-ungu:hover,
         .btn-export-excel-ungu:focus {
-            background-color: #f8f5ff !important;
+            background-color: #59339d !important;
             border-color: #59339d !important;
-            color: #59339d !important;
+            color: #ffffff !important;
         }
         .editor-mini-toolbar {
             display: inline-flex;
@@ -377,7 +377,9 @@
                                 </div>
                             </div>
 
-                            {{-- INFORMASI TOTAL DAN AUTO ADJUST --}}
+                            {{-- ========================================================================
+                                INFORMASI TOTAL, IMPORT/EXPORT SOAL EXCEL, DAN AUTO ADJUST BOBOT
+                                ======================================================================== --}}
                             <div class="row mb-3 mt-2" id="box-rekap-soal">
                                 <div class="col-12">
                                     <div class="p-3 bg-gray-50 border rounded d-flex flex-column flex-md-row justify-content-between align-items-center shadow-sm">
@@ -387,6 +389,9 @@
                                             <span class="ms-3 text-sm text-secondary">Total Poin: <strong id="summary-total-poin" class="text-info text-lg">0</strong> <span id="poin-warning" class="text-danger text-xs d-none">(Melebihi 100!)</span></span>
                                         </div>
                                         <div class="d-flex flex-wrap gap-2">
+                                            <button type="button" class="btn btn-sm btn-export-excel-ungu btn-export-soal-excel mb-0 shadow-sm" title="Export daftar soal saat ini ke file Excel (.xlsx) sesuai format template import">
+                                                <i class="fas fa-file-export me-1"></i> Export Soal Excel
+                                            </button>
                                             <button type="button" class="btn btn-sm btn-outline-primary mb-0 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportSoalExcel">
                                                 <i class="fas fa-file-excel me-1"></i> Import Soal Excel
                                             </button>
@@ -416,10 +421,12 @@
 
                         </div>
 
-                        {{-- TOMBOL SUBMIT UTAMA (EXPORT DI KIRI, BATAL & SIMPAN DI KANAN) --}}
+                        {{-- ========================================================================
+                            TOMBOL SUBMIT UTAMA (EXPORT DI KIRI, BATAL & SIMPAN DI KANAN)
+                            ======================================================================== --}}
                         <div class="card-footer bg-light border-top py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <div>
-                                <button type="button" id="btn-export-soal-excel" class="btn btn-sm btn-export-excel-ungu mb-0 shadow-sm" title="Export daftar soal saat ini ke file Excel (.xlsx) sesuai format template import">
+                                <button type="button" class="btn btn-sm btn-export-excel-ungu btn-export-soal-excel mb-0 shadow-sm" title="Export daftar soal saat ini ke file Excel (.xlsx) sesuai format template import">
                                     <i class="fas fa-file-export me-1"></i> Export Soal Excel
                                 </button>
                             </div>
@@ -1765,124 +1772,131 @@ document.addEventListener('DOMContentLoaded', function() {
     // ========================================================================
     // EXPORT SOAL SAAT INI KE EXCEL (.XLSX) SESUAI FORMAT TEMPLATE IMPORT
     // ========================================================================
-    const btnExportSoalExcel = document.getElementById('btn-export-soal-excel');
-    if (btnExportSoalExcel) {
-        btnExportSoalExcel.addEventListener('click', async function() {
-            const soalItems = document.querySelectorAll('.soal-item');
-            if (soalItems.length === 0) {
-                alert('Belum ada butir soal untuk di-export.');
-                return;
-            }
-
-            const payloadSoals = [];
-            soalItems.forEach(item => {
-                const tipe = item.querySelector('.soal-tipe').value;
-                const pertanyaan = item.querySelector('.soal-pertanyaan').value;
-                const bobotNilai = item.querySelector('.soal-bobot').value;
-                const mediaPreview = item.querySelector('.media-preview-container');
-                const hasMedia = (mediaPreview && !mediaPreview.classList.contains('d-none')) ? '1' : '0';
-
-                const soalObj = {
-                    tipe: tipe,
-                    pertanyaan: pertanyaan,
-                    bobot_nilai: bobotNilai,
-                    has_media: hasMedia,
-                    opsi_jawaban: [],
-                    has_opsi_media: [],
-                    kunci_jawaban: [],
-                    kunci_isian: '',
-                    pernyataan_bs: []
-                };
-
-                if (tipe === 'benar_salah') {
-                    item.querySelectorAll('.bs-row').forEach(row => {
-                        const teks = row.querySelector('.bs-teks').value;
-                        const bobot = row.querySelector('.bs-bobot').value;
-                        const radioBenar = row.querySelector('.bs-kunci-benar');
-                        const radioSalah = row.querySelector('.bs-kunci-salah');
-                        let kunci = '';
-                        if (radioBenar && radioBenar.checked) kunci = 'benar';
-                        else if (radioSalah && radioSalah.checked) kunci = 'salah';
-
-                        soalObj.pernyataan_bs.push({
-                            teks: teks,
-                            kunci: kunci,
-                            bobot: bobot
-                        });
-                    });
-                } else if (['pg', 'pg_kompleks'].includes(tipe)) {
-                    item.querySelectorAll('.opsi-item').forEach((optEl, optIdx) => {
-                        const teksOpsi = optEl.querySelector('.opsi-teks').value;
-                        const optPrev = optEl.querySelector('.opsi-media-preview-container');
-                        const hasOptMedia = (optPrev && !optPrev.classList.contains('d-none')) ? '1' : '0';
-
-                        soalObj.opsi_jawaban.push(teksOpsi);
-                        soalObj.has_opsi_media.push(hasOptMedia);
-
-                        if (tipe === 'pg') {
-                            const r = optEl.querySelector('.kunci-radio');
-                            if (r && r.checked) {
-                                soalObj.kunci_jawaban.push(String(optIdx));
-                            }
-                        } else {
-                            const c = optEl.querySelector('.kunci-checkbox');
-                            if (c && c.checked) {
-                                soalObj.kunci_jawaban.push(String(optIdx));
-                            }
-                        }
-                    });
-                } else {
-                    soalObj.kunci_isian = item.querySelector('.soal-kunci-isian')?.value?.trim() || '';
+    const exportSoalButtons = document.querySelectorAll('.btn-export-soal-excel');
+    if (exportSoalButtons.length > 0) {
+        exportSoalButtons.forEach(btnExport => {
+            btnExport.addEventListener('click', async function() {
+                const soalItems = document.querySelectorAll('.soal-item');
+                if (soalItems.length === 0) {
+                    alert('Belum ada butir soal untuk di-export.');
+                    return;
                 }
 
-                payloadSoals.push(soalObj);
-            });
+                const payloadSoals = [];
+                soalItems.forEach(item => {
+                    const tipe = item.querySelector('.soal-tipe').value;
+                    const pertanyaan = item.querySelector('.soal-pertanyaan').value;
+                    const bobotNilai = item.querySelector('.soal-bobot').value;
+                    const mediaPreview = item.querySelector('.media-preview-container');
+                    const hasMedia = (mediaPreview && !mediaPreview.classList.contains('d-none')) ? '1' : '0';
 
-            const originalHtml = btnExportSoalExcel.innerHTML;
-            btnExportSoalExcel.disabled = true;
-            btnExportSoalExcel.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Mengekspor...';
+                    const soalObj = {
+                        tipe: tipe,
+                        pertanyaan: pertanyaan,
+                        bobot_nilai: bobotNilai,
+                        has_media: hasMedia,
+                        opsi_jawaban: [],
+                        has_opsi_media: [],
+                        kunci_jawaban: [],
+                        kunci_isian: '',
+                        pernyataan_bs: []
+                    };
 
-            try {
-                const kodeUjiVal = inputKodeUji ? inputKodeUji.value.trim() : '';
-                const response = await fetch("{{ route('sba.soal.export') }}", {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json'
-                    },
-                    body: JSON.stringify({
-                        kode_uji: kodeUjiVal,
-                        soals: payloadSoals
-                    })
+                    if (tipe === 'benar_salah') {
+                        item.querySelectorAll('.bs-row').forEach(row => {
+                            const teks = row.querySelector('.bs-teks').value;
+                            const bobot = row.querySelector('.bs-bobot').value;
+                            const radioBenar = row.querySelector('.bs-kunci-benar');
+                            const radioSalah = row.querySelector('.bs-kunci-salah');
+                            let kunci = '';
+                            if (radioBenar && radioBenar.checked) kunci = 'benar';
+                            else if (radioSalah && radioSalah.checked) kunci = 'salah';
+
+                            soalObj.pernyataan_bs.push({
+                                teks: teks,
+                                kunci: kunci,
+                                bobot: bobot
+                            });
+                        });
+                    } else if (['pg', 'pg_kompleks'].includes(tipe)) {
+                        item.querySelectorAll('.opsi-item').forEach((optEl, optIdx) => {
+                            const teksOpsi = optEl.querySelector('.opsi-teks').value;
+                            const optPrev = optEl.querySelector('.opsi-media-preview-container');
+                            const hasOptMedia = (optPrev && !optPrev.classList.contains('d-none')) ? '1' : '0';
+
+                            soalObj.opsi_jawaban.push(teksOpsi);
+                            soalObj.has_opsi_media.push(hasOptMedia);
+
+                            if (tipe === 'pg') {
+                                const r = optEl.querySelector('.kunci-radio');
+                                if (r && r.checked) {
+                                    soalObj.kunci_jawaban.push(String(optIdx));
+                                }
+                            } else {
+                                const c = optEl.querySelector('.kunci-checkbox');
+                                if (c && c.checked) {
+                                    soalObj.kunci_jawaban.push(String(optIdx));
+                                }
+                            }
+                        });
+                    } else {
+                        soalObj.kunci_isian = item.querySelector('.soal-kunci-isian')?.value?.trim() || '';
+                    }
+
+                    payloadSoals.push(soalObj);
                 });
 
-                if (!response.ok) {
-                    let errMsg = 'Gagal mengekspor soal ke Excel.';
-                    try {
-                        const errData = await response.json();
-                        if (errData && errData.message) errMsg = errData.message;
-                    } catch (_) {}
-                    throw new Error(errMsg);
-                }
+                const originalHtmls = [];
+                exportSoalButtons.forEach((btn, idx) => {
+                    originalHtmls[idx] = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Mengekspor...';
+                });
 
-                const blob = await response.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = kodeUjiVal !== ''
-                    ? `Export_Soal_SBA_${kodeUjiVal}.xlsx`
-                    : 'Export_Soal_SBA.xlsx';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(downloadUrl);
-            } catch (err) {
-                alert(err.message || 'Terjadi kesalahan saat mengekspor soal.');
-            } finally {
-                btnExportSoalExcel.disabled = false;
-                btnExportSoalExcel.innerHTML = originalHtml;
-            }
+                try {
+                    const kodeUjiVal = inputKodeUji ? inputKodeUji.value.trim() : '';
+                    const response = await fetch("{{ route('sba.soal.export') }}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json'
+                        },
+                        body: JSON.stringify({
+                            kode_uji: kodeUjiVal,
+                            soals: payloadSoals
+                        })
+                    });
+
+                    if (!response.ok) {
+                        let errMsg = 'Gagal mengekspor soal ke Excel.';
+                        try {
+                            const errData = await response.json();
+                            if (errData && errData.message) errMsg = errData.message;
+                        } catch (_) {}
+                        throw new Error(errMsg);
+                    }
+
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = kodeUjiVal !== ''
+                        ? `Export_Soal_SBA_${kodeUjiVal}.xlsx`
+                        : 'Export_Soal_SBA.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(downloadUrl);
+                } catch (err) {
+                    alert(err.message || 'Terjadi kesalahan saat mengekspor soal.');
+                } finally {
+                    exportSoalButtons.forEach((btn, idx) => {
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtmls[idx];
+                    });
+                }
+            });
         });
     }
 

@@ -1249,60 +1249,78 @@ class SbaController extends Controller
     }
 
     /**
-     * Simpan Penilaian Manual (Uraian Tanpa Kunci & PG/PGK Tanpa Kunci) serta Finalisasi Skor (Status menjadi 'final')
+     * Simpan Penilaian Manual / Take Over Guru (Uraian Berkunci maupun Tanpa Kunci, & PG/PGK Tanpa Kunci) serta Finalisasi Skor
      */
     public function simpanPenilaianEsai(Request $request, $hasil_id)
     {
         $hasil = UjiHasil::with('uji.soals')->findOrFail($hasil_id);
         $this->authorizeUjiAccess($hasil->uji);
 
-        $skorManualTotal = 0;
-        $skorOtomatisTotal = 0;
+        $skorManualTotal = 0.0;
+        $skorOtomatisTotal = 0.0;
 
         $skorInputs = $request->input('skor_manual', $request->input('skor_esai', []));
-
-        foreach ($hasil->uji->soals as $soal) {
-            $jawaban = UjiJawaban::where('uji_hasil_id', $hasil->id)
-                ->where('uji_soal_id', $soal->id)
-                ->first();
-
-            $isManualGraded = $this->isSoalManualGraded($soal);
-
-            if ($isManualGraded) {
-                $skorDidapat = isset($skorInputs[$soal->id]) ? (float) $skorInputs[$soal->id] : ($jawaban ? (float) $jawaban->skor_didapat : 0);
-
-                if ($skorDidapat < 0) {
-                    $skorDidapat = 0;
-                }
-                if ($skorDidapat > $soal->bobot_nilai) {
-                    $skorDidapat = $soal->bobot_nilai;
-                }
-
-                if ($jawaban) {
-                    $jawaban->update(['skor_didapat' => $skorDidapat]);
-                } else {
-                    UjiJawaban::create([
-                        'uji_hasil_id' => $hasil->id,
-                        'uji_soal_id'  => $soal->id,
-                        'jawaban'      => null,
-                        'skor_didapat' => $skorDidapat,
-                    ]);
-                }
-                $skorManualTotal += $skorDidapat;
-            } else {
-                if ($jawaban) {
-                    $skorOtomatisTotal += (float) $jawaban->skor_didapat;
-                }
-            }
+        if (!is_array($skorInputs)) {
+            $skorInputs = [];
         }
 
-        $totalSkorAkhir = $skorOtomatisTotal + $skorManualTotal;
+        DB::transaction(function () use ($hasil, $skorInputs, &$skorManualTotal, &$skorOtomatisTotal) {
+            foreach ($hasil->uji->soals as $soal) {
+                $jawaban = UjiJawaban::where('uji_hasil_id', $hasil->id)
+                    ->where('uji_soal_id', $soal->id)
+                    ->first();
 
-        $hasil->update([
-            'skor_otomatis'     => $skorOtomatisTotal,
-            'total_skor'        => $totalSkorAkhir,
-            'status_pengerjaan' => 'final',
-        ]);
+                $isManualGraded = $this->isSoalManualGraded($soal);
+                $hasGuruOverrideInput = array_key_exists($soal->id, $skorInputs) && $skorInputs[$soal->id] !== null && $skorInputs[$soal->id] !== '';
+
+                // Berlaku untuk semua soal manual (esai tanpa kunci, PG/PGK tanpa kunci)
+                // maupun soal esai berkunci yang di-take over penilaiannya oleh guru
+                if ($isManualGraded || ($soal->tipe === 'esai' && $hasGuruOverrideInput)) {
+                    $skorDidapat = $hasGuruOverrideInput
+                        ? (float) $skorInputs[$soal->id]
+                        : ($jawaban ? (float) $jawaban->skor_didapat : 0.0);
+
+                    if ($skorDidapat < 0) {
+                        $skorDidapat = 0.0;
+                    }
+                    if ($skorDidapat > (float) $soal->bobot_nilai) {
+                        $skorDidapat = (float) $soal->bobot_nilai;
+                    }
+
+                    $skorDidapat = round($skorDidapat, 2);
+
+                    if ($jawaban) {
+                        $jawaban->update(['skor_didapat' => $skorDidapat]);
+                    } else {
+                        UjiJawaban::create([
+                            'uji_hasil_id' => $hasil->id,
+                            'uji_soal_id'  => $soal->id,
+                            'jawaban'      => null,
+                            'skor_didapat' => $skorDidapat,
+                        ]);
+                    }
+
+                    if ($isManualGraded) {
+                        $skorManualTotal += $skorDidapat;
+                    } else {
+                        $skorOtomatisTotal += $skorDidapat;
+                    }
+                } else {
+                    if ($jawaban) {
+                        $skorOtomatisTotal += (float) $jawaban->skor_didapat;
+                    }
+                }
+            }
+
+            $skorOtomatisTotal = round($skorOtomatisTotal, 2);
+            $totalSkorAkhir = round($skorOtomatisTotal + $skorManualTotal, 2);
+
+            $hasil->update([
+                'skor_otomatis'     => $skorOtomatisTotal,
+                'total_skor'        => $totalSkorAkhir,
+                'status_pengerjaan' => 'final',
+            ]);
+        });
 
         return redirect()->back()->with('success', 'Penilaian akhir berhasil disimpan dan status diubah menjadi FINAL!');
     }

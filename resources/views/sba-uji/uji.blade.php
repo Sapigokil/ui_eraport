@@ -740,6 +740,7 @@
                     <button type="button" class="btn btn-outline-secondary px-4 rounded-3" data-bs-dismiss="modal">Kembali</button>
                     <form action="{{ route('sba.uji.selesai', $uji->id) }}" method="POST" id="form-finalisasi">
                         @csrf
+                        <input type="hidden" name="hasil_id" value="{{ $hasil->id }}">
                         <button type="submit" class="btn btn-success px-4 fw-bold rounded-3">Ya, Kumpulkan</button>
                     </form>
                 </div>
@@ -967,10 +968,29 @@
                 );
             }
 
+            function lampirkanJawabanEsaiKeFormFinalisasi() {
+                const formFinal = document.getElementById('form-finalisasi');
+                if (!formFinal) return;
+
+                formFinal.querySelectorAll('.hidden-esai-final').forEach(el => el.remove());
+
+                document.querySelectorAll('.text-area-esai').forEach(ta => {
+                    const sId = ta.dataset.soalId;
+                    if (!sId) return;
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = `jawaban_esai[${sId}]`;
+                    hiddenInput.value = ta.value;
+                    hiddenInput.className = 'hidden-esai-final';
+                    formFinal.appendChild(hiddenInput);
+                });
+            }
+
             function submitFinalisasiOtomatis() {
                 if (isSubmittingFinal || isLockedGagal) return;
                 isSubmittingFinal = true;
                 releaseScreenWakeLock();
+                lampirkanJawabanEsaiKeFormFinalisasi();
                 document.getElementById('form-finalisasi').submit();
             }
 
@@ -1152,6 +1172,7 @@
                 }
                 isSubmittingFinal = true;
                 releaseScreenWakeLock();
+                lampirkanJawabanEsaiKeFormFinalisasi();
             });
 
             // --- 5. LOGIKA NAVIGASI & PENGECEKAN FULLSCREEN SETIAP GANTI SOAL ---

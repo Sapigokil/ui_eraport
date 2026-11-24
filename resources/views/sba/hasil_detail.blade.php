@@ -50,6 +50,11 @@
             padding: 2px 8px;
             border-radius: 4px;
         }
+        .esai-compare-box {
+            border-radius: 10px;
+            padding: 12px 14px;
+            height: 100%;
+        }
         .katex {
             font-size: 1.06em;
         }
@@ -164,7 +169,7 @@
             @csrf
         </form>
 
-        {{-- FORM PENILAIAN MANUAL (ESAI & SOAL TANPA KUNCI) --}}
+        {{-- FORM PENILAIAN MANUAL & TAKE OVER GURU --}}
         <form action="{{ route('sba.hasil.simpan_nilai', $hasil->id) }}" method="POST" id="formPenilaian">
             @csrf
             
@@ -187,7 +192,7 @@
                                     <strong class="text-dark" id="sidebar-skor-otomatis">{{ number_format($hasil->skor_otomatis ?? 0, 0) }} Poin</strong>
                                 </div>
                                 <div class="d-flex justify-content-between">
-                                    <span class="text-secondary">Skor Manual:</span>
+                                    <span class="text-secondary">Skor Manual / Esai:</span>
                                     <strong class="text-warning" id="sidebar-skor-manual">0 Poin</strong>
                                 </div>
                             </div>
@@ -197,14 +202,14 @@
                                 <i class="fas fa-sync-alt me-1"></i> Refresh Nilai (Bobot Baru)
                             </button>
                             <small class="text-xxs text-muted d-block mb-3" style="line-height: 1.3;">
-                                *Menghitung ulang skor PG, PG Kompleks & Benar/Salah mengikuti perubahan bobot soal terbaru.
+                                *Menghitung ulang skor PG, PG Kompleks, Benar/Salah & Esai Berkunci mengikuti perubahan bobot & kunci soal terbaru.
                             </small>
 
                             <button type="button" id="btnAutoScoring" class="btn btn-outline-info btn-sm w-100 mb-1">
                                 <i class="fas fa-magic me-1"></i> Auto-Scoring Penuh
                             </button>
                             <small class="text-xxs text-muted d-block mb-3" style="line-height: 1.3;">
-                                *Memberikan nilai maksimal pada seluruh soal manual (esai / soal tanpa kunci).
+                                *Memberikan nilai maksimal pada seluruh soal uraian & soal tanpa kunci.
                             </small>
 
                             <hr class="my-2">
@@ -223,7 +228,9 @@
                             $jawabanSiswa = $mapJawaban->get($soal->id);
                             $jawabanRaw = $jawabanSiswa ? $jawabanSiswa->jawaban : null;
                             $skorDidapat = $jawabanSiswa ? (float) $jawabanSiswa->skor_didapat : 0;
-                            $kunciArray = is_array($soal->kunci_jawaban) ? array_filter($soal->kunci_jawaban, fn($v) => $v !== null && $v !== '') : [];
+                            $kunciArray = is_array($soal->kunci_jawaban)
+                                ? array_values(array_filter($soal->kunci_jawaban, fn($v) => $v !== null && trim((string) $v) !== ''))
+                                : [];
 
                             // Deteksi kunci & status tanpa kunci untuk soal Pernyataan Benar Salah
                             $bsPernyataanList = ($soal->tipe === 'benar_salah' && is_array($soal->opsi_jawaban)) ? $soal->opsi_jawaban : [];
@@ -239,11 +246,15 @@
                                 }
                             }
 
+                            $esaiPunyaKunci = ($soal->tipe === 'esai' && !empty($kunciArray));
                             $tanpaKunci = (in_array($soal->tipe, ['pg', 'pg_kompleks']) && empty($kunciArray))
-                                || ($soal->tipe === 'benar_salah' && empty($bsKunciMap));
-                            $isManualGraded = ($soal->tipe === 'esai') || $tanpaKunci;
+                                || ($soal->tipe === 'benar_salah' && empty($bsKunciMap))
+                                || ($soal->tipe === 'esai' && empty($kunciArray));
 
-                            if ($isManualGraded) {
+                            // Semua soal esai tetap memiliki input skor di form agar guru bisa take over kapan saja
+                            $hasInputSkorForm = ($soal->tipe === 'esai') || $tanpaKunci;
+
+                            if ($hasInputSkorForm) {
                                 $hasManualQuestions = true;
                             } else {
                                 $totalSkorOtomatis += $skorDidapat;
@@ -253,17 +264,21 @@
                                 'pg' => 'PG',
                                 'pg_kompleks' => 'PG Kompleks',
                                 'benar_salah' => 'Pernyataan Benar / Salah',
-                                'esai' => 'Esai',
+                                'esai' => 'Esai / Isian',
                                 default => str_replace('_', ' ', $soal->tipe),
                             };
                         @endphp
 
-                        <div class="card card-custom mb-3 {{ $isManualGraded ? 'border border-warning' : 'border' }}">
+                        <div class="card card-custom mb-3 {{ $tanpaKunci ? 'border border-warning' : 'border' }}">
                             <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center border-bottom flex-wrap gap-2">
                                 <div>
                                     <span class="badge bg-gradient-dark text-xxs me-2">Soal #{{ $index + 1 }}</span>
                                     <span class="badge bg-outline-primary text-xxs text-uppercase">{{ $labelTipe }}</span>
-                                    @if($tanpaKunci)
+                                    @if($esaiPunyaKunci)
+                                        <span class="badge bg-success text-xxs ms-1">
+                                            <i class="fas fa-key me-1"></i> Berkunci (Auto-Correction)
+                                        </span>
+                                    @elseif($tanpaKunci)
                                         <span class="badge bg-warning text-dark text-xxs ms-1">
                                             <i class="fas fa-key me-1"></i> Tanpa Kunci Jawaban
                                         </span>
@@ -272,9 +287,9 @@
                                 <div>
                                     <span class="text-xs text-secondary me-2">Bobot Poin: <strong>{{ $soal->bobot_nilai }}</strong></span>
                                     
-                                    @if($soal->tipe === 'esai')
+                                    @if($soal->tipe === 'esai' && !$esaiPunyaKunci)
                                         <span class="badge bg-warning text-dark text-xxs">
-                                            <i class="fas fa-pen-alt me-1"></i> Penilaian Uraian
+                                            <i class="fas fa-pen-alt me-1"></i> Penilaian Uraian ({{ round($skorDidapat, 2) }})
                                         </span>
                                     @elseif($tanpaKunci)
                                         <span class="badge bg-warning text-dark text-xxs">
@@ -498,20 +513,74 @@
                                         </div>
                                     @endif
 
-                                {{-- TIPE ESAI / URAIAN (PANEL KOREKSI GURU) --}}
+                                {{-- TIPE ESAI / URAIAN (BERJAJAR: KIRI JAWABAN ASESI, KANAN KUNCI JAWABAN + TAKE OVER GURU) --}}
                                 @elseif($soal->tipe === 'esai')
-                                    <div class="bg-light p-3 rounded border mb-3">
-                                        <span class="text-xxs text-secondary font-weight-bold d-block mb-1">
-                                            <i class="fas fa-pen-alt me-1 text-primary"></i> Jawaban Uraian Asesi:
-                                        </span>
-                                        <p class="text-sm text-dark mb-0 italic" style="white-space: pre-line;">
-                                            {{ $jawabanRaw ? $jawabanRaw : '- Tidak Menjawab -' }}
-                                        </p>
+                                    @php
+                                        $jawabanEsaiText = is_array($jawabanRaw)
+                                            ? (string) (reset($jawabanRaw) ?: '')
+                                            : trim((string) $jawabanRaw);
+
+                                        $esaiBoxClass = 'bg-light border';
+                                        if ($esaiPunyaKunci) {
+                                            $esaiBoxClass = ($skorDidapat >= (float) $soal->bobot_nilai && $skorDidapat > 0)
+                                                ? 'option-correct border'
+                                                : ($skorDidapat > 0 ? 'option-chosen-neutral border' : 'option-wrong border');
+                                        }
+                                    @endphp
+
+                                    <div class="row g-3 mb-3 align-items-stretch">
+                                        {{-- KOLOM KIRI: JAWABAN ASESI --}}
+                                        <div class="col-md-6">
+                                            <div class="esai-compare-box {{ $esaiBoxClass }}">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="text-xxs text-secondary font-weight-bold text-uppercase">
+                                                        <i class="fas fa-user-edit me-1 text-primary"></i> Jawaban Uraian Asesi
+                                                    </span>
+                                                    <span class="badge {{ $skorDidapat > 0 ? 'bg-success' : 'bg-secondary' }} text-xxs">
+                                                        Skor: {{ round($skorDidapat, 2) }} / {{ $soal->bobot_nilai }}
+                                                    </span>
+                                                </div>
+                                                <p class="text-sm text-dark mb-0" style="white-space: pre-line; line-height: 1.55;">
+                                                    {{ $jawabanEsaiText !== '' ? $jawabanEsaiText : '- Tidak Menjawab -' }}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {{-- KOLOM KANAN: KUNCI JAWABAN --}}
+                                        <div class="col-md-6">
+                                            <div class="esai-compare-box {{ $esaiPunyaKunci ? 'option-correct border' : 'bg-light border' }}">
+                                                <span class="text-xxs {{ $esaiPunyaKunci ? 'text-success' : 'text-secondary' }} font-weight-bold text-uppercase d-block mb-2">
+                                                    <i class="fas fa-key me-1"></i> Kunci Jawaban Acuan
+                                                </span>
+
+                                                @if($esaiPunyaKunci)
+                                                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                                                        @foreach($kunciArray as $kItem)
+                                                            <span class="badge bg-success text-white text-xs px-2 py-1" style="white-space: normal; text-align: left;">
+                                                                {{ $kItem }}
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
+                                                    @if(count($kunciArray) > 1)
+                                                        <small class="text-xxs text-muted d-block mt-2">
+                                                            *Terdapat {{ count($kunciArray) }} variasi kunci jawaban yang diterima sistem.
+                                                        </small>
+                                                    @endif
+                                                @else
+                                                    <p class="text-xs text-muted fst-italic mb-0">
+                                                        Tidak ada kunci jawaban otomatis (penilaian uraian bebas oleh penguji).
+                                                    </p>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {{-- TOOLBAR INPUT SKOR ESAI --}}
+                                    {{-- TOOLBAR INPUT SKOR ESAI & TAKE OVER GURU --}}
                                     <div class="d-flex flex-wrap align-items-center gap-2 bg-white p-2 px-3 border border-warning rounded">
-                                        <span class="text-xs font-weight-bold text-dark me-2">Beri Skor Esai:</span>
+                                        <span class="text-xs font-weight-bold text-dark me-2">
+                                            <i class="fas fa-gavel text-warning me-1"></i>
+                                            {{ $esaiPunyaKunci ? 'Koreksi / Take Over Skor Esai:' : 'Beri Skor Esai:' }}
+                                        </span>
                                         
                                         <button type="button" class="btn btn-xs btn-outline-success mb-0 btn-quick-grade" 
                                                 data-soal-id="{{ $soal->id }}" data-skor="{{ $soal->bobot_nilai }}">
@@ -646,13 +715,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const formRefreshNilai = document.getElementById('formRefreshNilai');
     if (btnRefreshNilai && formRefreshNilai) {
         btnRefreshNilai.addEventListener('click', function() {
-            if (!confirm('Hitung ulang dan perbarui nilai peserta ini sesuai bobot soal terbaru?')) return;
+            if (!confirm('Hitung ulang dan perbarui nilai peserta ini sesuai bobot & kunci soal terbaru?')) return;
             formRefreshNilai.submit();
         });
     }
 
     document.getElementById('btnAutoScoring').addEventListener('click', function() {
-        if (!confirm('Apakah Anda yakin ingin memberikan nilai maksimal pada seluruh soal penilaian manual?')) return;
+        if (!confirm('Apakah Anda yakin ingin memberikan nilai maksimal pada seluruh soal uraian & soal tanpa kunci?')) return;
 
         manualInputs.forEach(input => {
             const max = parseFloat(input.getAttribute('data-bobot-max')) || 0;

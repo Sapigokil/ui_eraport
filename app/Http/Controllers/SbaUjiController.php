@@ -270,7 +270,7 @@ class SbaUjiController extends Controller
     // ======================================================================
     public function simpanJawaban(Request $request, $uji_id)
     {
-        $hasilId = session('sba_hasil_id');
+        $hasilId = session('sba_hasil_id') ?? $request->input('hasil_id');
         if (!$hasilId) {
             return response()->json(['status' => 'error', 'message' => 'Sesi tidak ditemukan.'], 401);
         }
@@ -313,7 +313,81 @@ class SbaUjiController extends Controller
     }
 
     /**
-     * Helper Private: Hitung Skor Otomatis PG, PG Kompleks, & Pernyataan Benar Salah
+     * Helper Private: Smart Normalized Exact Match untuk Jawaban Isian Singkat / Esai Berkunci
+     * - Jika kunci berupa angka: wajib cocok secara nilai numerik (mendukung koma/titik desimal, misal 0,5 == 0.5)
+     * - Jika kunci berupa teks: normalisasi huruf kecil, spasi ganda, dan tanda baca pinggir, lalu cocok persis
+     */
+    private function isJawabanIsianCocok(string $jawabanSiswa, array $daftarKunci): bool
+    {
+        $siswaTrim = trim($jawabanSiswa);
+        if ($siswaTrim === '') {
+            return false;
+        }
+
+        // Ekspansi jika elemen array masih mengandung pemisah '|'
+        $kunciVariants = [];
+        foreach ($daftarKunci as $kItem) {
+            foreach (explode('|', (string) $kItem) as $sub) {
+                $clean = trim($sub);
+                if ($clean !== '') {
+                    $kunciVariants[] = $clean;
+                }
+            }
+        }
+
+        if (empty($kunciVariants)) {
+            return false;
+        }
+
+        $normalizeNumber = static function (string $val): ?float {
+            $cleaned = preg_replace('/\s+/u', '', trim($val));
+            if ($cleaned === '') {
+                return null;
+            }
+            // Ganti koma desimal menjadi titik jika hanya ada satu pemisah desimal
+            if (substr_count($cleaned, ',') === 1 && substr_count($cleaned, '.') === 0) {
+                $cleaned = str_replace(',', '.', $cleaned);
+            }
+            if (is_numeric($cleaned)) {
+                return (float) $cleaned;
+            }
+            return null;
+        };
+
+        $normalizeText = static function (string $val): string {
+            $lower = mb_strtolower(trim($val), 'UTF-8');
+            // Hapus tanda baca di awal/akhir kata/kalimat (titik, koma, tanda kutip, kurung, dll.)
+            $stripped = preg_replace('/^[\p{P}\p{S}\s]+|[\p{P}\p{S}\s]+$/u', '', $lower);
+            // Samakan spasi berlebih di tengah menjadi satu spasi
+            return trim((string) preg_replace('/\s+/u', ' ', (string) $stripped));
+        };
+
+        $siswaNum = $normalizeNumber($siswaTrim);
+        $siswaTextNorm = $normalizeText($siswaTrim);
+
+        foreach ($kunciVariants as $kunci) {
+            $kunciNum = $normalizeNumber($kunci);
+
+            // Jalur 1: Pencocokan Numerik Eksak
+            if ($kunciNum !== null) {
+                if ($siswaNum !== null && abs($siswaNum - $kunciNum) < 1e-9) {
+                    return true;
+                }
+                continue;
+            }
+
+            // Jalur 2: Pencocokan Teks Ternormalisasi Eksak
+            $kunciTextNorm = $normalizeText($kunci);
+            if ($kunciTextNorm !== '' && $siswaTextNorm === $kunciTextNorm) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Helper Private: Hitung Skor Otomatis PG, PG Kompleks, Benar Salah, & Esai Berkunci (Isian Singkat)
      */
     private function hitungSkorOtomatis(Uji $uji, UjiHasil $hasil)
     {
@@ -366,6 +440,22 @@ class SbaUjiController extends Controller
 
                 $totalSkorOtomatis += $skorItem;
                 $jawabanSiswa->update(['skor_didapat' => $skorItem]);
+            } elseif ($soal->tipe === 'esai') {
+                $kunciArray = is_array($soal->kunci_jawaban) ? $soal->kunci_jawaban : [];
+                $kunciFiltered = array_values(array_filter($kunciArray, fn($v) => trim((string) $v) !== ''));
+
+                if (!empty($kunciFiltered)) {
+                    $jawabanText = is_array($jawabanSiswa->jawaban)
+                        ? (string) (reset($jawabanSiswa->jawaban) ?: '')
+                        : (string) $jawabanSiswa->jawaban;
+
+                    $skorItem = $this->isJawabanIsianCocok($jawabanText, $kunciFiltered)
+                        ? (float) $soal->bobot_nilai
+                        : 0;
+
+                    $totalSkorOtomatis += $skorItem;
+                    $jawabanSiswa->update(['skor_didapat' => $skorItem]);
+                }
             }
         }
 
@@ -377,7 +467,7 @@ class SbaUjiController extends Controller
     // ======================================================================
     public function catatPelanggaran(Request $request, $uji_id)
     {
-        $hasilId = session('sba_hasil_id');
+        $hasilId = session('sba_hasil_id') ?? $request->input('hasil_id');
         $uji = Uji::with('soals')->findOrFail($uji_id);
 
         // Jika mode Open Book aktif, abaikan seluruh pencatatan pelanggaran
@@ -449,7 +539,8 @@ class SbaUjiController extends Controller
             ->first();
 
         if (!$hasil) {
-            return redirect()->route('sba.portal')->with('error', 'Data sesi ujian tidak ditemukan.');
+            return redirect()->route('sba.portal', ['kode' => $uji->kode_uji])
+                ->with('error', 'Data sesi ujian tidak ditemukan.');
         }
 
         // Jika sudah selesai (akibat double-tap / auto-submit bersamaan), langsung tampilkan hasil
@@ -459,7 +550,29 @@ class SbaUjiController extends Controller
         }
 
         if ($hasil->status_pengerjaan !== 'berlangsung') {
-            return redirect()->route('sba.portal')->with('error', 'Sesi ujian tidak valid atau dihentikan.');
+            return redirect()->route('sba.portal', ['kode' => $uji->kode_uji])
+                ->with('error', 'Sesi ujian tidak valid atau dihentikan.');
+        }
+
+        // Sinkronisasi jawaban esai terakhir jika dikirim melalui payload finalisasi
+        $jawabanEsaiMap = $request->input('jawaban_esai', []);
+        if (is_array($jawabanEsaiMap)) {
+            $validSoalIds = $uji->soals->pluck('id')->map(fn($id) => (int) $id)->all();
+            foreach ($jawabanEsaiMap as $soalIdKey => $teksEsai) {
+                $soalIdInt = (int) $soalIdKey;
+                if (in_array($soalIdInt, $validSoalIds, true)) {
+                    UjiJawaban::updateOrCreate(
+                        [
+                            'uji_hasil_id' => $hasil->id,
+                            'uji_soal_id'  => $soalIdInt,
+                        ],
+                        [
+                            'jawaban' => $teksEsai,
+                        ]
+                    );
+                }
+            }
+            $hasil->load('jawabans');
         }
 
         $totalSkorOtomatis = $this->hitungSkorOtomatis($uji, $hasil);
@@ -480,7 +593,8 @@ class SbaUjiController extends Controller
     {
         $uji = Uji::with('soals')->findOrFail($uji_id);
         $hasil = UjiHasil::where('id', $hasil_id)->where('uji_id', $uji->id)->firstOrFail();
+        $butuhPenilaianManual = $uji->butuhPenilaianManual();
 
-        return view('sba-uji.selesai', compact('uji', 'hasil'));
+        return view('sba-uji.selesai', compact('uji', 'hasil', 'butuhPenilaianManual'));
     }
 }
