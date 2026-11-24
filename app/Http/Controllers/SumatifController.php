@@ -252,7 +252,9 @@ class SumatifController extends Controller
             $semesterDB = $this->mapSemesterToInt($request->semester);
             
             if (!is_null($semesterDB)) {
-                $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
+                $siswaQuery = Siswa::with('detail')
+                    ->where('id_kelas', $request->id_kelas)
+                    ->where('status', 'aktif');
                 
                 $selectedMapel = MataPelajaran::find($request->id_mapel);
                 
@@ -424,7 +426,9 @@ class SumatifController extends Controller
 
         if (!$mapel) return back()->with('error', 'Mapel sudah tidak aktif atau tidak tersedia.');
 
-        $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
+        $siswaQuery = Siswa::with('detail')
+            ->where('id_kelas', $request->id_kelas)
+            ->where('status', 'aktif');
 
         // === IMPLEMENTASI KAMUS ALIAS DI SINI ===
         if ($mapel && $mapel->agama_khusus) {
