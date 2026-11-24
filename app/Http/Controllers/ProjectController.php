@@ -134,7 +134,9 @@ class ProjectController extends Controller
             }
             
             $selectedMapel = MataPelajaran::find($request->id_mapel);
-            $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
+            $siswaQuery = Siswa::with('detail')
+                ->where('id_kelas', $request->id_kelas)
+                ->where('status', 'aktif');
 
             // === IMPLEMENTASI KAMUS ALIAS DI SINI ===
             if ($selectedMapel && $selectedMapel->agama_khusus) {
@@ -267,7 +269,9 @@ class ProjectController extends Controller
             return back()->with('error', 'Mapel sudah tidak aktif atau tidak tersedia.');
         }
 
-        $siswaQuery = Siswa::with('detail')->where('id_kelas', $request->id_kelas);
+        $siswaQuery = Siswa::with('detail')
+            ->where('id_kelas', $request->id_kelas)
+            ->where('status', 'aktif');
         
         // === IMPLEMENTASI KAMUS ALIAS DI SINI ===
         if ($mapel && $mapel->agama_khusus) {

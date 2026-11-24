@@ -158,6 +158,7 @@ class RekapNilaiController extends Controller
             $querySiswa = DB::table('siswa')
                 ->join('detail_siswa', 'siswa.id_siswa', '=', 'detail_siswa.id_siswa')
                 ->where('siswa.id_kelas', $id_kelas)
+                ->where('siswa.status', 'aktif')
                 ->select('siswa.id_siswa', 'siswa.nama_siswa', 'siswa.nisn', 'detail_siswa.agama')
                 ->orderBy('siswa.nama_siswa', 'asc');
 
