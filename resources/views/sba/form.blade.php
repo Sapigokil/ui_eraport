@@ -114,7 +114,41 @@
             background: #f6f2ff;
             color: #6f42c1;
         }
+        #grid-daftar-kelas {
+            max-height: 290px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            padding-right: 4px;
+        }
+        .kelas-check-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #ffffff;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        .kelas-check-card:hover {
+            border-color: #6f42c1;
+            background: #faf7ff;
+        }
+        .kelas-check-card.is-checked {
+            border-color: #6f42c1;
+            background: #f3ebff;
+        }
     </style>
+
+    @php
+        $isUmumInitial = (bool) old('buka_untuk_umum', isset($uji) ? $uji->buka_untuk_umum : false);
+        $selectedKelasIdsInitial = collect(old('kelas_ids', isset($uji) && is_array($uji->kelas_ids) ? $uji->kelas_ids : []))
+            ->map(fn($v) => (int) $v)
+            ->unique()
+            ->values()
+            ->all();
+    @endphp
 
     <div class="container-fluid py-4 px-4">
         {{-- ENCTYPE MULTIPART/FORM-DATA PENTING UNTUK UPLOAD GAMBAR --}}
@@ -217,7 +251,7 @@
                             </div>
 
                             <div class="row mb-3">
-                                {{-- KOLOM KIRI: Informasi Dasar --}}
+                                {{-- KOLOM KIRI: Informasi Dasar & Daftar Asesi --}}
                                 <div class="col-md-7 pe-md-4">
                                     <div class="form-group mb-2">
                                         <label for="judul" class="form-control-label text-xs mb-1">Judul Asesmen <span class="text-danger">*</span></label>
@@ -270,6 +304,24 @@
                                         <small class="text-xxs text-secondary d-block mt-1">Bisa diisi kode custom (hanya huruf A-Z dan angka 0-9, maksimal 12 karakter, tanpa spasi).</small>
                                     </div>
 
+                                    {{-- PENGATURAN DAFTAR ASESI (KELAS TERPILIH / TERBUKA UNTUK UMUM) --}}
+                                    <div class="form-group mb-2">
+                                        <label class="form-control-label text-xs mb-1">Daftar Asesi (Target Peserta) <span class="text-danger">*</span></label>
+                                        <div id="box-daftar-asesi" class="p-2 px-3 bg-light border rounded d-flex justify-content-between align-items-center gap-2 @error('kelas_ids') border-danger @enderror">
+                                            <div class="flex-grow-1" style="min-width: 0;">
+                                                <div id="daftar-asesi-summary" class="text-xs fw-bold text-dark">
+                                                    {{-- Diisi dinamis oleh JS --}}
+                                                </div>
+                                                <small id="daftar-asesi-subinfo" class="text-xxs text-secondary d-block mt-1">
+                                                    {{-- Diisi dinamis oleh JS --}}
+                                                </small>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-primary mb-0 px-3 flex-shrink-0" data-bs-toggle="modal" data-bs-target="#modalDaftarAsesi">
+                                                <i class="fas fa-users-cog me-1"></i> Ubah
+                                            </button>
+                                        </div>
+                                    </div>
+
                                     <div class="form-group mb-0">
                                         <label for="deskripsi" class="form-control-label text-xs mb-1">Deskripsi / Petunjuk</label>
                                         <textarea class="form-control form-control-sm border px-2 py-1" id="deskripsi" name="deskripsi" rows="3" 
@@ -311,7 +363,7 @@
 
                                     {{-- PENGATURAN KEAMANAN & PERCOBAAN --}}
                                     <div class="row border-top pt-2 mt-1">
-                                        {{-- KOLOM KIRI: Mode Ujian (Open Book / Strict Mode) & Opsi Umum --}}
+                                        {{-- KOLOM KIRI: Mode Ujian (Open Book / Strict Mode) & Opsi Soal --}}
                                         <div class="col-md-6">
                                             <div class="p-2 bg-light border rounded mb-2">
                                                 <div class="form-check form-switch ps-0 mb-1">
@@ -344,11 +396,6 @@
                                                     <input class="form-check-input ms-0" type="checkbox" id="tampilkan_nilai" name="tampilkan_nilai" value="1" 
                                                         {{ old('tampilkan_nilai', $uji->tampilkan_nilai ?? false) ? 'checked' : '' }}>
                                                     <label class="form-check-label text-xs ms-2 mb-0" for="tampilkan_nilai">Tampilkan Nilai</label>
-                                                </div>
-                                                <div class="form-check form-switch ps-0 mb-0">
-                                                    <input class="form-check-input ms-0" type="checkbox" id="buka_untuk_umum" name="buka_untuk_umum" value="1" 
-                                                        {{ old('buka_untuk_umum', $uji->buka_untuk_umum ?? false) ? 'checked' : '' }}>
-                                                    <label class="form-check-label text-xs ms-2 mb-0" for="buka_untuk_umum">Buka untuk Umum</label>
                                                 </div>
                                             </div>
                                         </div>
@@ -444,6 +491,89 @@
     </div>
     <x-app.footer />
 </main>
+
+{{-- MODAL POP-UP DAFTAR ASESI (PILIH KELAS / TERBUKA UNTUK UMUM) - DI LUAR <main> AGAR SCROLL TIDAK TEMBUS --}}
+<div class="modal fade" id="modalDaftarAsesi" tabindex="-1" aria-labelledby="modalDaftarAsesiLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content border-0 shadow-lg overflow-hidden">
+            <div class="modal-header bg-gradient-primary border-0 py-3 px-4">
+                <h6 class="modal-title fw-bold text-white mb-0" id="modalDaftarAsesiLabel">
+                    <i class="fas fa-users-cog me-2"></i> Pengaturan Daftar Asesi (Peserta Ujian)
+                </h6>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-white text-start">
+                {{-- OPSI TERBUKA UNTUK UMUM --}}
+                <div class="p-3 bg-light border rounded-3 mb-3">
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="buka_untuk_umum" name="buka_untuk_umum" form="form-ujian-sba" value="1"
+                               {{ $isUmumInitial ? 'checked' : '' }} style="cursor: pointer;">
+                        <label class="form-check-label text-sm fw-bold text-dark mb-0" for="buka_untuk_umum" style="cursor: pointer;">
+                            Terbuka untuk Umum (Tanpa Pembatasan Kelas / NISN)
+                        </label>
+                    </div>
+                    <small class="text-xs text-secondary d-block mt-1 ms-4">
+                        Jika dicentang, siapa saja yang memiliki Kode Asesmen dapat masuk portal dengan mengisi nama secara bebas. Jika tidak dicentang, peserta wajib terdaftar pada kelas yang dipilih di bawah ini.
+                    </small>
+                </div>
+
+                {{-- ALERT VALIDASI DI DALAM MODAL --}}
+                <div id="modal-asesi-alert" class="alert alert-danger text-white text-xs py-2 px-3 mb-3 d-none">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Pilih minimal <strong>1 kelas</strong> yang diperbolehkan mengikuti asesmen, atau centang opsi <strong>Terbuka untuk Umum</strong>.
+                </div>
+
+                {{-- WRAPPER DAFTAR KELAS --}}
+                <div id="wrapper-pilihan-kelas" class="{{ $isUmumInitial ? 'opacity-50' : '' }}">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="check-all-kelas" style="cursor: pointer;" {{ $isUmumInitial ? 'disabled' : '' }}>
+                            <label class="form-check-label text-xs fw-bold text-primary mb-0" for="check-all-kelas" style="cursor: pointer;">
+                                Centang Semua Kelas
+                            </label>
+                        </div>
+                        <div style="width: 240px;">
+                            <input type="text" id="search-kelas-input" class="form-control form-control-sm border px-2 py-1" placeholder="Cari nama kelas..." {{ $isUmumInitial ? 'disabled' : '' }}>
+                        </div>
+                    </div>
+
+                    <div id="grid-daftar-kelas" class="row g-2">
+                        @forelse($kelasList ?? [] as $kls)
+                            @php
+                                $isCheckedKelas = in_array((int) $kls->id_kelas, $selectedKelasIdsInitial, true);
+                            @endphp
+                            <div class="col-6 col-md-4 kelas-item-col" data-nama-kelas="{{ strtolower($kls->nama_kelas) }}">
+                                <label class="kelas-check-card d-flex align-items-center gap-2 w-100 mb-0 {{ $isCheckedKelas ? 'is-checked' : '' }}" for="kelas_chk_{{ $kls->id_kelas }}">
+                                    <input class="form-check-input kelas-checkbox m-0 flex-shrink-0"
+                                           type="checkbox"
+                                           name="kelas_ids[]"
+                                           form="form-ujian-sba"
+                                           id="kelas_chk_{{ $kls->id_kelas }}"
+                                           value="{{ $kls->id_kelas }}"
+                                           data-nama="{{ $kls->nama_kelas }}"
+                                           {{ $isCheckedKelas ? 'checked' : '' }}
+                                           {{ $isUmumInitial ? 'disabled' : '' }}>
+                                    <span class="text-xs fw-bold text-dark text-truncate">{{ $kls->nama_kelas }}</span>
+                                </label>
+                            </div>
+                        @empty
+                            <div class="col-12 text-center py-4 text-muted text-xs">
+                                Data kelas belum tersedia di database.
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top bg-light py-2 px-4 d-flex justify-content-between align-items-center">
+                <span id="modal-asesi-counter" class="text-xs fw-bold text-secondary">0 kelas dipilih</span>
+                <button type="button" id="btn-selesai-pilih-asesi" class="btn btn-sm bg-gradient-primary text-white fw-bold px-4 shadow-sm mb-0">
+                    <i class="fas fa-check me-1"></i> Terapkan Pilihan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {{-- MODAL VISUAL EQUATION EDITOR (MATHLIVE - SEPERTI EQUATION DI MS WORD) --}}
 <div class="modal fade" id="modalEquationEditor" tabindex="-1" aria-labelledby="modalEquationEditorLabel" aria-hidden="true" data-bs-backdrop="static">
@@ -928,6 +1058,147 @@
 document.addEventListener('DOMContentLoaded', function() {
 
     /* ========================================================================
+     * PENGATURAN DAFTAR ASESI (MODAL PILIH KELAS & TERBUKA UNTUK UMUM)
+     * ======================================================================== */
+    const chkBukaUmum = document.getElementById('buka_untuk_umum');
+    const chkAllKelas = document.getElementById('check-all-kelas');
+    const searchKelasInput = document.getElementById('search-kelas-input');
+    const wrapperPilihanKelas = document.getElementById('wrapper-pilihan-kelas');
+    const gridDaftarKelasEl = document.getElementById('grid-daftar-kelas');
+    const kelasCheckboxes = document.querySelectorAll('.kelas-checkbox');
+    const summaryAsesiEl = document.getElementById('daftar-asesi-summary');
+    const subinfoAsesiEl = document.getElementById('daftar-asesi-subinfo');
+    const boxDaftarAsesi = document.getElementById('box-daftar-asesi');
+    const modalAsesiEl = document.getElementById('modalDaftarAsesi');
+    const modalAsesiAlert = document.getElementById('modal-asesi-alert');
+    const modalAsesiCounter = document.getElementById('modal-asesi-counter');
+    const btnSelesaiPilihAsesi = document.getElementById('btn-selesai-pilih-asesi');
+
+    if (gridDaftarKelasEl) {
+        gridDaftarKelasEl.addEventListener('wheel', function(e) {
+            e.stopPropagation();
+        }, { passive: true });
+    }
+
+    function getSelectedKelasNames() {
+        const names = [];
+        kelasCheckboxes.forEach(chk => {
+            if (chk.checked) {
+                names.push(chk.dataset.nama || '');
+            }
+        });
+        return names.filter(Boolean);
+    }
+
+    function updateDaftarAsesiState() {
+        const isUmum = chkBukaUmum && chkBukaUmum.checked;
+
+        if (wrapperPilihanKelas) {
+            wrapperPilihanKelas.classList.toggle('opacity-50', isUmum);
+        }
+        if (chkAllKelas) chkAllKelas.disabled = isUmum;
+        if (searchKelasInput) searchKelasInput.disabled = isUmum;
+
+        kelasCheckboxes.forEach(chk => {
+            chk.disabled = isUmum;
+            const card = chk.closest('.kelas-check-card');
+            if (card) {
+                card.classList.toggle('is-checked', !isUmum && chk.checked);
+            }
+        });
+
+        const selectedNames = getSelectedKelasNames();
+        const totalSelected = selectedNames.length;
+
+        if (modalAsesiCounter) {
+            modalAsesiCounter.innerText = isUmum
+                ? 'Mode Terbuka untuk Umum aktif'
+                : `${totalSelected} kelas dipilih`;
+        }
+
+        if (chkAllKelas && !isUmum) {
+            const visibleCheckboxes = Array.from(kelasCheckboxes).filter(chk => {
+                const col = chk.closest('.kelas-item-col');
+                return col && !col.classList.contains('d-none');
+            });
+            chkAllKelas.checked = visibleCheckboxes.length > 0 && visibleCheckboxes.every(chk => chk.checked);
+        }
+
+        if (summaryAsesiEl && subinfoAsesiEl && boxDaftarAsesi) {
+            boxDaftarAsesi.classList.remove('border-danger');
+
+            if (isUmum) {
+                summaryAsesiEl.innerHTML = '<span class="badge bg-gradient-success me-1">UMUM</span> Terbuka untuk Umum';
+                subinfoAsesiEl.innerText = 'Semua peserta dapat masuk portal menggunakan nama tanpa pembatasan kelas.';
+                if (modalAsesiAlert) modalAsesiAlert.classList.add('d-none');
+            } else if (totalSelected > 0) {
+                if (modalAsesiAlert) modalAsesiAlert.classList.add('d-none');
+                if (totalSelected <= 5) {
+                    summaryAsesiEl.innerHTML = `<span class="text-primary"><i class="fas fa-user-check me-1"></i> ${selectedNames.join(', ')}</span>`;
+                } else {
+                    const previewList = selectedNames.slice(0, 4).join(', ');
+                    summaryAsesiEl.innerHTML = `<span class="text-primary"><i class="fas fa-user-check me-1"></i> ${previewList}, +${totalSelected - 4} kelas lainnya</span>`;
+                }
+                subinfoAsesiEl.innerText = `Terbatas hanya untuk ${totalSelected} kelas terpilih (validasi NISN/NIS & kelas di portal).`;
+            } else {
+                summaryAsesiEl.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i> Belum ada kelas dipilih</span>';
+                subinfoAsesiEl.innerText = 'Klik tombol Ubah untuk memilih minimal 1 kelas atau aktifkan Terbuka untuk Umum.';
+            }
+        }
+    }
+
+    if (chkBukaUmum) {
+        chkBukaUmum.addEventListener('change', updateDaftarAsesiState);
+    }
+
+    kelasCheckboxes.forEach(chk => {
+        chk.addEventListener('change', updateDaftarAsesiState);
+    });
+
+    if (chkAllKelas) {
+        chkAllKelas.addEventListener('change', function() {
+            const targetState = this.checked;
+            kelasCheckboxes.forEach(chk => {
+                const col = chk.closest('.kelas-item-col');
+                if (col && !col.classList.contains('d-none')) {
+                    chk.checked = targetState;
+                }
+            });
+            updateDaftarAsesiState();
+        });
+    }
+
+    if (searchKelasInput) {
+        searchKelasInput.addEventListener('input', function() {
+            const keyword = this.value.toLowerCase().trim();
+            document.querySelectorAll('.kelas-item-col').forEach(col => {
+                const nama = col.dataset.namaKelas || '';
+                col.classList.toggle('d-none', keyword !== '' && !nama.includes(keyword));
+            });
+            updateDaftarAsesiState();
+        });
+    }
+
+    if (btnSelesaiPilihAsesi && modalAsesiEl) {
+        btnSelesaiPilihAsesi.addEventListener('click', function() {
+            const isUmum = chkBukaUmum && chkBukaUmum.checked;
+            const totalSelected = getSelectedKelasNames().length;
+
+            if (!isUmum && totalSelected === 0) {
+                if (modalAsesiAlert) modalAsesiAlert.classList.remove('d-none');
+                return;
+            }
+
+            if (modalAsesiAlert) modalAsesiAlert.classList.add('d-none');
+            const bsModal = bootstrap.Modal.getInstance(modalAsesiEl);
+            if (bsModal) bsModal.hide();
+            updateDaftarAsesiState();
+        });
+    }
+
+    updateDaftarAsesiState();
+
+    /* ========================================================================
      * TOOLBAR FORMAT TEKS (B/I/U/SUB/SUP), EDITOR RUMUS (MATHLIVE) & PREVIEW KATEX
      * ======================================================================== */
     const modalEqEl = document.getElementById('modalEquationEditor');
@@ -972,26 +1243,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function buildSafeRichHtmlWithMathTokens(rawText) {
         const mathTokens = [];
-        // 1. Amankan blok rumus $$...$$ dan $...$ lebih dulu agar tidak tersentuh escaping HTML
         const protectedText = rawText.replace(/(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g, function(match) {
             const token = `@@MATH_TOKEN_${mathTokens.length}@@`;
             mathTokens.push(match);
             return token;
         });
 
-        // 2. Escape seluruh HTML berbahaya di luar blok rumus
         let safeHtml = protectedText
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
 
-        // 3. Kembalikan hanya tag format teks yang diizinkan (whitelist)
         safeHtml = safeHtml.replace(/&lt;(\/?(b|i|u|sub|sup|strong|em))&gt;/gi, '<$1>');
-
-        // 4. Konversi baris baru menjadi <br>
         safeHtml = safeHtml.replace(/\n/g, '<br>');
 
-        // 5. Kembalikan blok rumus matematika ke posisi semula
         safeHtml = safeHtml.replace(/@@MATH_TOKEN_(\d+)@@/g, function(_, idx) {
             return mathTokens[Number(idx)] ?? '';
         });
@@ -1574,7 +1839,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const labelPertanyaan = item.querySelector('.label-pertanyaan-utama');
         const textareaPertanyaan = item.querySelector('.soal-pertanyaan');
 
-        // Reset atribut BS terlebih dahulu
         item.querySelectorAll('.bs-teks').forEach(el => el.removeAttribute('required'));
         item.querySelectorAll('.bs-kunci-benar').forEach(el => el.removeAttribute('required'));
 
@@ -1670,7 +1934,6 @@ document.addEventListener('DOMContentLoaded', function() {
             item.querySelectorAll('.kunci-radio').forEach(el => el.name = `soals[${index}][kunci_jawaban][]`);
             item.querySelectorAll('.kunci-checkbox').forEach(el => el.name = `soals[${index}][kunci_jawaban][]`);
 
-            // Penamaan atribut pernyataan Benar/Salah
             item.querySelectorAll('.bs-row').forEach((row, pIdx) => {
                 row.querySelector('.bs-row-num').innerText = pIdx + 1;
                 row.querySelector('.bs-teks').name = `soals[${index}][pernyataan_bs][${pIdx}][teks]`;
@@ -2050,7 +2313,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ========================================================================
-    // INTERCEPT SUBMIT FORM: MODAL BOBOT & SIMPAN VIA AJAX (ZERO PAGE RELOAD)
+    // INTERCEPT SUBMIT FORM: VALIDASI DAFTAR ASESI, MODAL BOBOT & SIMPAN VIA AJAX
     // ========================================================================
     const formUjianSba = document.getElementById('form-ujian-sba');
     const modalBobotEl = document.getElementById('modalPeringatanBobot');
@@ -2135,6 +2398,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (field === 'kode_uji' && inputKodeUji) {
                         inputKodeUji.classList.add('is-invalid');
                     }
+                    if (field === 'kelas_ids' && boxDaftarAsesi) {
+                        boxDaftarAsesi.classList.add('border-danger');
+                    }
                     const prefix = formatErrorKeyLabel(field);
                     (Array.isArray(msgs) ? msgs : [msgs]).forEach(m => {
                         formattedMessages.push(prefix ? `${prefix}: ${m}` : m);
@@ -2186,6 +2452,18 @@ document.addEventListener('DOMContentLoaded', function() {
     if (formUjianSba && modalBobotEl) {
         formUjianSba.addEventListener('submit', function(e) {
             e.preventDefault();
+
+            // Validasi Daftar Asesi: wajib pilih minimal 1 kelas jika tidak Terbuka untuk Umum
+            const isUmum = chkBukaUmum && chkBukaUmum.checked;
+            const totalSelectedKelas = getSelectedKelasNames().length;
+            if (!isUmum && totalSelectedKelas === 0) {
+                if (boxDaftarAsesi) boxDaftarAsesi.classList.add('border-danger');
+                if (modalAsesiAlert) modalAsesiAlert.classList.remove('d-none');
+                if (modalAsesiEl) {
+                    bootstrap.Modal.getOrCreateInstance(modalAsesiEl).show();
+                }
+                return;
+            }
 
             if (!formUjianSba.checkValidity()) {
                 formUjianSba.reportValidity();

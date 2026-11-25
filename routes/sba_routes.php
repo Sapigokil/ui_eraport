@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SbaController;
+use App\Http\Controllers\SbaHasilController;
 use App\Http\Controllers\SbaUjiController;
 use App\Http\Controllers\SbaSettingController;
 
@@ -36,7 +37,7 @@ Route::middleware(['auth', 'can:sba.menu'])->group(function () {
         });
 
         // ----------------------------------------------------------------------
-        // B. MANAJEMEN UJIAN & BANK SOAL (CRUD)
+        // B. MANAJEMEN UJIAN & BANK SOAL (CRUD) -> SbaController
         // ----------------------------------------------------------------------
         Route::get('/create', [SbaController::class, 'create'])->name('create');
         Route::post('/store', [SbaController::class, 'store'])->name('store');
@@ -52,27 +53,27 @@ Route::middleware(['auth', 'can:sba.menu'])->group(function () {
         Route::delete('/soal/{soal_id}', [SbaController::class, 'destroySoal'])->name('soal.destroy');
         
         // ----------------------------------------------------------------------
-        // C. HASIL UJIAN & REKAP DATA (ANALYTICS & EXPORT)
+        // C. HASIL UJIAN & REKAP DATA (ANALYTICS & EXPORT) -> SbaHasilController
         // ----------------------------------------------------------------------
-        Route::get('/{uji_id}/hasil', [SbaController::class, 'hasilIndex'])->name('hasil.index');
-        Route::get('/{uji_id}/hasil/export', [SbaController::class, 'exportHasil'])->name('hasil.export');
+        Route::get('/{uji_id}/hasil', [SbaHasilController::class, 'hasilIndex'])->name('hasil.index');
+        Route::get('/{uji_id}/hasil/export', [SbaHasilController::class, 'exportHasil'])->name('hasil.export');
 
         // ----------------------------------------------------------------------
-        // D. DETAIL ASESI & PENILAIAN ESAI
+        // D. DETAIL ASESI & PENILAIAN ESAI -> SbaHasilController
         // ----------------------------------------------------------------------
-        Route::get('/hasil/{hasil_id}/detail', [SbaController::class, 'hasilDetail'])->name('hasil.detail');
-        Route::post('/hasil/{hasil_id}/simpan-nilai', [SbaController::class, 'simpanPenilaianEsai'])->name('hasil.simpan_nilai');
-        Route::post('/hasil/{hasil_id}/refresh-nilai', [SbaController::class, 'refreshNilaiHasil'])->name('hasil.refresh_nilai');
-        Route::get('/hasil/{hasil_id}/export-pdf', [SbaController::class, 'exportHasilDetailPdf'])->name('hasil.detail.pdf');
-        Route::delete('/hasil/{hasil_id}', [SbaController::class, 'hasilDestroy'])->name('hasil.destroy');
+        Route::get('/hasil/{hasil_id}/detail', [SbaHasilController::class, 'hasilDetail'])->name('hasil.detail');
+        Route::post('/hasil/{hasil_id}/simpan-nilai', [SbaHasilController::class, 'simpanPenilaianEsai'])->name('hasil.simpan_nilai');
+        Route::post('/hasil/{hasil_id}/refresh-nilai', [SbaHasilController::class, 'refreshNilaiHasil'])->name('hasil.refresh_nilai');
+        Route::get('/hasil/{hasil_id}/export-pdf', [SbaHasilController::class, 'exportHasilDetailPdf'])->name('hasil.detail.pdf');
+        Route::delete('/hasil/{hasil_id}', [SbaHasilController::class, 'hasilDestroy'])->name('hasil.destroy');
         
         // Unlock Sesi Gagal Pelanggaran & Finalisasi Paksa
-        Route::post('/hasil/{hasil_id}/unlock', [SbaController::class, 'unlockSesi'])->name('hasil.unlock');
-        Route::post('/hasil/{hasil_id}/finalisasi', [SbaController::class, 'finalisasiPaksa'])->name('hasil.finalisasi');
+        Route::post('/hasil/{hasil_id}/unlock', [SbaHasilController::class, 'unlockSesi'])->name('hasil.unlock');
+        Route::post('/hasil/{hasil_id}/finalisasi', [SbaHasilController::class, 'finalisasiPaksa'])->name('hasil.finalisasi');
 
         // Action Massal (Bulk Delete & Bulk Refresh Nilai)
-        Route::delete('/uji/{uji_id}/hasil/bulk-delete', [SbaController::class, 'bulkDelete'])->name('hasil.bulk_delete');
-        Route::post('/uji/{uji_id}/hasil/bulk-refresh-nilai', [SbaController::class, 'bulkRefreshNilai'])->name('hasil.bulk_refresh_nilai');
+        Route::delete('/uji/{uji_id}/hasil/bulk-delete', [SbaHasilController::class, 'bulkDelete'])->name('hasil.bulk_delete');
+        Route::post('/uji/{uji_id}/hasil/bulk-refresh-nilai', [SbaHasilController::class, 'bulkRefreshNilai'])->name('hasil.bulk_refresh_nilai');
 
     });
 

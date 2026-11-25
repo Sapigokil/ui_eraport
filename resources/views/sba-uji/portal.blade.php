@@ -22,6 +22,15 @@
         $inlineBodyStyle = "background-color: {$failoverColor}; background-image: url('{$imageUrl}'); background-repeat: no-repeat; background-position: center center; background-attachment: fixed; background-size: cover;";
         $showOverlay = true;
     }
+
+    $isKhususKelasPreview = isset($ujiPreview) && $ujiPreview && !$ujiPreview->buka_untuk_umum;
+    $namaKelasAllowedPreview = [];
+    if ($isKhususKelasPreview && is_array($ujiPreview->kelas_ids) && count($ujiPreview->kelas_ids) > 0) {
+        $namaKelasAllowedPreview = \App\Models\Kelas::whereIn('id_kelas', $ujiPreview->kelas_ids)
+            ->orderBy('nama_kelas')
+            ->pluck('nama_kelas')
+            ->toArray();
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="id">
@@ -119,14 +128,34 @@
 
             <div class="card-body p-4">
                 @if(session('error'))
-                    <div class="alert alert-danger text-center py-2 shadow-sm text-sm" role="alert">
+                    <div class="alert alert-danger text-center py-2 shadow-sm small" role="alert">
                         <i class="fas fa-exclamation-triangle me-1"></i> {{ session('error') }}
                     </div>
                 @endif
 
                 @if(session('warning'))
-                    <div class="alert alert-warning text-center py-2 shadow-sm text-sm" role="alert">
+                    <div class="alert alert-warning text-center py-2 shadow-sm small" role="alert">
                         <i class="fas fa-info-circle me-1"></i> {{ session('warning') }}
+                    </div>
+                @endif
+
+                @if($isKhususKelasPreview)
+                    <div class="alert alert-light border text-center py-2 px-3 shadow-xs small mb-3" role="alert">
+                        <div class="fw-bold text-dark mb-1">
+                            <i class="fas fa-user-check text-primary me-1"></i> {{ $ujiPreview->judul }}
+                        </div>
+                        <span class="text-muted" style="font-size: 0.78rem;">
+                            Khusus peserta kelas: <strong>{{ count($namaKelasAllowedPreview) > 0 ? implode(', ', $namaKelasAllowedPreview) : 'Terdaftar' }}</strong>
+                        </span>
+                    </div>
+                @elseif(isset($ujiPreview) && $ujiPreview && $ujiPreview->buka_untuk_umum)
+                    <div class="alert alert-light border text-center py-2 px-3 shadow-xs small mb-3" role="alert">
+                        <div class="fw-bold text-dark mb-1">
+                            <i class="fas fa-globe text-success me-1"></i> {{ $ujiPreview->judul }}
+                        </div>
+                        <span class="text-muted" style="font-size: 0.78rem;">
+                            Asesmen terbuka untuk siswa terdaftar maupun peserta umum.
+                        </span>
                     </div>
                 @endif
 
@@ -144,13 +173,15 @@
                         </div>
                     </div>
 
-                    <!-- Checkbox Jalur Umum -->
+                    <!-- Checkbox Jalur Umum (disembunyikan otomatis jika quicklink khusus kelas tertentu) -->
+                    @if(!$isKhususKelasPreview)
                     <div class="form-check form-switch mb-4">
                         <input class="form-check-input" type="checkbox" id="checkPublic" name="is_public" value="1" style="cursor: pointer;" {{ old('is_public') ? 'checked' : '' }}>
                         <label class="form-check-label text-muted small ms-1" for="checkPublic" style="cursor: pointer;">
                             Bukan siswa? Gunakan akun public
                         </label>
                     </div>
+                    @endif
 
                     <!-- INPUT KODE UJIAN -->
                     <div class="mb-4 text-center">

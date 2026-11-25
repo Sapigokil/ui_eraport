@@ -13,13 +13,22 @@ use Carbon\Carbon;
 class SbaUjiController extends Controller
 {
     // ======================================================================
-    // 1. PORTAL & VALIDASI MASUK (Validasi kode_uji hanya di sini)
+    // 1. PORTAL & VALIDASI MASUK (Validasi kode_uji & daftar asesi)
     // ======================================================================
     
-    public function portal()
+    public function portal(Request $request)
     {
         $bgConfig = \App\Models\SbaSetting::getPortalBackground();
-        return view('sba-uji.portal', compact('bgConfig'));
+        $ujiPreview = null;
+
+        if ($request->filled('kode')) {
+            $kodeParam = strtoupper(trim((string) $request->query('kode')));
+            $ujiPreview = Uji::where('kode_uji', $kodeParam)
+                ->whereIn('status', ['published', 'closed'])
+                ->first(['id', 'kode_uji', 'judul', 'buka_untuk_umum', 'kelas_ids', 'status']);
+        }
+
+        return view('sba-uji.portal', compact('bgConfig', 'ujiPreview'));
     }
 
     public function processPortal(Request $request)
@@ -32,21 +41,26 @@ class SbaUjiController extends Controller
         $uji = Uji::where('kode_uji', $kodeUji)->whereIn('status', ['published', 'closed'])->first();
 
         if (!$uji) {
-            return back()->with('error', 'Kode Asesmen tidak ditemukan atau belum diterbitkan!');
+            return back()->withInput()->with('error', 'Kode Asesmen tidak ditemukan atau belum diterbitkan!');
         }
 
         if ($uji->status === 'closed') {
-            return back()->with('error', 'Asesmen ini sudah ditutup oleh admin.');
+            return back()->withInput()->with('error', 'Asesmen ini sudah ditutup oleh admin.');
         }
 
         // Cek Validasi Waktu Mulai & Selesai (Patokan Utama)
         $now = now();
         if ($uji->waktu_mulai && $now->lt($uji->waktu_mulai)) {
-            return back()->with('error', 'Ujian belum dimulai. Jadwal: ' . $uji->waktu_mulai->format('d/m/Y H:i'));
+            return back()->withInput()->with('error', 'Ujian belum dimulai. Jadwal: ' . $uji->waktu_mulai->format('d/m/Y H:i'));
         }
         if ($uji->waktu_selesai && $now->gt($uji->waktu_selesai)) {
-            return back()->with('error', 'Ujian telah berakhir pada: ' . $uji->waktu_selesai->format('d/m/Y H:i'));
+            return back()->withInput()->with('error', 'Ujian telah berakhir pada: ' . $uji->waktu_selesai->format('d/m/Y H:i'));
         }
+
+        $isBukaUmum = (bool) $uji->buka_untuk_umum;
+        $allowedKelasIds = is_array($uji->kelas_ids)
+            ? array_map('intval', $uji->kelas_ids)
+            : [];
 
         // Inisialisasi variabel peserta
         $asesiId = null;
@@ -55,26 +69,42 @@ class SbaUjiController extends Controller
         // --- JALUR PUBLIK ---
         if ($request->has('is_public') && $request->is_public == '1') {
             $request->validate(['nama_lengkap' => 'required|string|max:100']);
-            if (!$uji->buka_untuk_umum) {
-                return back()->with('error', 'Asesmen ini hanya untuk peserta terdaftar!');
+            if (!$isBukaUmum) {
+                return back()->withInput()->with('error', 'Asesmen ini hanya diperuntukkan bagi siswa pada kelas yang telah ditentukan (bukan untuk umum). Silakan masuk menggunakan NIS atau NISN.');
             }
-            $namaPublik = $request->nama_lengkap;
+            $namaPublik = trim($request->nama_lengkap);
             $mode = 'publik';
         } 
-        // --- JALUR SISWA / ASESI ---
+        // --- JALUR SISWA / ASESI (MENDUKUNG NISN MAUPUN NIS / NIPD) ---
         else {
             $request->validate(['nisn' => 'required|string']);
-            $nisnInput = trim($request->nisn);
+            $identitasInput = trim($request->nisn);
 
-            // 1. Cari data siswa berdasarkan kolom nisn pada tabel siswa
-            $siswa = Siswa::where('nisn', $nisnInput)->first();
+            // 1. Cari data siswa berdasarkan kolom nisn ATAU nipd pada tabel siswa
+            $siswa = Siswa::with('kelas')
+                ->where(function ($q) use ($identitasInput) {
+                    $q->where('nisn', $identitasInput)
+                      ->orWhere('nipd', $identitasInput);
+                })
+                ->first();
+
             if (!$siswa) {
-                return back()->with('error', 'NISN tidak terdaftar dalam sistem!');
+                return back()->withInput()->with('error', 'NIS atau NISN tidak terdaftar dalam sistem!');
             }
 
-            // 2. Cek apakah siswa sudah terhubung ke akun tabel users (via id_siswa atau username)
+            // 2. Validasi Daftar Asesi (Kelas Terpilih) jika asesmen tidak dibuka untuk umum
+            if (!$isBukaUmum) {
+                $siswaKelasId = (int) ($siswa->id_kelas ?? 0);
+                if ($siswaKelasId <= 0 || !in_array($siswaKelasId, $allowedKelasIds, true)) {
+                    $namaKelasSiswa = $siswa->kelas->nama_kelas ?? 'Belum Terdaftar Kelas';
+                    return back()->withInput()->with('error', 'Akses ditolak. Kelas Anda (' . $namaKelasSiswa . ') tidak termasuk dalam daftar peserta asesmen ini.');
+                }
+            }
+
+            // 3. Cek apakah siswa sudah terhubung ke akun tabel users (via id_siswa atau username nisn/nipd)
             $asesi = User::where('id_siswa', $siswa->id_siswa)
-                ->orWhere('username', $siswa->nisn)
+                ->when(!empty($siswa->nisn), fn($q) => $q->orWhere('username', $siswa->nisn))
+                ->when(!empty($siswa->nipd), fn($q) => $q->orWhere('username', $siswa->nipd))
                 ->first();
 
             if ($asesi) {
@@ -83,7 +113,8 @@ class SbaUjiController extends Controller
             } else {
                 // Fallback jika siswa belum membuat akun di tabel users
                 $asesiId = null;
-                $namaPublik = $siswa->nama_siswa . ' (' . $siswa->nisn . ')';
+                $nomorIdentitas = $siswa->nisn ?: ($siswa->nipd ?: $identitasInput);
+                $namaPublik = $siswa->nama_siswa . ' (' . $nomorIdentitas . ')';
             }
 
             $mode = 'siswa';
@@ -106,12 +137,12 @@ class SbaUjiController extends Controller
             $jumlahPercobaan = $riwayat->count();
             
             if ($jumlahPercobaan >= $uji->maksimal_percobaan) {
-                return back()->with('error', 'Anda telah mencapai batas maksimal percobaan ujian ini ('. $uji->maksimal_percobaan .' kali).');
+                return back()->withInput()->with('error', 'Anda telah mencapai batas maksimal percobaan ujian ini ('. $uji->maksimal_percobaan .' kali).');
             }
 
             $pernahGagal = $riwayat->where('status_pengerjaan', 'gagal_pelanggaran')->first();
             if ($pernahGagal && !$uji->ulangi_jika_gagal) {
-                return back()->with('error', 'Anda pernah didiskualifikasi karena pelanggaran dan silahkan menghubungi pengawas uji.');
+                return back()->withInput()->with('error', 'Anda pernah didiskualifikasi karena pelanggaran dan silahkan menghubungi pengawas uji.');
             }
         }
 

@@ -11,11 +11,19 @@ return [
     |
     */
 
-    'current_version' => '1.0.29',
+    'current_version' => '1.0.30',
     
-    'last_updated' => '2026-11-23',
+    'last_updated' => '2026-11-25',
 
     'changelog' => [
+        [
+            'version' => '1.0.30',
+            'date'    => '2026-11-25',
+            'notes'   => [
+                'Penambahan Target Asesmen untuk menentukan kelas atau kelompok siswa yang dapat mengakses ujian tertentu pada modul Smart Based Assessment (SBA).',
+                'Perbaikan Export Excel rekap hasil peserta agar menampilkan data yang lebih lengkap dan akurat, termasuk informasi kelas dan analisis skor per nomor soal.',
+            ],
+        ],
         [
             'version' => '1.0.29',
             'date'    => '2026-11-23',
