@@ -233,7 +233,7 @@
                                                 $sources = [
                                                     'unsplash_preset' => ['icon' => 'fa-th-large', 'title' => '1. Unsplash Kurasi', 'desc' => '6 kategori pilihan siap pakai'],
                                                     'static_color'    => ['icon' => 'fa-paint-brush', 'title' => '2. Static / Gradasi', 'desc' => '1 warna solid atau gradasi'],
-                                                    'unsplash_live'   => ['icon' => 'fa-random', 'title' => '3. Unsplash Live', 'desc' => 'Acak online + tombol refresh'],
+                                                    'unsplash_live'   => ['icon' => 'fa-random', 'title' => '3. Unsplash Live (Beta)', 'desc' => 'Live Online, Tahap Uji Coba'],
                                                     'image_url'       => ['icon' => 'fa-link', 'title' => '4. URL Image', 'desc' => 'Tautan gambar langsung'],
                                                     'upload'          => ['icon' => 'fa-cloud-upload-alt', 'title' => '5. Upload Komputer', 'desc' => 'Unggah file lokal (maks 2MB)'],
                                                 ];
