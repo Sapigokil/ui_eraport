@@ -30,7 +30,7 @@ Route::middleware(['auth', 'can:sba.menu'])->group(function () {
         // ----------------------------------------------------------------------
         // A2. SETTINGS MODUL SBA (URL Prefix: /admin/sba/settings)
         // ----------------------------------------------------------------------
-        Route::prefix('settings')->name('settings.')->group(function () {
+        Route::prefix('settings')->name('settings.')->middleware('can:setting.menu')->group(function () {
             Route::get('/background-portal', [SbaSettingController::class, 'backgroundPortal'])->name('background_portal');
             Route::post('/background-portal', [SbaSettingController::class, 'updateBackgroundPortal'])->name('background_portal.update');
             Route::get('/background-portal/unsplash-live', [SbaSettingController::class, 'fetchUnsplashLive'])->name('background_portal.unsplash_live');
