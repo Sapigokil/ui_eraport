@@ -3,14 +3,12 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SbaController;
 use App\Http\Controllers\SbaUjiController;
+use App\Http\Controllers\SbaSettingController;
 
 /*
 |--------------------------------------------------------------------------
 | SMART BASED ASSESSMENT (SBA) ADD-ON ROUTES
 |--------------------------------------------------------------------------
-| Modul Add-on Premium untuk Manajemen Bank Soal, Pembuatan Ujian, 
-| CBT Engine, & Analytics Hasil Ujian.
-|
 */
 
 // ==============================================================================
@@ -27,6 +25,15 @@ Route::middleware(['auth', 'can:sba.menu'])->group(function () {
         Route::get('/', [SbaController::class, 'index'])->name('index');
         Route::get('/get-mapel-by-guru/{guru_id}', [SbaController::class, 'getMapelByGuru'])->name('get-mapel-by-guru');
         Route::get('/check-kode', [SbaController::class, 'checkKode'])->name('check_kode');
+
+        // ----------------------------------------------------------------------
+        // A2. SETTINGS MODUL SBA (URL Prefix: /admin/sba/settings)
+        // ----------------------------------------------------------------------
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/background-portal', [SbaSettingController::class, 'backgroundPortal'])->name('background_portal');
+            Route::post('/background-portal', [SbaSettingController::class, 'updateBackgroundPortal'])->name('background_portal.update');
+            Route::get('/background-portal/unsplash-live', [SbaSettingController::class, 'fetchUnsplashLive'])->name('background_portal.unsplash_live');
+        });
 
         // ----------------------------------------------------------------------
         // B. MANAJEMEN UJIAN & BANK SOAL (CRUD)

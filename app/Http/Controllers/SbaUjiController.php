@@ -18,7 +18,8 @@ class SbaUjiController extends Controller
     
     public function portal()
     {
-        return view('sba-uji.portal');
+        $bgConfig = \App\Models\SbaSetting::getPortalBackground();
+        return view('sba-uji.portal', compact('bgConfig'));
     }
 
     public function processPortal(Request $request)

@@ -463,6 +463,13 @@
                 @if(Route::has('sba.index'))
                 @php
                     $isSbaActive = request()->routeIs(['sba.*']);
+                    $isSbaSettingActive = request()->routeIs(['sba.settings.*']);
+                    $isSbaUjianActive = request()->routeIs([
+                        'sba.index',
+                        'sba.create',
+                        'sba.edit',
+                        'sba.hasil.*',
+                    ]);
                 @endphp
                 <li class="nav-item mt-2">
                     <a class="sidenav-category-toggle" data-bs-toggle="collapse" href="#catSba" role="button" aria-expanded="{{ $isSbaActive ? 'true' : 'false' }}">
@@ -474,11 +481,31 @@
                     
                     <div class="collapse {{ $isSbaActive ? 'show' : '' }} category-wrapper" id="catSba" data-bs-parent="#sidenav-collapse-main">
                         <ul class="nav flex-column">
+                            {{-- Menu 1: Daftar Ujian --}}
                             <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('sba.index') ? 'active' : '' }}" href="{{ route('sba.index') }}">
+                                <a class="nav-link {{ $isSbaUjianActive ? 'active' : '' }}" href="{{ route('sba.index') }}">
                                     <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-laptop-code text-sm"></i></div>
                                     <span class="nav-link-text">Daftar Ujian</span>
                                 </a>
+                            </li>
+
+                            {{-- Menu 2: Settings (Dropdown) --}}
+                            <li class="nav-item">
+                                <a data-bs-toggle="collapse" href="#sbaSettingsMenu" role="button" class="nav-link {{ $isSbaSettingActive ? 'active' : '' }}" aria-expanded="{{ $isSbaSettingActive ? 'true' : 'false' }}" aria-controls="sbaSettingsMenu">
+                                    <div class="me-3 d-flex align-items-center justify-content-center" style="width: 25px;"><i class="fas fa-cogs text-sm"></i></div>
+                                    <span class="nav-link-text">Settings</span>
+                                </a>
+                                <div class="collapse {{ $isSbaSettingActive ? 'show' : '' }}" id="sbaSettingsMenu">
+                                    <ul class="nav flex-column">
+                                        @if(Route::has('sba.settings.background_portal'))
+                                        <li class="nav-item">
+                                            <a class="nav-link {{ request()->routeIs('sba.settings.background_portal*') ? 'active' : '' }}" href="{{ route('sba.settings.background_portal') }}">
+                                                Background Portal
+                                            </a>
+                                        </li>
+                                        @endif
+                                    </ul>
+                                </div>
                             </li>
                         </ul>
                     </div>

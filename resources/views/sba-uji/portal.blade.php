@@ -1,3 +1,28 @@
+@php
+    $bg = $bgConfig ?? \App\Models\SbaSetting::getPortalBackground();
+    $sourceType     = $bg['source_type'] ?? 'unsplash_preset';
+    $failoverColor  = $bg['failover_color'] ?? '#eef2f7';
+    $overlayOpacity = (float) ($bg['overlay_opacity'] ?? 0.60);
+    $imageUrl       = $bg['resolved_image_url'] ?? '';
+
+    $inlineBodyStyle = "background-color: {$failoverColor};";
+    $showOverlay     = false;
+
+    if ($sourceType === 'static_color') {
+        if (($bg['color_mode'] ?? 'solid') === 'gradient') {
+            $angle = $bg['gradient_angle'] ?? '135deg';
+            $start = $bg['gradient_start'] ?? '#6f42c1';
+            $end   = $bg['gradient_end'] ?? '#3b1d7a';
+            $inlineBodyStyle = "background: linear-gradient({$angle}, {$start} 0%, {$end} 100%);";
+        } else {
+            $solid = $bg['solid_color'] ?? $failoverColor;
+            $inlineBodyStyle = "background-color: {$solid};";
+        }
+    } elseif (!empty($imageUrl)) {
+        $inlineBodyStyle = "background-color: {$failoverColor}; background-image: url('{$imageUrl}'); background-repeat: no-repeat; background-position: center center; background-attachment: fixed; background-size: cover;";
+        $showOverlay = true;
+    }
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -10,20 +35,19 @@
     
     <style>
         body {
-            background: url('https://images.unsplash.com/photo-1497294815431-9365093b7331?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
-            background-size: cover;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s ease;
         }
         .bg-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
             z-index: 1;
+            transition: opacity 0.3s ease;
         }
         .portal-card {
             z-index: 2;
@@ -81,9 +105,9 @@
         }
     </style>
 </head>
-<body>
+<body style="{{ $inlineBodyStyle }}">
 
-    <div class="bg-overlay"></div>
+    <div class="bg-overlay" id="portalBgOverlay" style="background-color: rgba(0, 0, 0, {{ $overlayOpacity }}); {{ $showOverlay ? '' : 'display: none;' }}"></div>
 
     <div class="container position-relative z-2 d-flex justify-content-center px-3">
         <div class="portal-card border-0">
@@ -187,5 +211,24 @@
             }
         });
     </script>
+
+    {{-- Failover Otomatis ke Warna Lembut jika Gambar Gagal Dimuat atau Timeout --}}
+    @if($showOverlay && !empty($imageUrl))
+    <script>
+        (function() {
+            const probe = new Image();
+            const fallbackToSoftColor = function() {
+                document.body.style.backgroundImage = 'none';
+                document.body.style.backgroundColor = @json($failoverColor);
+                const ov = document.getElementById('portalBgOverlay');
+                if (ov) ov.style.display = 'none';
+            };
+            const timer = setTimeout(fallbackToSoftColor, 4000);
+            probe.onload = function() { clearTimeout(timer); };
+            probe.onerror = function() { clearTimeout(timer); fallbackToSoftColor(); };
+            probe.src = @json($imageUrl);
+        })();
+    </script>
+    @endif
 </body>
 </html>
