@@ -380,12 +380,22 @@
                                             <div class="input-group input-group-sm border rounded mb-2">
                                                 <input type="url" name="custom_url" id="input_custom_url" class="form-control border-0 px-2"
                                                        value="{{ old('custom_url', ($bgConfig['source_type'] === 'image_url' ? $bgConfig['image_url'] : '')) }}"
-                                                       placeholder="https://example.com/background-portal.jpg">
+                                                       placeholder="https://images.pexels.com/photos/...">
                                                 <button type="button" class="btn btn-outline-primary mb-0" id="btn-apply-custom-url">
                                                     <i class="fas fa-eye me-1"></i> Pratinjau
                                                 </button>
                                             </div>
-                                            <small class="text-muted text-xs d-block">Pastikan URL mengarah langsung ke file gambar (<code>.jpg</code>, <code>.png</code>, <code>.webp</code>) dan dapat diakses publik tanpa login.</small>
+                                            <small class="text-muted text-xs d-block mb-2">
+                                                Pastikan URL mengarah langsung ke file gambar (<code>.jpg</code>, <code>.png</code>, <code>.webp</code>) dan dapat diakses publik tanpa login.
+                                            </small>
+                                            <div class="p-2 px-3 bg-light border rounded-3 text-xs text-dark" style="line-height: 1.6;">
+                                                <i class="fas fa-lightbulb text-warning me-1"></i>
+                                                <strong>Rekomendasi Sumber Gambar:</strong> Gunakan penyedia gambar bebas lisensi (<em>royalty-free</em>) yang URL gambarnya bisa diakses langsung oleh publik tanpa pembatasan <em>hotlink</em>, seperti
+                                                <a href="https://www.pexels.com" target="_blank" rel="noopener noreferrer" class="text-primary fw-bold text-decoration-underline">https://www.pexels.com</a>
+                                                dan
+                                                <a href="https://pixabay.com" target="_blank" rel="noopener noreferrer" class="text-primary fw-bold text-decoration-underline">https://pixabay.com</a>
+                                                (klik kanan pada foto pilihan Anda &rarr; pilih <strong>Copy image address</strong> / <strong>Salin alamat gambar</strong>, bukan menyalin tautan halaman webnya).
+                                            </div>
                                         </div>
 
                                         {{-- PANEL 5: UPLOAD IMAGE DARI KOMPUTER --}}
