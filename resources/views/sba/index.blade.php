@@ -94,9 +94,22 @@
 
                         @php
                             $hasViewAll = $canViewAll ?? auth()->user()->can('sba.view_all');
-                            $activeAuthorId = isset($selectedAuthorId)
-                                ? (string) $selectedAuthorId
-                                : ($hasViewAll ? ($request->has('user_id') ? (string) request('user_id', '') : (string) auth()->id()) : (string) auth()->id());
+                            if (isset($selectedAuthorId)) {
+                                $activeAuthorId = ($selectedAuthorId === '' || $selectedAuthorId === 'all')
+                                    ? 'all'
+                                    : (string) $selectedAuthorId;
+                            } elseif ($hasViewAll) {
+                                $rawUserId = request('user_id');
+                                if (request()->has('user_id') && ($rawUserId === null || $rawUserId === '' || $rawUserId === 'all')) {
+                                    $activeAuthorId = 'all';
+                                } elseif (request()->filled('user_id')) {
+                                    $activeAuthorId = (string) $rawUserId;
+                                } else {
+                                    $activeAuthorId = (string) auth()->id();
+                                }
+                            } else {
+                                $activeAuthorId = (string) auth()->id();
+                            }
                         @endphp
 
                         {{-- PANEL FILTER & SEARCH --}}
@@ -134,7 +147,7 @@
                             @if($hasViewAll)
                                 <div class="col-md-2">
                                     <select name="user_id" class="form-select form-select-sm border px-2 py-1" onchange="this.form.submit()">
-                                        <option value="" {{ $activeAuthorId === '' ? 'selected' : '' }}>-- Semua Author --</option>
+                                        <option value="all" {{ $activeAuthorId === 'all' ? 'selected' : '' }}>-- Semua Author --</option>
                                         @foreach($authors as $author)
                                             <option value="{{ $author->id }}" {{ $activeAuthorId === (string) $author->id ? 'selected' : '' }}>
                                                 {{ $author->name }}

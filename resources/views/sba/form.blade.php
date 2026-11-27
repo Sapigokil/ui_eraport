@@ -115,17 +115,29 @@
             color: #6f42c1;
         }
         #grid-daftar-kelas {
-            max-height: 290px;
+            max-height: 360px;
             overflow-y: auto;
             overflow-x: hidden;
             overscroll-behavior: contain;
             -webkit-overflow-scrolling: touch;
             padding-right: 4px;
         }
+        .tingkat-column-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px;
+            height: 100%;
+        }
+        .tingkat-column-header {
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
         .kelas-check-card {
             border: 1px solid #dee2e6;
             border-radius: 8px;
-            padding: 8px 10px;
+            padding: 7px 10px;
             background: #ffffff;
             cursor: pointer;
             transition: all 0.15s ease;
@@ -148,6 +160,35 @@
             ->unique()
             ->values()
             ->all();
+
+        // Pengelompokan kelas berdasarkan kolom `tingkat` (fallback ekstrak angka awal nama_kelas jika `tingkat` null)
+        $kelasGroupedByTingkat = collect($kelasList ?? [])
+            ->groupBy(function ($kls) {
+                $rawTingkat = isset($kls->tingkat) ? trim((string) $kls->tingkat) : '';
+                if ($rawTingkat !== '') {
+                    return $rawTingkat;
+                }
+                if (preg_match('/^(\d+|[IVX]+)/i', trim((string) ($kls->nama_kelas ?? '')), $matches)) {
+                    return strtoupper($matches[1]);
+                }
+                return 'Lainnya';
+            })
+            ->sortKeysUsing(function ($a, $b) {
+                if ($a === 'Lainnya' && $b !== 'Lainnya') return 1;
+                if ($a !== 'Lainnya' && $b === 'Lainnya') return -1;
+                return strnatcasecmp((string) $a, (string) $b);
+            })
+            ->map(function ($items) {
+                return $items->sortBy(fn($k) => (string) ($k->nama_kelas ?? ''), SORT_NATURAL | SORT_FLAG_CASE)->values();
+            });
+
+        $jumlahKolomTingkat = $kelasGroupedByTingkat->count();
+        $colClassTingkat = match (true) {
+            $jumlahKolomTingkat <= 1 => 'col-12',
+            $jumlahKolomTingkat === 2 => 'col-12 col-md-6',
+            $jumlahKolomTingkat === 3 => 'col-12 col-md-4',
+            default => 'col-12 col-md-6 col-lg-3',
+        };
     @endphp
 
     <div class="container-fluid py-4 px-4">
@@ -160,6 +201,9 @@
             @if(isset($uji))
                 @method('PUT')
             @endif
+
+            {{-- INPUT HIDDEN DI DALAM FORM AGAR SELALU TERKIRIM SAAT SUBMIT / AJAX --}}
+            <input type="hidden" name="buka_untuk_umum" id="buka_untuk_umum_hidden" value="{{ $isUmumInitial ? '1' : '0' }}">
 
             <div class="row">
                 <div class="col-12">
@@ -494,7 +538,7 @@
 
 {{-- MODAL POP-UP DAFTAR ASESI (PILIH KELAS / TERBUKA UNTUK UMUM) - DI LUAR <main> AGAR SCROLL TIDAK TEMBUS --}}
 <div class="modal fade" id="modalDaftarAsesi" tabindex="-1" aria-labelledby="modalDaftarAsesiLabel" aria-hidden="true" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl">
         <div class="modal-content border-0 shadow-lg overflow-hidden">
             <div class="modal-header bg-gradient-primary border-0 py-3 px-4">
                 <h6 class="modal-title fw-bold text-white mb-0" id="modalDaftarAsesiLabel">
@@ -507,7 +551,7 @@
                 {{-- OPSI TERBUKA UNTUK UMUM --}}
                 <div class="p-3 bg-light border rounded-3 mb-3">
                     <div class="form-check mb-0">
-                        <input class="form-check-input" type="checkbox" id="buka_untuk_umum" name="buka_untuk_umum" form="form-ujian-sba" value="1"
+                        <input class="form-check-input" type="checkbox" id="buka_untuk_umum" value="1"
                                {{ $isUmumInitial ? 'checked' : '' }} style="cursor: pointer;">
                         <label class="form-check-label text-sm fw-bold text-dark mb-0" for="buka_untuk_umum" style="cursor: pointer;">
                             Terbuka untuk Umum (Tanpa Pembatasan Kelas / NISN)
@@ -523,9 +567,9 @@
                     <i class="fas fa-exclamation-triangle me-1"></i> Pilih minimal <strong>1 kelas</strong> yang diperbolehkan mengikuti asesmen, atau centang opsi <strong>Terbuka untuk Umum</strong>.
                 </div>
 
-                {{-- WRAPPER DAFTAR KELAS --}}
+                {{-- WRAPPER DAFTAR KELAS DIKELOMPOKKAN PER KOLOM TINGKAT (TERKECIL KIRI -> KANAN) --}}
                 <div id="wrapper-pilihan-kelas" class="{{ $isUmumInitial ? 'opacity-50' : '' }}">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2 pb-2 border-bottom">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
                         <div class="form-check mb-0">
                             <input class="form-check-input" type="checkbox" id="check-all-kelas" style="cursor: pointer;" {{ $isUmumInitial ? 'disabled' : '' }}>
                             <label class="form-check-label text-xs fw-bold text-primary mb-0" for="check-all-kelas" style="cursor: pointer;">
@@ -537,24 +581,54 @@
                         </div>
                     </div>
 
-                    <div id="grid-daftar-kelas" class="row g-2">
-                        @forelse($kelasList ?? [] as $kls)
+                    <div id="grid-daftar-kelas" class="row g-3">
+                        @forelse($kelasGroupedByTingkat as $tingkatKey => $kelasItems)
                             @php
-                                $isCheckedKelas = in_array((int) $kls->id_kelas, $selectedKelasIdsInitial, true);
+                                $tingkatSlug = \Illuminate\Support\Str::slug((string) $tingkatKey, '_');
+                                $judulKolomTingkat = $tingkatKey === 'Lainnya' ? 'Kelas Lainnya' : 'Kelas ' . $tingkatKey;
                             @endphp
-                            <div class="col-6 col-md-4 kelas-item-col" data-nama-kelas="{{ strtolower($kls->nama_kelas) }}">
-                                <label class="kelas-check-card d-flex align-items-center gap-2 w-100 mb-0 {{ $isCheckedKelas ? 'is-checked' : '' }}" for="kelas_chk_{{ $kls->id_kelas }}">
-                                    <input class="form-check-input kelas-checkbox m-0 flex-shrink-0"
-                                           type="checkbox"
-                                           name="kelas_ids[]"
-                                           form="form-ujian-sba"
-                                           id="kelas_chk_{{ $kls->id_kelas }}"
-                                           value="{{ $kls->id_kelas }}"
-                                           data-nama="{{ $kls->nama_kelas }}"
-                                           {{ $isCheckedKelas ? 'checked' : '' }}
-                                           {{ $isUmumInitial ? 'disabled' : '' }}>
-                                    <span class="text-xs fw-bold text-dark text-truncate">{{ $kls->nama_kelas }}</span>
-                                </label>
+                            <div class="{{ $colClassTingkat }} tingkat-group-col" data-tingkat="{{ $tingkatSlug }}">
+                                <div class="tingkat-column-box">
+                                    <div class="tingkat-column-header d-flex justify-content-between align-items-center gap-2">
+                                        <span class="text-xs fw-bold text-primary text-uppercase">
+                                            <i class="fas fa-layer-group me-1"></i> {{ $judulKolomTingkat }}
+                                        </span>
+                                        <div class="form-check mb-0">
+                                            <input class="form-check-input check-tingkat-kelas"
+                                                   type="checkbox"
+                                                   id="check_tingkat_{{ $tingkatSlug }}"
+                                                   data-tingkat="{{ $tingkatSlug }}"
+                                                   style="cursor: pointer;"
+                                                   {{ $isUmumInitial ? 'disabled' : '' }}>
+                                            <label class="form-check-label text-xxs fw-bold text-secondary mb-0" for="check_tingkat_{{ $tingkatSlug }}" style="cursor: pointer;">
+                                                Semua
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex flex-column gap-2">
+                                        @foreach($kelasItems as $kls)
+                                            @php
+                                                $isCheckedKelas = in_array((int) $kls->id_kelas, $selectedKelasIdsInitial, true);
+                                            @endphp
+                                            <div class="kelas-item-col" data-nama-kelas="{{ strtolower($kls->nama_kelas) }}" data-tingkat="{{ $tingkatSlug }}">
+                                                <label class="kelas-check-card d-flex align-items-center gap-2 w-100 mb-0 {{ $isCheckedKelas ? 'is-checked' : '' }}" for="kelas_chk_{{ $kls->id_kelas }}">
+                                                    <input class="form-check-input kelas-checkbox m-0 flex-shrink-0"
+                                                           type="checkbox"
+                                                           name="kelas_ids[]"
+                                                           form="form-ujian-sba"
+                                                           id="kelas_chk_{{ $kls->id_kelas }}"
+                                                           value="{{ $kls->id_kelas }}"
+                                                           data-nama="{{ $kls->nama_kelas }}"
+                                                           data-tingkat="{{ $tingkatSlug }}"
+                                                           {{ $isCheckedKelas ? 'checked' : '' }}
+                                                           {{ $isUmumInitial ? 'disabled' : '' }}>
+                                                    <span class="text-xs fw-bold text-dark text-truncate">{{ $kls->nama_kelas }}</span>
+                                                </label>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
                             </div>
                         @empty
                             <div class="col-12 text-center py-4 text-muted text-xs">
@@ -1058,10 +1132,12 @@
 document.addEventListener('DOMContentLoaded', function() {
 
     /* ========================================================================
-     * PENGATURAN DAFTAR ASESI (MODAL PILIH KELAS & TERBUKA UNTUK UMUM)
+     * PENGATURAN DAFTAR ASESI (MODAL PILIH KELAS PER TINGKAT & TERBUKA UNTUK UMUM)
      * ======================================================================== */
     const chkBukaUmum = document.getElementById('buka_untuk_umum');
+    const hiddenBukaUmum = document.getElementById('buka_untuk_umum_hidden');
     const chkAllKelas = document.getElementById('check-all-kelas');
+    const chkTingkatList = document.querySelectorAll('.check-tingkat-kelas');
     const searchKelasInput = document.getElementById('search-kelas-input');
     const wrapperPilihanKelas = document.getElementById('wrapper-pilihan-kelas');
     const gridDaftarKelasEl = document.getElementById('grid-daftar-kelas');
@@ -1091,7 +1167,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateDaftarAsesiState() {
-        const isUmum = chkBukaUmum && chkBukaUmum.checked;
+        const isUmum = Boolean(chkBukaUmum && chkBukaUmum.checked);
+
+        if (hiddenBukaUmum) {
+            hiddenBukaUmum.value = isUmum ? '1' : '0';
+        }
 
         if (wrapperPilihanKelas) {
             wrapperPilihanKelas.classList.toggle('opacity-50', isUmum);
@@ -1104,6 +1184,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const card = chk.closest('.kelas-check-card');
             if (card) {
                 card.classList.toggle('is-checked', !isUmum && chk.checked);
+            }
+        });
+
+        // Sinkronisasi checkbox "Semua" per kolom tingkat
+        chkTingkatList.forEach(chkTingkat => {
+            chkTingkat.disabled = isUmum;
+            if (!isUmum) {
+                const tingkat = chkTingkat.dataset.tingkat || '';
+                const visibleInTingkat = Array.from(kelasCheckboxes).filter(chk => {
+                    const col = chk.closest('.kelas-item-col');
+                    return chk.dataset.tingkat === tingkat && col && !col.classList.contains('d-none');
+                });
+                chkTingkat.checked = visibleInTingkat.length > 0 && visibleInTingkat.every(chk => chk.checked);
             }
         });
 
@@ -1155,6 +1248,20 @@ document.addEventListener('DOMContentLoaded', function() {
         chk.addEventListener('change', updateDaftarAsesiState);
     });
 
+    chkTingkatList.forEach(chkTingkat => {
+        chkTingkat.addEventListener('change', function() {
+            const tingkat = this.dataset.tingkat || '';
+            const targetState = this.checked;
+            kelasCheckboxes.forEach(chk => {
+                const col = chk.closest('.kelas-item-col');
+                if (chk.dataset.tingkat === tingkat && col && !col.classList.contains('d-none')) {
+                    chk.checked = targetState;
+                }
+            });
+            updateDaftarAsesiState();
+        });
+    });
+
     if (chkAllKelas) {
         chkAllKelas.addEventListener('change', function() {
             const targetState = this.checked;
@@ -1175,6 +1282,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 const nama = col.dataset.namaKelas || '';
                 col.classList.toggle('d-none', keyword !== '' && !nama.includes(keyword));
             });
+
+            // Sembunyikan kolom tingkat jika seluruh kelas di dalamnya tidak cocok dengan pencarian
+            document.querySelectorAll('.tingkat-group-col').forEach(groupCol => {
+                const visibleItems = groupCol.querySelectorAll('.kelas-item-col:not(.d-none)');
+                groupCol.classList.toggle('d-none', visibleItems.length === 0);
+            });
+
             updateDaftarAsesiState();
         });
     }
@@ -2361,6 +2475,11 @@ document.addEventListener('DOMContentLoaded', function() {
         ajaxErrorAlert.classList.add('d-none');
         updateSoalNames();
 
+        const isUmum = Boolean(chkBukaUmum && chkBukaUmum.checked);
+        if (hiddenBukaUmum) {
+            hiddenBukaUmum.value = isUmum ? '1' : '0';
+        }
+
         const originalButtonHtmls = [];
         submitButtons.forEach((btn, idx) => {
             originalButtonHtmls[idx] = btn.innerHTML;
@@ -2370,6 +2489,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const formData = new FormData(formUjianSba);
+            formData.set('buka_untuk_umum', isUmum ? '1' : '0');
 
             const response = await fetch(formUjianSba.action, {
                 method: 'POST',

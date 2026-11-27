@@ -8,6 +8,7 @@ use App\Models\UjiSoal;
 use App\Models\MataPelajaran;
 use App\Traits\AuthorizesSbaAccess;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -32,9 +33,14 @@ class SbaController extends Controller
      */
     private function getDaftarKelas()
     {
+        $columns = ['id_kelas', 'nama_kelas'];
+        if (Schema::hasColumn('kelas', 'tingkat')) {
+            $columns[] = 'tingkat';
+        }
+
         return DB::table('kelas')
             ->orderBy('nama_kelas')
-            ->get(['id_kelas', 'nama_kelas']);
+            ->get($columns);
     }
 
     /**
@@ -286,9 +292,12 @@ class SbaController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name']);
 
-            $selectedAuthorId = $request->has('user_id')
-                ? (string) $request->input('user_id', '')
-                : $currentUserId;
+            if ($request->has('user_id')) {
+                $rawAuthor = (string) $request->input('user_id', '');
+                $selectedAuthorId = ($rawAuthor === '' || $rawAuthor === 'all') ? 'all' : $rawAuthor;
+            } else {
+                $selectedAuthorId = $currentUserId;
+            }
         } else {
             $authors = collect();
             $selectedAuthorId = $currentUserId;
@@ -321,7 +330,7 @@ class SbaController extends Controller
         }
 
         if ($canViewAll) {
-            if ($selectedAuthorId !== '') {
+            if ($selectedAuthorId !== '' && $selectedAuthorId !== 'all') {
                 $query->where('user_id', $selectedAuthorId);
             }
         } else {
@@ -376,12 +385,15 @@ class SbaController extends Controller
     public function store(Request $request)
     {
         $isUmum = $request->boolean('buka_untuk_umum');
+        $kelasIds = $isUmum
+            ? null
+            : array_values(array_unique(array_filter(array_map('intval', (array) $request->input('kelas_ids', [])))));
 
         $request->merge([
             'kode_uji'        => strtoupper(trim((string) $request->kode_uji)),
             'id_mapel'        => $request->filled('id_mapel') ? $request->id_mapel : null,
             'buka_untuk_umum' => $isUmum ? 1 : 0,
-            'kelas_ids'       => $isUmum ? [] : array_values(array_unique(array_map('intval', (array) $request->input('kelas_ids', [])))),
+            'kelas_ids'       => $kelasIds,
         ]);
 
         $request->validate([
@@ -389,7 +401,7 @@ class SbaController extends Controller
             'kategori_uji'          => 'required|in:PSTS,PSAS,Sumatif,Umum',
             'id_mapel'              => 'nullable|integer|exists:mata_pelajaran,id_mapel',
             'kode_uji'              => ['required', 'string', 'max:12', 'regex:/^[A-Z0-9]+$/', 'unique:ujis,kode_uji'],
-            'kelas_ids'             => 'required_if:buka_untuk_umum,0|array|min:1',
+            'kelas_ids'             => 'exclude_if:buka_untuk_umum,1|required|array|min:1',
             'kelas_ids.*'           => 'integer|exists:kelas,id_kelas',
             'durasi_menit'          => 'required|integer|min:0',
             'toleransi_pelanggaran' => 'required|integer|min:0',
@@ -410,7 +422,7 @@ class SbaController extends Controller
             'kode_uji.max'                   => 'Kode Asesmen maksimal 12 karakter.',
             'kode_uji.regex'                 => 'Kode Asesmen hanya boleh berisi huruf (A-Z) dan angka (0-9) tanpa spasi atau simbol.',
             'kode_uji.unique'                => 'Kode Asesmen sudah digunakan oleh ujian lain. Silakan gunakan kode lain.',
-            'kelas_ids.required_if'          => 'Daftar Asesi: Pilih minimal 1 kelas atau aktifkan opsi Terbuka untuk Umum.',
+            'kelas_ids.required'             => 'Daftar Asesi: Pilih minimal 1 kelas atau aktifkan opsi Terbuka untuk Umum.',
             'kelas_ids.min'                  => 'Daftar Asesi: Pilih minimal 1 kelas atau aktifkan opsi Terbuka untuk Umum.',
             'kelas_ids.*.exists'             => 'Salah satu kelas yang dipilih tidak ditemukan di database.',
             'durasi_menit.required'          => 'Durasi pengerjaan wajib diisi (isi 0 jika tanpa batas).',
@@ -430,7 +442,7 @@ class SbaController extends Controller
             $normalizedSoals[$index] = $this->normalizeSoalPayload($request, $soalData, (int) $index);
         }
 
-        $uji = DB::transaction(function () use ($request, $normalizedSoals, $isUmum) {
+        $uji = DB::transaction(function () use ($request, $normalizedSoals, $isUmum, $kelasIds) {
             $uji = Uji::create([
                 'user_id'               => auth()->id(),
                 'kode_uji'              => $request->kode_uji,
@@ -445,7 +457,7 @@ class SbaController extends Controller
                 'open_book'             => $request->boolean('open_book'),
                 'tampilkan_nilai'       => $request->boolean('tampilkan_nilai'),
                 'buka_untuk_umum'       => $isUmum,
-                'kelas_ids'             => $isUmum ? null : $request->kelas_ids,
+                'kelas_ids'             => $isUmum ? null : $kelasIds,
                 'toleransi_pelanggaran' => $request->toleransi_pelanggaran,
                 'maksimal_percobaan'    => $request->maksimal_percobaan ?? 1,
                 'ulangi_jika_gagal'     => $request->boolean('ulangi_jika_gagal'),
@@ -496,12 +508,15 @@ class SbaController extends Controller
         $this->authorizeUjiAccess($uji);
 
         $isUmum = $request->boolean('buka_untuk_umum');
+        $kelasIds = $isUmum
+            ? null
+            : array_values(array_unique(array_filter(array_map('intval', (array) $request->input('kelas_ids', [])))));
 
         $request->merge([
             'kode_uji'        => strtoupper(trim((string) $request->kode_uji)),
             'id_mapel'        => $request->filled('id_mapel') ? $request->id_mapel : null,
             'buka_untuk_umum' => $isUmum ? 1 : 0,
-            'kelas_ids'       => $isUmum ? [] : array_values(array_unique(array_map('intval', (array) $request->input('kelas_ids', [])))),
+            'kelas_ids'       => $kelasIds,
         ]);
 
         $request->validate([
@@ -509,7 +524,7 @@ class SbaController extends Controller
             'kategori_uji'          => 'required|in:PSTS,PSAS,Sumatif,Umum',
             'id_mapel'              => 'nullable|integer|exists:mata_pelajaran,id_mapel',
             'kode_uji'              => ['required', 'string', 'max:12', 'regex:/^[A-Z0-9]+$/', 'unique:ujis,kode_uji,' . $uji->id],
-            'kelas_ids'             => 'required_if:buka_untuk_umum,0|array|min:1',
+            'kelas_ids'             => 'exclude_if:buka_untuk_umum,1|required|array|min:1',
             'kelas_ids.*'           => 'integer|exists:kelas,id_kelas',
             'durasi_menit'          => 'required|integer|min:0',
             'toleransi_pelanggaran' => 'required|integer|min:0',
@@ -530,7 +545,7 @@ class SbaController extends Controller
             'kode_uji.max'                   => 'Kode Asesmen maksimal 12 karakter.',
             'kode_uji.regex'                 => 'Kode Asesmen hanya boleh berisi huruf (A-Z) dan angka (0-9) tanpa spasi atau simbol.',
             'kode_uji.unique'                => 'Kode Asesmen sudah digunakan oleh ujian lain. Silakan gunakan kode lain.',
-            'kelas_ids.required_if'          => 'Daftar Asesi: Pilih minimal 1 kelas atau aktifkan opsi Terbuka untuk Umum.',
+            'kelas_ids.required'             => 'Daftar Asesi: Pilih minimal 1 kelas atau aktifkan opsi Terbuka untuk Umum.',
             'kelas_ids.min'                  => 'Daftar Asesi: Pilih minimal 1 kelas atau aktifkan opsi Terbuka untuk Umum.',
             'kelas_ids.*.exists'             => 'Salah satu kelas yang dipilih tidak ditemukan di database.',
             'durasi_menit.required'          => 'Durasi pengerjaan wajib diisi (isi 0 jika tanpa batas).',
@@ -553,7 +568,7 @@ class SbaController extends Controller
             $normalizedSoals[$index] = $this->normalizeSoalPayload($request, $soalData, (int) $index, $soalEksis);
         }
 
-        DB::transaction(function () use ($request, $uji, $normalizedSoals, $isUmum) {
+        DB::transaction(function () use ($request, $uji, $normalizedSoals, $isUmum, $kelasIds) {
             $uji->update([
                 'kode_uji'              => $request->kode_uji,
                 'judul'                 => $request->judul,
@@ -567,7 +582,7 @@ class SbaController extends Controller
                 'open_book'             => $request->boolean('open_book'),
                 'tampilkan_nilai'       => $request->boolean('tampilkan_nilai'),
                 'buka_untuk_umum'       => $isUmum,
-                'kelas_ids'             => $isUmum ? null : $request->kelas_ids,
+                'kelas_ids'             => $isUmum ? null : $kelasIds,
                 'toleransi_pelanggaran' => $request->toleransi_pelanggaran,
                 'maksimal_percobaan'    => $request->maksimal_percobaan ?? 1,
                 'ulangi_jika_gagal'     => $request->boolean('ulangi_jika_gagal'),
